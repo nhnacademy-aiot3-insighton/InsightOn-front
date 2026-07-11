@@ -2,9 +2,9 @@ name: front CD
 
 on:
   workflow_run:
-    workflows: ["front CI"]
-    types: [completed]
-    branches: [main]
+    workflows: [ "front CI" ]
+    types: [ completed ]
+    branches: [ main ]
 jobs:
   build-and-push:
     if: github.event.workflow_run.conclusion == 'success'
@@ -67,5 +67,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            echo "${{ secrets.PAT_READ_PACKAGES }}" | docker login ghcr.io -u ${{ secrets.PAT_USERNAME }} --password-stdin
             chmod +x ~/deploy/scripts/deploy.sh
             ~/deploy/scripts/deploy.sh "${{ needs.build-and-push.outputs.full_image }}:latest"
