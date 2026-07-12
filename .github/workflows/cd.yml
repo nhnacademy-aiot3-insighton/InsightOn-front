@@ -68,5 +68,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "${{ secrets.PAT_READ_PACKAGES }}" | docker login ghcr.io -u ${{ secrets.PAT_USERNAME }} --password-stdin
+            
+            rm -rf ~/insighton-config
+            git clone https://${{ secrets.PAT_USERNAME }}:${{ secrets.CONFIG_REPO_TOKEN }}@github.com/nhnacademy-aiot3-insighton/InsightOn-config.git ~/insighton-config
+
             chmod +x ~/deploy/scripts/deploy.sh
             ~/deploy/scripts/deploy.sh "${{ needs.build-and-push.outputs.full_image }}:latest"
