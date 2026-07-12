@@ -12,9 +12,6 @@ RUN mvn clean package -DskipTests -B
 # Run
 FROM eclipse-temurin:21-jre
 
-RUN useradd -m srious
-USER srious
-
 WORKDIR /app
 COPY --from=build --chown=srious:srious /app/target/*.jar app.jar
 
