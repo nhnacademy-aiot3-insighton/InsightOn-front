@@ -4,9 +4,9 @@ name: front CI
 # 언제 이 workflow를 실행하지 정의
 on:
   push:
-    branches: [main, develop] # 브랜치에 commit이 push되면
+    branches: [main, dev, dev-deploy] # 브랜치에 commit이 push되면
   pull_request:
-    branches: [main] # main으로 향하는 PR이 열리거나 업데이트되면 실행 (merge 전에 미리 검증하려는 목)
+    branches: [main, dev, dev-deploy] # main으로 향하는 PR이 열리거나 업데이트되면 실행 (merge 전에 미리 검증하려는 목)
 
 # 작업 단위를 정의
 jobs:

@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: [ "front CI" ]
     types: [ completed ]
-    branches: [ main ]
+    branches: [ main, dev-deploy ]
 jobs:
   build-and-push:
     if: github.event.workflow_run.conclusion == 'success'
