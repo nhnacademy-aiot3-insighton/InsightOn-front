@@ -3,8 +3,8 @@ set -e
 
 IMAGE="$1"
 
-# shellcheck disable=SC1090
 set -a
+# shellcheck disable=SC1090
 source ~/insighton-config/front.env
 set +a
 

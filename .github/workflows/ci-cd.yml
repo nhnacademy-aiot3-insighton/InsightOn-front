@@ -1,13 +1,39 @@
-name: front CD
+name: front CI/CD
 
 on:
-  workflow_run:
-    workflows: [ "front CI" ]
-    types: [ completed ]
-    branches: [ main ]
+  push:
+    branches: [main, dev-deploy, dev]
+  pull_request:
+    branches: [main, dev-deploy, dev]
+
 jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Code Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 21 Install
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Maven Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build and Test
+        run: mvn -B clean verify
+
   build-and-push:
-    if: github.event.workflow_run.conclusion == 'success'
+    needs: build-and-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev-deploy')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,6 +69,7 @@ jobs:
 
   deploy:
     needs: build-and-push
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev-deploy')
     runs-on: ubuntu-latest
 
     steps:
@@ -68,7 +95,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "${{ secrets.PAT_READ_PACKAGES }}" | docker login ghcr.io -u ${{ secrets.PAT_USERNAME }} --password-stdin
-            
+
             rm -rf ~/insighton-config
             git clone https://${{ secrets.PAT_USERNAME }}:${{ secrets.CONFIG_REPO_TOKEN }}@github.com/nhnacademy-aiot3-insighton/InsightOn-config.git ~/insighton-config
 
