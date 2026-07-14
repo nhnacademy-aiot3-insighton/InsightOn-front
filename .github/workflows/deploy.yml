@@ -8,5 +8,5 @@ on:
 
 jobs:
   call-reusable:
-    uses: nhnacademy-aiot3-insighton/InsightOn-infra/.github/workflows/front-ci-cd.yml@main
+    uses: nhnacademy-aiot3-insighton/InsightOn-infra/.github/workflows/front-ci-cd.yml@feature/ci-cd-deploy
     secrets: inherit
