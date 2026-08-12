@@ -5,18 +5,17 @@ import com.nhnacademy.insightonfront.dto.chart.ChartDataResponse;
 import com.nhnacademy.insightonfront.dto.dashboard.DashboardResponse;
 import com.nhnacademy.insightonfront.dto.widget.WidgetSaveRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class DashboardController {
 
     private final CoreApiClient coreApiClient;
@@ -42,12 +41,19 @@ public class DashboardController {
             @RequestHeader Long userId,
             @PathVariable("group-id") Long groupId,
             @PathVariable("location-id") Long locationId,
-            List<WidgetSaveRequest> requests,
+            @RequestBody List<WidgetSaveRequest> requests,
             Model model) {
 
-        Map<Long, ChartDataResponse> responseMap = coreApiClient.saveDashboard(userId, groupId, locationId, requests);
+
+        try {
+            Map<Long, ChartDataResponse> responseMap = coreApiClient.saveDashboard(userId, groupId, locationId, requests);
 
         model.addAttribute("chartData", responseMap);
-        return "redirect:/dashboard/widgets";
+            log.info("HTML 버튼 클릭으로 Front 컨트롤러 세이브 실행됨!");
+
+        } catch (Exception e) {
+            log.error("저장실패!!");
+        }
+        return "redirect:/testSave";
     }
 }
