@@ -17,7 +17,7 @@ public interface CoreApiClient {
      */
     @GetMapping("/api/v1/groups/{group-id}/location/{location-id}/dashboard")
     DashboardResponse getDashboard(
-            @RequestHeader("X-USER-ID") Long userId,
+            @RequestHeader Long userId,
             @PathVariable("group-id") Long groupId,
             @PathVariable("location-id") Long locationId
     );
@@ -27,7 +27,7 @@ public interface CoreApiClient {
      */
     @PostMapping("/api/v1/groups/{group-id}/location/{location-id}/dashboard/save")
     Map<Long, ChartDataResponse> saveDashboard(
-            @RequestHeader("X-USER-ID") Long userId,
+            @RequestHeader Long userId,
             @PathVariable("group-id") Long groupId,
             @PathVariable("location-id") Long locationId,
             @RequestBody List<WidgetSaveRequest> requests
