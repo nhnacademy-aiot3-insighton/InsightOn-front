@@ -48,7 +48,7 @@ public class GroupMemberController {
 
         log.info("멤버의 권한이 변경 되었습니다. Group ID : {}, groupMember ID : {}", groupId, groupMemberId);
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/members/" + groupMemberId;
     }
 
     @PutMapping("/{group-member-id}/toggle-super-manager")
@@ -59,7 +59,7 @@ public class GroupMemberController {
 
         log.info("super manager의 권한이 양도 되었습니다. Group ID : {}, 새로운 super manager groupMember ID: {}", groupId, groupMemberId);
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/members/" + groupMemberId;
     }
 
     @DeleteMapping("/{group-member-id}/kick-member")
@@ -71,7 +71,7 @@ public class GroupMemberController {
 
         log.info("멤버가 추방 되었습니다. Group ID : {}, 추방된 멤버 ID : {}", groupId, groupMemberId);
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/members";
     }
 
     @DeleteMapping("/leave-group")

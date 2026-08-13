@@ -71,7 +71,7 @@ public class GroupController {
 
         log.info("토큰이 새로 발급되었습니다. Group ID : {}", groupId);
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/my-group";
     }
 
     @PutMapping("/{group-id}/update")
@@ -81,7 +81,7 @@ public class GroupController {
 
         groupClient.updateGroup(userId, groupId, request);
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/my-group";
     }
 
     @DeleteMapping("/{group-id}/delete")
