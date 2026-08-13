@@ -1,8 +1,9 @@
-package com.nhnacademy.insightonfront.client.core;
+package com.nhnacademy.insightonfront.adapter.core.dashboard;
 
-import com.nhnacademy.insightonfront.dto.chart.ChartDataResponse;
-import com.nhnacademy.insightonfront.dto.dashboard.DashboardResponse;
-import com.nhnacademy.insightonfront.dto.widget.WidgetSaveRequest;
+
+import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.chart.ChartDataResponse;
+import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.dashboard.DashboardResponse;
+import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.widget.WidgetSaveRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @FeignClient(name = "insighton-gateway")
-public interface CoreApiClient {
+public interface DashboardClient {
 
     /**
      * 대시보드 조회

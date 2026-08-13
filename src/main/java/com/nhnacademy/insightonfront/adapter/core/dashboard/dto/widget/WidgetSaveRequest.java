@@ -1,4 +1,4 @@
-package com.nhnacademy.insightonfront.dto.widget;
+package com.nhnacademy.insightonfront.adapter.core.dashboard.dto.widget;
 
 
 import lombok.Builder;
