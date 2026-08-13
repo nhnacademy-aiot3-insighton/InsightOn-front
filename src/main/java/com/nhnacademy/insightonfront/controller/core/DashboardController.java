@@ -1,9 +1,9 @@
-package com.nhnacademy.insightonfront.controller;
+package com.nhnacademy.insightonfront.controller.core;
 
-import com.nhnacademy.insightonfront.client.core.CoreApiClient;
-import com.nhnacademy.insightonfront.dto.chart.ChartDataResponse;
-import com.nhnacademy.insightonfront.dto.dashboard.DashboardResponse;
-import com.nhnacademy.insightonfront.dto.widget.WidgetSaveRequest;
+import com.nhnacademy.insightonfront.adapter.core.dashboard.DashboardClient;
+import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.chart.ChartDataResponse;
+import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.dashboard.DashboardResponse;
+import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.widget.WidgetSaveRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -18,7 +18,7 @@ import java.util.Map;
 @Slf4j
 public class DashboardController {
 
-    private final CoreApiClient coreApiClient;
+    private final DashboardClient dashboardClient;
 
     @GetMapping("/groups/{group-id}/location/{location-id}/dashboard")
     public String getDashboard(
@@ -29,7 +29,7 @@ public class DashboardController {
                                Model model
     ) {
 
-        DashboardResponse response = coreApiClient.getDashboard(userId, groupId, locationId);
+        DashboardResponse response = dashboardClient.getDashboard(userId, groupId, locationId);
 
         model.addAttribute("dashboard", response);
 
@@ -46,7 +46,7 @@ public class DashboardController {
 
 
         try {
-            Map<Long, ChartDataResponse> responseMap = coreApiClient.saveDashboard(userId, groupId, locationId, requests);
+            Map<Long, ChartDataResponse> responseMap = dashboardClient.saveDashboard(userId, groupId, locationId, requests);
 
         model.addAttribute("chartData", responseMap);
             log.info("HTML 버튼 클릭으로 Front 컨트롤러 세이브 실행됨!");

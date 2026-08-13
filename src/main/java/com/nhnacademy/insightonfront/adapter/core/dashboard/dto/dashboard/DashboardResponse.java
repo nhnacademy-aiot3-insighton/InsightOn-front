@@ -1,7 +1,7 @@
-package com.nhnacademy.insightonfront.dto.dashboard;
+package com.nhnacademy.insightonfront.adapter.core.dashboard.dto.dashboard;
 
 
-import com.nhnacademy.insightonfront.dto.widget.WidgetsListResponse;
+import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.widget.WidgetsListResponse;
 import lombok.Builder;
 
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.nhnacademy.insightonfront.dto.chart;
+package com.nhnacademy.insightonfront.adapter.core.dashboard.dto.chart;
 
 import java.util.List;
 
