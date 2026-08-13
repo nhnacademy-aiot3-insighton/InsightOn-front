@@ -54,6 +54,6 @@ public class DashboardController {
         } catch (Exception e) {
             log.error("저장실패!!");
         }
-        return "redirect:/testSave";
+        return "redirect:/groups/" + groupId + "/location/" + locationId + "/dashboard";
     }
 }

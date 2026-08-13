@@ -28,7 +28,7 @@ public class LocationController {
 
         log.info("location이 생성 되었습니다. group ID : {}", groupId);
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/location/list";
     }
 
     @GetMapping("/list")
@@ -60,7 +60,7 @@ public class LocationController {
 
         log.info("모드가 변경 되었습니다. Group ID: {}, Location ID: {}", groupId, locationId);
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/location/" + locationId;
     }
 
     @PutMapping("/{location-id}/update")
@@ -73,7 +73,7 @@ public class LocationController {
 
         log.info("location name이 변경 되었습니다. Location ID : {}, 변경된 이름 : {}", locationId, request.newLocationName());
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/location/" + locationId;
     }
 
     @DeleteMapping("/{location-id}/delete")
@@ -84,7 +84,7 @@ public class LocationController {
 
         log.info("location이 삭제되었습니다. Group ID : {}, 삭제된 Location ID : {}", groupId, locationId);
 
-        return "redirect:/";
+        return "redirect:/groups/" + groupId + "/location/list";
     }
 
 }
