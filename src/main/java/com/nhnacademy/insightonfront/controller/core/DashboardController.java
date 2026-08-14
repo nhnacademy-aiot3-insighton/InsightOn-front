@@ -20,12 +20,12 @@ public class DashboardController {
 
     private final DashboardClient dashboardClient;
 
-    @GetMapping("/groups/{group-id}/location/{location-id}/dashboard")
+    @GetMapping("/groups/location/dashboard")
     public String getDashboard(
             //여기서 auth 토큰을 넘겨줘야함(?)
             @RequestHeader Long userId,
-            @PathVariable("group-id") Long groupId,
-            @PathVariable("location-id") Long locationId,
+            @SessionAttribute("groupId") Long groupId,
+            @SessionAttribute("locationId") Long locationId,
                                Model model
     ) {
 
@@ -36,11 +36,11 @@ public class DashboardController {
         return "dashboard/widgets";
     }
 
-    @PostMapping("/groups/{group-id}/location/{location-id}/dashboard/save")
+    @PostMapping("/groups/location/dashboard/save")
     public String saveDashboard(
             @RequestHeader Long userId,
-            @PathVariable("group-id") Long groupId,
-            @PathVariable("location-id") Long locationId,
+            @SessionAttribute("groupId") Long groupId,
+            @SessionAttribute("locationId") Long locationId,
             @RequestBody List<WidgetSaveRequest> requests,
             Model model) {
 

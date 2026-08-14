@@ -14,13 +14,13 @@ import java.util.List;
 @Controller
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("/groups/{group-id}/members")
+@RequestMapping("/my-group")
 public class GroupMemberController {
     private final GroupMemberClient groupMemberClient;
 
-    @GetMapping
+    @GetMapping("/member-list")
     public String getGroupMemberList(@RequestHeader Long userId,
-                                     @PathVariable("group-id") Long groupId, Model model) {
+                                     @SessionAttribute("groupId") Long groupId, Model model) {
         List<GroupMemberListResponse> groupMemberList = groupMemberClient.getGroupMemberList(userId, groupId);
 
         model.addAttribute("groupMemberList", groupMemberList);
@@ -28,10 +28,10 @@ public class GroupMemberController {
         return "";
     }
 
-    @GetMapping("/{group-member-id}")
+    @GetMapping("/my")
     public String getGroupMember(@RequestHeader Long userId,
-                                 @PathVariable("group-id") Long groupId,
-                                 @PathVariable("group-member-id") Long groupMemberId, Model model) {
+                                 @SessionAttribute("groupId") Long groupId,
+                                 @SessionAttribute("groupMemberId") Long groupMemberId, Model model) {
         GroupMemberResponse groupMember = groupMemberClient.getGroupMember(userId, groupId, groupMemberId);
 
         model.addAttribute("groupMember", groupMember);
@@ -39,10 +39,10 @@ public class GroupMemberController {
         return "";
     }
 
-    @PutMapping("/{group-member-id}/toggle-manager")
+    @PutMapping("/toggle-manager")
     public String toggleManagerRole(@RequestHeader Long userId,
-                                    @PathVariable("group-id") Long groupId,
-                                    @PathVariable("group-member-id") Long groupMemberId) {
+                                    @SessionAttribute("groupId") Long groupId,
+                                    @SessionAttribute("groupMemberId") Long groupMemberId) {
 
         groupMemberClient.toggleManagerRole(userId, groupId, groupMemberId);
 
@@ -51,10 +51,10 @@ public class GroupMemberController {
         return "redirect:/groups/" + groupId + "/members/" + groupMemberId;
     }
 
-    @PutMapping("/{group-member-id}/toggle-super-manager")
+    @PutMapping("/toggle-super-manager")
     public String toggleSuperManagerRole(@RequestHeader Long userId,
-                                         @PathVariable("group-id") Long groupId,
-                                         @PathVariable("group-member-id") Long groupMemberId) {
+                                         @SessionAttribute("groupId") Long groupId,
+                                         @SessionAttribute("groupMemberId") Long groupMemberId) {
         groupMemberClient.toggleSuperManagerRole(userId, groupId, groupMemberId);
 
         log.info("super manager의 권한이 양도 되었습니다. Group ID : {}, 새로운 super manager groupMember ID: {}", groupId, groupMemberId);
@@ -62,10 +62,10 @@ public class GroupMemberController {
         return "redirect:/groups/" + groupId + "/members/" + groupMemberId;
     }
 
-    @DeleteMapping("/{group-member-id}/kick-member")
+    @DeleteMapping("/kick-member")
     public String kickGroupMember(@RequestHeader Long userId,
-                                  @PathVariable("group-id") Long groupId,
-                                  @PathVariable("group-member-id") Long groupMemberId) {
+                                  @SessionAttribute("groupId") Long groupId,
+                                  @SessionAttribute("groupMemberId") Long groupMemberId) {
 
         groupMemberClient.kickGroupMember(userId, groupId, groupMemberId);
 
@@ -76,7 +76,7 @@ public class GroupMemberController {
 
     @DeleteMapping("/leave-group")
     public String leaveGroup(@RequestHeader Long userId,
-                             @PathVariable("group-id") Long groupId) {
+                             @SessionAttribute("groupId") Long groupId) {
 
         groupMemberClient.leaveGroup(userId, groupId);
 
