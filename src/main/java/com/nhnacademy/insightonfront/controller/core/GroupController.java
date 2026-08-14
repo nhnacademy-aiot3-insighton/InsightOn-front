@@ -1,10 +1,8 @@
 package com.nhnacademy.insightonfront.controller.core;
 
 import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
-import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupAdminResponse;
 import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupRequest;
 import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupResponse;
-import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -14,11 +12,11 @@ import org.springframework.web.bind.annotation.*;
 @Controller
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("/groups")
+@RequestMapping("/my-group")
 public class GroupController {
     private final GroupClient groupClient;
 
-    @PostMapping("/groups/create")
+    @PostMapping("/create")
     public String createGroup(@RequestHeader Long userId,
                               @RequestBody GroupRequest request) {
 
@@ -27,9 +25,9 @@ public class GroupController {
         return "redirect:/";
     }
 
-    @GetMapping("/{group-id}/my-group")
+    @GetMapping("/my-group")
     public String getMyGroup(@RequestHeader Long userId,
-                             @PathVariable("group-id") Long groupId,
+                             @SessionAttribute("groupId") Long groupId,
                              Model model) {
         GroupResponse myGroup = groupClient.getMyGroup(userId, groupId);
 
@@ -38,9 +36,9 @@ public class GroupController {
         return "";
     }
 
-    @GetMapping("/{group-id}/preview")
+    @GetMapping("/preview")
     public String getGroupPreview(@RequestHeader Long userId,
-                                  @PathVariable("group-id") Long groupId,
+                                  @SessionAttribute("groupId") Long groupId,
                                   @RequestParam("inviteToken") String inviteToken,
                                   Model model) {
 
@@ -51,21 +49,10 @@ public class GroupController {
         return "";
     }
 
-    @GetMapping("/admin/group-list")
-    public String getGroupList(@RequestHeader Long userId,
-                               @RequestHeader String userRole,
-                               @RequestParam("page") int page,
-                               @RequestParam("size") int size, Model model) {
-        PageResponse<GroupAdminResponse> adminGroupList = groupClient.getGroupList(userRole, userId, page, size);
 
-        model.addAttribute("groupList", adminGroupList);
-
-        return "";
-    }
-
-    @PutMapping("/{group-id}/invite-token/new")
+    @PutMapping("/invite-token/new")
     public String newInviteToken(@RequestHeader Long userId,
-                                 @PathVariable("group-id") Long groupId) {
+                                 @SessionAttribute("groupId") Long groupId) {
 
         groupClient.newInviteToken(userId, groupId);
 
@@ -74,9 +61,9 @@ public class GroupController {
         return "redirect:/groups/" + groupId + "/my-group";
     }
 
-    @PutMapping("/{group-id}/update")
+    @PutMapping("/update")
     public String updateGroup(@RequestHeader Long userId,
-                              @PathVariable("group-id") Long groupId,
+                              @SessionAttribute("groupId") Long groupId,
                               @RequestBody GroupRequest request) {
 
         groupClient.updateGroup(userId, groupId, request);
@@ -84,9 +71,9 @@ public class GroupController {
         return "redirect:/groups/" + groupId + "/my-group";
     }
 
-    @DeleteMapping("/{group-id}/delete")
+    @DeleteMapping("/delete")
     public String deleteGroup(@RequestHeader Long userId,
-                              @PathVariable("group-id") Long groupId) {
+                              @SessionAttribute("groupId") Long groupId) {
 
         groupClient.deleteGroup(userId, groupId);
 

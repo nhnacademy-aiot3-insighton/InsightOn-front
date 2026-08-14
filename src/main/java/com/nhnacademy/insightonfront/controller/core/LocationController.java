@@ -16,13 +16,13 @@ import java.util.List;
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/groups/{group-id}/location")
+@RequestMapping("/my-group/location")
 public class LocationController {
     private final LocationClient locationClient;
 
     @PostMapping("/create")
     public String createLocation(@RequestHeader Long userId,
-                                 @PathVariable("group-id") Long groupId,
+                                 @SessionAttribute("groupId") Long groupId,
                                  @RequestBody LocationCreateRequest request) {
         locationClient.createLocation(groupId, request, userId);
 
@@ -33,7 +33,7 @@ public class LocationController {
 
     @GetMapping("/list")
     public String getLocationList(@RequestHeader Long userId,
-                                  @PathVariable("group-id") Long groupId, Model model) {
+                                  @SessionAttribute("groupId") Long groupId, Model model) {
         List<LocationListResponse> locationList = locationClient.getLocationList(groupId, userId);
 
         model.addAttribute("locationList", locationList);
@@ -41,10 +41,10 @@ public class LocationController {
         return "";
     }
 
-    @GetMapping("/{location-id}")
+    @GetMapping
     public String getLocation(@RequestHeader Long userId,
-                              @PathVariable("group-id") Long groupId,
-                              @PathVariable("location-id") Long locationId, Model model) {
+                              @SessionAttribute("groupId") Long groupId,
+                              @SessionAttribute("locationId") Long locationId, Model model) {
         LocationDetailResponse location = locationClient.getLocation(groupId, locationId, userId);
 
         model.addAttribute("location", location);
@@ -52,10 +52,10 @@ public class LocationController {
         return "";
     }
 
-    @PutMapping("/{location-id}/toggle-model")
+    @PutMapping("/toggle-model")
     public String toggleAutoControlMode(@RequestHeader Long userId,
-                                        @PathVariable("group-id") Long groupId,
-                                        @PathVariable("location-id") Long locationId) {
+                                        @SessionAttribute("groupId") Long groupId,
+                                        @SessionAttribute("locationId") Long locationId) {
         locationClient.toggleAutoControlMode(groupId, locationId, userId);
 
         log.info("모드가 변경 되었습니다. Group ID: {}, Location ID: {}", groupId, locationId);
@@ -63,10 +63,10 @@ public class LocationController {
         return "redirect:/groups/" + groupId + "/location/" + locationId;
     }
 
-    @PutMapping("/{location-id}/update")
+    @PutMapping("/update")
     public String updateName(@RequestHeader Long userId,
-                             @PathVariable("group-id") Long groupId,
-                             @PathVariable("location-id") Long locationId,
+                             @SessionAttribute("groupId") Long groupId,
+                             @SessionAttribute("locationId") Long locationId,
                              @RequestBody LocationUpdateRequest request) {
 
         locationClient.updateName(groupId, locationId, request, userId);
@@ -76,10 +76,10 @@ public class LocationController {
         return "redirect:/groups/" + groupId + "/location/" + locationId;
     }
 
-    @DeleteMapping("/{location-id}/delete")
+    @DeleteMapping("/delete")
     public String deleteLocation(@RequestHeader Long userId,
-                                 @PathVariable("group-id") Long groupId,
-                                 @PathVariable("location-id") Long locationId) {
+                                 @SessionAttribute("groupId") Long groupId,
+                                 @SessionAttribute("locationId") Long locationId) {
         locationClient.deleteLocation(groupId, locationId, userId);
 
         log.info("location이 삭제되었습니다. Group ID : {}, 삭제된 Location ID : {}", groupId, locationId);
