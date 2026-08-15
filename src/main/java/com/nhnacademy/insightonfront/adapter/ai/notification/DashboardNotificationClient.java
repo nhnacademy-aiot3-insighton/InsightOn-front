@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * 실시간 알림은 브라우저가 Gateway의 SSE 엔드포인트에 직접 EventSource로 붙거나, WebClient 기반
  * 별도 컴포넌트로 처리해야 한다.
  */
-@FeignClient(name = "insighton-gateway", contextId = "dashboardNotificationClient")
+@FeignClient(name = "insighton-gateway", contextId = "dashboardNotificationClient", url = "${service-url.gateway}")
 public interface DashboardNotificationClient {
 
     @GetMapping("/api/v1/dashboard-notifications")

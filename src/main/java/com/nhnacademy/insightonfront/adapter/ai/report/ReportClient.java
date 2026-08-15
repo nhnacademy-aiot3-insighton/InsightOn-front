@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "insighton-gateway", contextId = "reportClient")
+@FeignClient(name = "insighton-gateway", contextId = "reportClient", url = "${service-url.gateway}")
 public interface ReportClient {
 
     @GetMapping("/api/v1/reports")

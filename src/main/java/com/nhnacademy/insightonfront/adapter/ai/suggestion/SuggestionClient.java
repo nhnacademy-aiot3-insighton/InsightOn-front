@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "insighton-gateway", contextId = "suggestionClient")
+@FeignClient(name = "insighton-gateway", contextId = "suggestionClient", url = "${service-url.gateway}")
 public interface SuggestionClient {
 
     @GetMapping("/api/v1/suggestions")

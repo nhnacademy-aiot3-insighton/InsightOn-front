@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
  * <p><b>알려진 제약</b>: 다른 클라이언트들과 동일 — 로그인/세션 붙을 때 X-USER-ID 대신 Authorization
  * 헤더 전달로 바꿔야 실제로 끝까지 동작한다.
  */
-@FeignClient(name = "insighton-gateway", contextId = "groupMemberClient")
+@FeignClient(name = "insighton-gateway", contextId = "groupMemberClient", url = "${service-url.gateway}")
 public interface GroupMemberClient {
 
     @GetMapping("/api/v1/groups/{group-id}/members")
