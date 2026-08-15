@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "insighton-gateway", contextId = "engineAlertClient")
+@FeignClient(name = "insighton-gateway", contextId = "engineAlertClient", url = "${service-url.gateway}")
 public interface EngineAlertClient {
 
     @GetMapping("/api/v1/engine-alerts")
