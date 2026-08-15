@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "insighton-gateway")
+@FeignClient(name = "insighton-gateway", url = "${service-url.gateway}")
 public interface DashboardClient {
 
     /**
