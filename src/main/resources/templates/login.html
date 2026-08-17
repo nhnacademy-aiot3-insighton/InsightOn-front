@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>로그인 - InsightOn</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body>
+
+<div class="auth-split">
+
+    <!-- left: not decoration for its own sake — the same panel language and live-status
+         dots the dashboard itself uses, standing in for the sensors this product watches -->
+    <div class="auth-visual" aria-hidden="true">
+        <a th:href="@{/}" class="auth-visual-brand">
+            <i class="ti ti-chart-line"></i>
+            InsightOn
+        </a>
+        <div class="auth-visual-copy">
+            <p>건물 곳곳의 센서가<br>여기 하나로 모여요.</p>
+            <span>온도, 습도, CO2, 게이트웨이 — 실시간으로.</span>
+        </div>
+
+        <svg class="auth-visual-skyline" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="120" width="50" height="180" fill="currentColor"/>
+            <rect x="70" y="60" width="60" height="240" fill="currentColor"/>
+            <rect x="140" y="20" width="55" height="280" fill="currentColor"/>
+            <rect x="205" y="90" width="70" height="210" fill="currentColor"/>
+            <rect x="285" y="150" width="45" height="150" fill="currentColor"/>
+            <rect x="340" y="180" width="50" height="120" fill="currentColor"/>
+        </svg>
+
+        <span class="sensor-dot" style="top:56%; left:14%;"></span>
+        <span class="sensor-dot success" style="top:44%; left:32%;"></span>
+        <span class="sensor-dot" style="top:36%; left:49%;"></span>
+        <span class="sensor-dot success" style="top:50%; left:66%;"></span>
+        <span class="sensor-dot warning" style="top:61%; left:81%;"></span>
+        <span class="sensor-dot" style="top:57%; left:93%;"></span>
+    </div>
+
+    <!-- right: familiar and fast on purpose — nobody wants novelty when entering a password -->
+    <div class="auth-form-panel">
+        <div class="auth-form-wrap">
+            <a th:href="@{/}" class="brand auth-form-brand">
+                <i class="ti ti-chart-line"></i>
+                InsightOn
+            </a>
+            <h1>로그인</h1>
+            <p class="auth-subtitle">그룹 대시보드를 보려면 먼저 로그인하세요.</p>
+
+            <div class="auth-error" th:if="${loginError}">
+                <i class="ti ti-alert-circle"></i>
+                <span th:text="${loginError}"></span>
+            </div>
+            <div class="auth-error" style="background:var(--success-tint); color:var(--success); border-color:rgba(47,125,92,0.25);" th:if="${param.registered != null}">
+                <i class="ti ti-check"></i>
+                <span>가입이 완료됐어요. 로그인해주세요.</span>
+            </div>
+
+            <div class="oauth-list">
+                <form th:action="@{/login/google}" method="post">
+                    <button type="submit" class="btn-google">
+                        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+                            <path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.92-2.26c-.81.54-1.84.87-3.04.87-2.34 0-4.32-1.58-5.03-3.71H.96v2.33A9 9 0 0 0 9 18z"/>
+                            <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/>
+                            <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+                        </svg>
+                        Google로 로그인
+                    </button>
+                </form>
+                <form th:action="@{/login/github}" method="post">
+                    <button type="submit" class="btn-google">
+                        <svg width="18" height="18" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#181717" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        GitHub로 로그인
+                    </button>
+                </form>
+            </div>
+
+            <div class="auth-divider">또는</div>
+
+            <form th:action="@{/login}" method="post">
+                <div class="settings-field">
+                    <label for="email">이메일</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="you@company.com" required autofocus>
+                </div>
+                <div class="settings-field">
+                    <label for="password">비밀번호</label>
+                    <div class="password-field">
+                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+                        <button type="button" class="password-toggle" aria-label="비밀번호 표시"><i class="ti ti-eye"></i></button>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mb-3">
+                    <button type="button" class="btn-link-quiet" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">비밀번호를 잊으셨나요?</button>
+                </div>
+                <button type="submit" class="btn-landing-primary w-100 justify-content-center">
+                    로그인<i class="ti ti-arrow-right"></i>
+                </button>
+            </form>
+
+            <p class="auth-footer-note">
+                계정이 없으신가요? <a th:href="@{/signup}">회원가입</a>
+            </p>
+            <p class="auth-footer-note">
+                <button type="button" class="btn-link-quiet" data-bs-toggle="modal" data-bs-target="#findIdModal">이메일이 기억나지 않으세요?</button>
+            </p>
+        </div>
+    </div>
+
+</div>
+
+<!-- 이메일 찾기 -->
+<div class="modal fade" id="findIdModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">이메일 찾기</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="auth-subtitle" style="margin-bottom: var(--sp-4);">가입할 때 등록한 이름과 전화번호를 입력하면 이메일을 마스킹해서 보여드려요.</p>
+                <div id="findIdResult"></div>
+                <div class="settings-field">
+                    <label for="findIdName">이름</label>
+                    <input type="text" id="findIdName" class="form-control" placeholder="홍길동">
+                </div>
+                <div class="settings-field">
+                    <label for="findIdPhone">전화번호</label>
+                    <input type="tel" id="findIdPhone" class="form-control" placeholder="010-1234-5678">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" id="btnFindId" class="btn btn-primary">이메일 찾기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 비밀번호 재설정 -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">비밀번호 재설정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="auth-subtitle" style="margin-bottom: var(--sp-4);">가입할 때 쓴 이메일을 입력하면 재설정 링크를 보내드려요.</p>
+                <div id="resetPasswordResult"></div>
+                <div class="settings-field">
+                    <label for="resetEmail">이메일</label>
+                    <input type="email" id="resetEmail" class="form-control" placeholder="you@company.com">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" id="btnResetPassword" class="btn btn-primary">재설정 링크 보내기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/auth.js}"></script>
+</body>
+</html>
