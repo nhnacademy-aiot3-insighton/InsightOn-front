@@ -1,0 +1,2729 @@
+:root {
+  --sidebar-width: 240px;
+  --header-height: 68px;
+
+  --font-sans: "IBM Plex Sans", "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+
+  /* type scale — 3 tiers only */
+  --fs-meta: 0.75rem;   /* 12px: captions, labels, timestamps */
+  --fs-body: 0.8125rem; /* 13px: base body text — dense, not marketing-page roomy */
+  --fs-metric: 1.25rem; /* 20px: large numeric readouts */
+
+  /* icon scale — 2 sizes only */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+
+  /* spacing scale — 4px multiples only */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* one radius, no exceptions — precise, drafted corners, not soft */
+  --radius: 2px;
+
+  /* blueprint paper surfaces — cool, cyanotype-adjacent, never pure white/black */
+  --paper: #eef1f6;
+  --surface: #ffffff;
+  --surface-alt: #f4f7fa;
+  --line: #ccd5e0;
+  --line-strong: #a9b8c9;
+  --ink: #16232f;
+  --ink-soft: #56697d;
+  --ink-faint: #97a5b5;
+
+  /* blueprint ink — the one drafting-pen accent */
+  --primary: #1c4e80;
+  --primary-tint: rgba(28, 78, 128, 0.08);
+
+  /* revision-mark colors — status only, never decorative */
+  --success: #2f7d5c;
+  --success-tint: rgba(47, 125, 92, 0.10);
+  --warning: #b8752a;
+  --warning-tint: rgba(184, 117, 42, 0.10);
+  --danger: #b8392f;
+  --danger-tint: rgba(184, 57, 47, 0.10);
+}
+
+:root {
+  /* keep Bootstrap's own components (dropdown, buttons, form controls) on our surfaces */
+  --bs-border-radius: 2px;
+  --bs-border-radius-sm: 2px;
+  --bs-border-radius-lg: 3px;
+
+  --bs-body-bg: var(--paper);
+  --bs-body-color: var(--ink);
+
+  --bs-primary: #1c4e80;
+  --bs-primary-rgb: 28, 78, 128;
+  --bs-primary-bg-subtle: rgba(28, 78, 128, 0.08);
+  --bs-primary-border-subtle: rgba(28, 78, 128, 0.25);
+
+  --bs-secondary-color: var(--ink-soft);
+  --bs-border-color: var(--line);
+  --bs-border-color-translucent: var(--line);
+
+  --bs-dropdown-bg: var(--surface);
+  --bs-dropdown-link-color: var(--ink);
+  --bs-dropdown-link-hover-color: var(--ink);
+  --bs-dropdown-link-hover-bg: var(--surface-alt);
+  --bs-dropdown-border-color: var(--line);
+  --bs-dropdown-divider-bg: var(--line);
+  --bs-dropdown-header-color: var(--ink-faint);
+
+  --bs-offcanvas-bg: var(--surface);
+  --bs-offcanvas-color: var(--ink);
+
+  --bs-modal-bg: var(--surface);
+  --bs-modal-color: var(--ink);
+  --bs-modal-header-border-color: var(--line);
+  --bs-modal-footer-border-color: var(--line);
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.form-control,
+.form-select {
+  background-color: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--surface);
+  color: var(--ink);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-tint);
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+  background-color: var(--surface-alt);
+  color: var(--ink-soft);
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: var(--ink-soft);
+  --bs-btn-border-color: var(--line);
+  --bs-btn-hover-bg: var(--surface-alt);
+  --bs-btn-hover-border-color: var(--line-strong);
+  --bs-btn-hover-color: var(--ink);
+}
+
+/* Bootstrap bakes $primary into .btn-primary's own --bs-btn-* variables as literal hex at
+   compile time — overriding the shared --bs-primary custom property alone never reaches it,
+   so every "primary" button (settings save, modal apply, etc.) was quietly rendering stock
+   Bootstrap blue instead of the app's ink-blue. Override the button's own variables instead. */
+.btn-primary {
+  --bs-btn-bg: var(--primary);
+  --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--ink);
+  --bs-btn-hover-border-color: var(--ink);
+  --bs-btn-active-bg: var(--ink);
+  --bs-btn-active-border-color: var(--ink);
+  --bs-btn-disabled-bg: var(--line-strong);
+  --bs-btn-disabled-border-color: var(--line-strong);
+  --bs-btn-focus-shadow-rgb: 28, 78, 128;
+}
+
+/* ---------- status dot — reused wherever a live/status state is shown ---------- */
+
+.led-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.led-dot.live {
+  animation: led-pulse 2s ease-in-out infinite;
+}
+
+@keyframes led-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .led-dot.live { animation: none; }
+}
+
+/* ---------- header ---------- */
+
+.app-header {
+  height: var(--header-height);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.app-header .brand {
+  font-weight: 600;
+  font-size: var(--fs-body);
+  color: var(--ink);
+}
+
+.app-header .brand i {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: var(--icon-sm);
+}
+
+.app-header .brand .text-muted-group {
+  font-weight: 400;
+  color: var(--ink-faint);
+  font-size: var(--fs-body);
+}
+
+.app-nav .nav-link {
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+  padding: var(--sp-2) var(--sp-1);
+  margin: 0 var(--sp-3);
+  border-bottom: 2px solid transparent;
+}
+
+.app-nav .nav-link.active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  font-weight: 600;
+}
+
+.header-icon-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: var(--icon-md);
+  padding: var(--sp-2);
+  border-radius: var(--radius);
+  display: inline-flex;
+}
+
+.header-icon-btn:hover {
+  background-color: var(--surface-alt);
+  color: var(--ink);
+}
+
+.app-header .dropdown .btn {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-body);
+  border-radius: var(--radius);
+}
+
+.notif-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--sp-1);
+  border-radius: var(--radius);
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.notif-dropdown {
+  width: 340px;
+  padding: 0;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(22, 35, 47, 0.12);
+}
+
+.notif-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.notif-dropdown-header span {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.notif-list {
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.notif-item {
+  display: block;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item:hover {
+  background: var(--surface-alt);
+}
+
+.notif-item.is-read {
+  background: var(--surface-alt);
+}
+
+.notif-item-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.notif-item.is-read .notif-item-title {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.notif-item-title::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  flex-shrink: 0;
+}
+
+.notif-item.severity-danger .notif-item-title::before  { background: var(--danger); }
+.notif-item.severity-warning .notif-item-title::before { background: var(--warning); }
+.notif-item.severity-success .notif-item-title::before { background: var(--success); }
+
+.notif-item-meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  margin-top: var(--sp-1);
+  padding-left: var(--sp-4);
+}
+
+.notif-dropdown-footer {
+  padding: var(--sp-3) var(--sp-4);
+  text-align: center;
+  border-top: 1px solid var(--line);
+}
+
+.notif-dropdown-footer a {
+  font-size: var(--fs-body);
+  color: var(--primary);
+  text-decoration: none;
+}
+
+/* ---------- sidebar ---------- */
+
+.app-sidebar {
+  width: var(--sidebar-width);
+  min-height: calc(100vh - var(--header-height));
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: var(--sp-4);
+}
+
+.app-sidebar .sidebar-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0 var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.app-sidebar .location-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  max-height: 50vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.app-sidebar .location-link {
+  display: block;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid transparent;
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.app-sidebar .location-link:hover {
+  color: var(--ink);
+  background: var(--surface-alt);
+  border-left-color: var(--line-strong);
+}
+
+.app-sidebar .location-link.active {
+  border-left-color: var(--ink);
+  background: var(--surface-alt);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.app-sidebar .add-location-link {
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  margin-top: var(--sp-2);
+  border-top: 1px solid var(--line);
+}
+
+.app-sidebar .add-location-link:hover {
+  color: var(--ink);
+}
+
+/* ---------- main ---------- */
+
+.app-main {
+  flex: 1;
+  padding: var(--sp-4);
+  background-color: var(--paper);
+  min-height: calc(100vh - var(--header-height));
+}
+
+/* ---------- section headers ---------- */
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  margin-bottom: var(--sp-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+
+.section-header .section-label {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.btn-add-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+
+.btn-add-widget:hover {
+  background: var(--surface-alt);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.btn-add-widget i {
+  font-size: var(--icon-sm);
+}
+
+.btn-add-widget.is-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* ---------- panels ---------- */
+
+.widget-card,
+.shortcut-card,
+.chart-widget-card,
+.location-summary-list {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---------- widget-card ---------- */
+
+.widget-card {
+  padding: var(--sp-3);
+  height: 100%;
+  border-left: 2px solid var(--line);
+}
+
+.widget-card.warning { border-left-color: var(--warning); }
+.widget-card.danger  { border-left-color: var(--danger); }
+.widget-card.success { border-left-color: var(--success); }
+
+.widget-card .widget-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-sm);
+  font-size: var(--icon-sm);
+  color: var(--ink-faint);
+  margin-right: var(--sp-2);
+  vertical-align: middle;
+}
+
+.widget-card.warning .widget-icon { color: var(--warning); }
+.widget-card.danger .widget-icon  { color: var(--danger); }
+.widget-card.success .widget-icon { color: var(--success); }
+
+.widget-card .widget-label {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.widget-card .widget-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-metric);
+  font-weight: 600;
+  margin-top: var(--sp-2);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-card .widget-sub {
+  color: var(--ink-faint);
+  font-size: var(--fs-meta);
+  margin-top: var(--sp-1);
+}
+
+.mini-bar {
+  height: 4px;
+  background: var(--paper);
+  margin-top: var(--sp-2);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.mini-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.widget-card.warning .mini-bar > span { background: var(--warning); }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius);
+  margin-top: var(--sp-2);
+  border: 1px solid transparent;
+}
+
+.status-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-badge.danger {
+  background: var(--danger-tint);
+  color: var(--danger);
+  border-color: rgba(184, 57, 47, 0.25);
+}
+
+.status-badge.success {
+  background: var(--success-tint);
+  color: var(--success);
+  border-color: rgba(47, 125, 92, 0.25);
+}
+
+.status-badge.warning {
+  background: var(--warning-tint);
+  color: var(--warning);
+  border-color: rgba(184, 117, 42, 0.25);
+}
+
+.status-badge.success::before {
+  animation: led-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-badge.success::before { animation: none; }
+}
+
+/* ---------- shortcut-card ---------- */
+
+.shortcut-card {
+  padding: var(--sp-3);
+  text-align: center;
+  color: var(--ink);
+  text-decoration: none;
+  display: block;
+  height: 100%;
+}
+
+.shortcut-card:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-alt);
+}
+
+.shortcut-card .shortcut-icon {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  margin: 0 auto;
+}
+
+.shortcut-card i {
+  font-size: var(--icon-sm);
+}
+
+.shortcut-card .shortcut-label {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  margin-top: var(--sp-2);
+  color: var(--ink);
+}
+
+.shortcut-card .shortcut-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  margin-top: var(--sp-1);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.shortcut-card .shortcut-value.danger {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ---------- chart-widget-card ---------- */
+
+.chart-widget-card {
+  padding: var(--sp-3);
+}
+
+.chart-widget-card .widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+
+.chart-widget-card .widget-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chart-widget-card .widget-label i {
+  font-size: var(--icon-sm);
+}
+
+.chart-widget-card .live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--success);
+  background: var(--success-tint);
+  border: 1px solid rgba(47, 125, 92, 0.25);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius);
+}
+
+.chart-widget-card .live-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: led-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-widget-card .live-badge::before { animation: none; }
+}
+
+/* ---------- location summary list ---------- */
+
+.location-summary-list {
+  overflow: hidden;
+}
+
+.location-summary-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: var(--sp-2) var(--sp-3);
+  text-decoration: none;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.location-summary-row:last-child {
+  border-bottom: none;
+}
+
+.location-summary-row:hover {
+  background: var(--surface-alt);
+}
+
+.location-summary-name {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-weight: 500;
+  flex: 1;
+}
+
+.location-summary-name .location-avatar {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--surface-alt);
+  flex-shrink: 0;
+}
+
+.location-summary-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  min-width: 84px;
+  font-variant-numeric: tabular-nums;
+}
+
+.location-summary-stat i {
+  font-size: var(--icon-sm);
+}
+
+.location-summary-stat.danger { color: var(--danger); }
+.location-summary-stat.success { color: var(--success); }
+
+.location-summary-row > i:last-child {
+  color: var(--ink-faint);
+  font-size: var(--icon-sm);
+}
+
+/* ---------- AI chat ---------- */
+
+.chat-fab {
+  position: fixed;
+  right: var(--sp-6);
+  bottom: var(--sp-6);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: var(--icon-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(22, 35, 47, 0.12);
+  z-index: 1045;
+}
+
+.chat-fab:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.chat-offcanvas {
+  width: 380px;
+  max-width: 92vw;
+}
+
+.chat-offcanvas .offcanvas-header {
+  border-bottom: 1px solid var(--line);
+}
+
+.chat-offcanvas .offcanvas-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.chat-offcanvas .offcanvas-title i {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: var(--icon-sm);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  background: var(--paper);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.chat-bubble {
+  max-width: 82%;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius);
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.chat-bubble.bot {
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.chat-bubble.user {
+  align-self: flex-end;
+  background: var(--primary);
+  color: #fff;
+}
+
+.chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.chat-input-row .form-control {
+  border-radius: var(--radius);
+  border-color: var(--line);
+  font-size: var(--fs-body);
+}
+
+.chat-send-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--icon-sm);
+}
+
+.chat-send-btn:hover {
+  background: var(--ink);
+}
+
+/* ---------- settings form ---------- */
+
+.settings-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-6);
+  max-width: 560px;
+}
+
+.settings-field {
+  margin-bottom: var(--sp-4);
+}
+
+.settings-field label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.settings-field .form-control {
+  border-color: var(--line);
+  font-size: var(--fs-body);
+}
+
+.settings-field .form-control:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-tint);
+}
+
+.settings-field .form-text {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  margin-top: var(--sp-1);
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+}
+
+/* =====================================================================
+   Widget dashboard — configurable InfluxDB widget grid, powered by
+   GridStack.js (https://gridstack.github.io/gridstack.js/). No separate
+   "layout edit" mode: every widget is directly draggable, resizable, and
+   configurable from the normal dashboard screen. GridStack's own engine
+   owns collision handling — resizing or dragging a widget into a
+   neighbor pushes that neighbor out of the way automatically, cascading
+   through however many widgets are affected.
+   ===================================================================== */
+
+.widget-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.widget-toolbar .btn-add-widget-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.widget-toolbar .btn-add-widget-primary:hover {
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+  color: #fff;
+}
+
+.grid-stack {
+  border-radius: var(--radius);
+}
+
+/* the drop-target ghost GridStack shows mid-drag/resize — restyled to match the palette */
+.grid-stack-placeholder > .placeholder-content {
+  background: var(--surface-alt);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.grid-stack-item > .grid-stack-item-content.grid-widget {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+.grid-widget:hover,
+.grid-widget:focus-within {
+  border-color: var(--line-strong);
+}
+
+.grid-stack-item.ui-draggable-dragging .grid-widget,
+.grid-stack-item.ui-resizable-resizing .grid-widget {
+  box-shadow: 0 8px 20px rgba(22, 35, 47, 0.18);
+}
+
+.grid-stack-item .ui-resizable-handle {
+  z-index: 2;
+}
+
+.grid-widget-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.grid-widget-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  min-width: 0;
+}
+
+.grid-widget-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-widget-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+
+/* opacity, not display:none — a hidden-by-display element drops out of the
+   tab order, so a keyboard user could never Tab into it to trigger :focus-within */
+.grid-widget:hover .grid-widget-controls,
+.grid-widget:focus-within .grid-widget-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.grid-widget-controls button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.grid-widget-controls button:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.grid-widget-controls button.remove:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.grid-widget-controls .drag-handle {
+  cursor: grab;
+}
+
+/* dimension tag — the blueprint signature: literal grid footprint, not decoration */
+.grid-widget-dim {
+  display: none;
+  position: absolute;
+  bottom: var(--sp-1);
+  right: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+
+.grid-widget:hover .grid-widget-dim,
+.grid-widget:focus-within .grid-widget-dim {
+  display: block;
+}
+
+.grid-widget-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-metric);
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.grid-widget-unit {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  margin-left: var(--sp-1);
+}
+
+.grid-widget-sparkline {
+  flex: 1;
+  min-height: 0;
+  margin-top: var(--sp-2);
+}
+
+.grid-widget-chart {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.grid-widget-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: var(--fs-meta);
+}
+
+/* ---------- widget config modal ---------- */
+
+.widget-config-field {
+  margin-bottom: var(--sp-4);
+}
+
+.widget-config-field label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.metric-check-list {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.metric-check-list .form-check {
+  margin: 0;
+}
+
+.metric-check-empty {
+  color: var(--ink-faint);
+  font-size: var(--fs-meta);
+}
+
+.type-choice-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+
+.type-choice {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-1);
+  text-align: center;
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.type-choice input {
+  display: none;
+}
+
+.type-choice i {
+  display: block;
+  font-size: var(--icon-md);
+  margin-bottom: var(--sp-1);
+}
+
+.type-choice:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--surface-alt);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* =====================================================================
+   Landing page — deliberately roomier than the dashboard. The dashboard
+   is a dense instrument; the landing page is what sells it, so it gets
+   more air, bigger type, and its hero is a real (miniaturized, inert)
+   reproduction of the actual product UI, not a generic illustration.
+   ===================================================================== */
+
+.landing-header {
+  height: var(--header-height);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-6);
+  gap: var(--sp-6);
+}
+
+.landing-header .brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.landing-header .brand i {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: var(--icon-sm);
+}
+
+.landing-nav {
+  display: flex;
+  gap: var(--sp-6);
+  flex: 1;
+}
+
+.landing-nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: var(--fs-body);
+}
+
+.landing-nav a:hover {
+  color: var(--ink);
+}
+
+.landing-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.landing-section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--sp-8) var(--sp-6);
+}
+
+.landing-hero {
+  padding-top: calc(var(--sp-8) * 1.5);
+  padding-bottom: calc(var(--sp-8) * 1.5);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-8);
+  align-items: center;
+}
+
+.landing-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--sp-4);
+}
+
+.landing-hero h1 {
+  font-size: 2.75rem;
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--sp-4);
+}
+
+.landing-hero h1 em {
+  font-style: normal;
+  color: var(--primary);
+}
+
+.landing-hero p {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 46ch;
+  margin-bottom: var(--sp-6);
+}
+
+.landing-hero-actions {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.btn-landing-primary,
+.btn-landing-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-6);
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: var(--fs-body);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.btn-landing-primary {
+  background: var(--ink);
+  color: #fff;
+}
+
+.btn-landing-primary:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-landing-primary:disabled {
+  background: var(--line-strong);
+  cursor: not-allowed;
+}
+
+.btn-landing-secondary {
+  border-color: var(--line);
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.btn-landing-secondary:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-alt);
+}
+
+/* the hero mockup: a real, inert miniature of the actual dashboard UI */
+.hero-mockup {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: var(--sp-4);
+  box-shadow: 0 24px 60px -20px rgba(22, 35, 47, 0.25);
+  pointer-events: none;
+  user-select: none;
+}
+
+.hero-mockup-titlebar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.hero-mockup-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.hero-mockup-path {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-left: var(--sp-2);
+}
+
+.landing-section-head {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto var(--sp-8);
+}
+
+.landing-section-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--sp-2);
+}
+
+.landing-section-head h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+
+.landing-section-head p {
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
+}
+
+.feature-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-6);
+  background: var(--surface);
+}
+
+.feature-card .feature-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  background: var(--primary-tint);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: var(--sp-4);
+}
+
+.feature-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+
+.feature-card p {
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.landing-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-6);
+  counter-reset: landing-step;
+}
+
+.landing-step {
+  position: relative;
+  padding-top: var(--sp-8);
+}
+
+.landing-step::before {
+  counter-increment: landing-step;
+  content: counter(landing-step, decimal-leading-zero);
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  border-top: 2px solid var(--primary);
+  padding-top: var(--sp-2);
+  width: 48px;
+}
+
+.landing-step h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+
+.landing-step p {
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.landing-cta {
+  background: var(--ink);
+  border-radius: 8px;
+  padding: var(--sp-8);
+  text-align: center;
+  color: #fff;
+}
+
+.landing-cta h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: var(--sp-3);
+}
+
+.landing-cta p {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: var(--sp-6);
+  font-size: 1rem;
+}
+
+.landing-cta .btn-landing-primary {
+  background: var(--primary);
+}
+
+.landing-cta .btn-landing-primary:hover {
+  background: #2a5f96;
+}
+
+.landing-footer {
+  border-top: 1px solid var(--line);
+  padding: var(--sp-6);
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: var(--fs-meta);
+}
+
+@media (max-width: 900px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+  }
+  .feature-grid,
+  .landing-steps {
+    grid-template-columns: 1fr;
+  }
+  .landing-nav {
+    display: none;
+  }
+}
+
+/* =====================================================================
+   Auth shell — login and the pre-group "apply for a group" flow. Both
+   sit outside any group context, so they get the landing header (brand
+   mark only, no group switcher) and a single centered card rather than
+   the dashboard's sidebar shell.
+   ===================================================================== */
+
+.auth-main {
+  min-height: calc(100vh - var(--header-height));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: var(--sp-8);
+}
+
+.auth-card-wide {
+  max-width: 560px;
+}
+
+.auth-card h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+
+.auth-subtitle {
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+  margin-bottom: var(--sp-6);
+  line-height: 1.5;
+}
+
+.auth-error {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--danger-tint);
+  color: var(--danger);
+  border: 1px solid rgba(184, 57, 47, 0.25);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  font-size: var(--fs-body);
+  margin-bottom: var(--sp-4);
+}
+
+.auth-footer-note {
+  text-align: center;
+  margin-top: var(--sp-6);
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+}
+
+.auth-footer-note a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-footer-note a:hover {
+  color: var(--primary);
+}
+
+/* a <button> made to read as an inline text link — used for modal triggers so they behave
+   like the plain links they replaced (no full page nav, just opens the find-id/reset modal) */
+.btn-link-quiet {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  text-decoration: underline;
+}
+
+.btn-link-quiet:hover {
+  color: var(--ink);
+}
+
+.auth-footer-note .btn-link-quiet {
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.auth-footer-note .btn-link-quiet:hover {
+  color: var(--primary);
+}
+
+.registration-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-6);
+}
+
+.registration-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-body);
+}
+
+.registration-detail-row:last-of-type {
+  border-bottom: none;
+}
+
+.registration-detail-row dt {
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.registration-detail-row dd {
+  color: var(--ink);
+  margin: 0;
+  text-align: right;
+}
+
+/* =====================================================================
+   Login — split screen. The right side is the form, familiar and fast
+   on purpose (nobody wants novelty when entering a password). The left
+   side is the one place this page gets to be a little bit product: a
+   skyline built from the same panel language as the dashboard, with the
+   dashboard's own live-status dots (not stock art) standing in for the
+   sensors this product actually watches.
+   ===================================================================== */
+
+.auth-split {
+  min-height: 100vh;
+  display: flex;
+}
+
+.auth-visual {
+  flex: 1 1 46%;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #16232f 0%, #0b131c 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-8);
+}
+
+.auth-visual-skyline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: auto;
+  color: #1c2b3d;
+}
+
+.auth-visual-brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-visual-brand i {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: var(--icon-sm);
+}
+
+.auth-visual-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 360px;
+}
+
+.auth-visual-copy p {
+  color: #fff;
+  font-size: 1.375rem;
+  line-height: 1.4;
+  font-weight: 600;
+  margin-bottom: var(--sp-2);
+}
+
+.auth-visual-copy span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: var(--fs-body);
+}
+
+.sensor-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px rgba(52, 150, 201, 0.15), 0 0 12px rgba(93, 188, 230, 0.8);
+  animation: led-pulse 2.4s ease-in-out infinite;
+}
+
+.sensor-dot.success { background: var(--success); box-shadow: 0 0 0 4px rgba(47, 125, 92, 0.15), 0 0 12px rgba(76, 189, 137, 0.8); }
+.sensor-dot.warning { background: var(--warning); box-shadow: 0 0 0 4px rgba(184, 117, 42, 0.15), 0 0 12px rgba(224, 155, 76, 0.8); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sensor-dot { animation: none; }
+}
+
+.auth-form-panel {
+  flex: 1 1 54%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  padding: var(--sp-6);
+}
+
+.auth-form-wrap {
+  width: 100%;
+  max-width: 360px;
+}
+
+.oauth-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.btn-google:hover {
+  background: var(--surface-alt);
+  border-color: var(--line-strong);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: var(--sp-6) 0;
+  color: var(--ink-faint);
+  font-size: var(--fs-meta);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* only shown when .auth-visual (which carries the brand mark on desktop) is hidden */
+.auth-form-brand {
+  display: none;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  margin-bottom: var(--sp-6);
+}
+
+.auth-form-brand i {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: var(--icon-sm);
+}
+
+@media (max-width: 900px) {
+  .auth-visual {
+    display: none;
+  }
+  .auth-form-panel {
+    flex: 1 1 100%;
+  }
+  .auth-form-brand {
+    display: flex;
+  }
+}
+
+/* =====================================================================
+   Auth utility widgets — password visibility, email verification, and
+   the mypage settings list. Reuses settings-card/settings-field/
+   status-badge from the rest of the app rather than inventing new
+   components, so an account page never feels like a different product.
+   ===================================================================== */
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 40px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: var(--sp-2);
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle:hover {
+  color: var(--ink);
+  background: var(--surface-alt);
+}
+
+.verify-row {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.verify-row input {
+  flex: 1;
+}
+
+.verify-row .btn-outline-secondary {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.verify-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  margin-top: var(--sp-2);
+  min-height: 1.2em;
+}
+
+.verify-status.success { color: var(--success); }
+.verify-status.danger { color: var(--danger); }
+.verify-status.warning { color: var(--warning); }
+
+.field-hint {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  margin-top: var(--sp-1);
+}
+
+.field-hint.danger { color: var(--danger); }
+.field-hint.success { color: var(--success); }
+
+/* find-id result: the one thing that page exists to show */
+.masked-email-result {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  background: var(--success-tint);
+  border: 1px solid rgba(47, 125, 92, 0.25);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.masked-email-result i {
+  color: var(--success);
+  font-size: var(--icon-md);
+  flex-shrink: 0;
+}
+
+.masked-email-result .num {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* mypage: a plain document column, not a dashboard — deliberately calmer */
+.account-shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--sp-8) var(--sp-6);
+}
+
+.account-header {
+  margin-bottom: var(--sp-6);
+}
+
+.account-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--sp-1);
+}
+
+.account-header p {
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+}
+
+.account-section {
+  margin-bottom: var(--sp-6);
+}
+
+.account-section-title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--sp-3);
+}
+
+.social-account-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.social-account-row:last-child {
+  border-bottom: none;
+}
+
+.social-account-row .social-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: var(--icon-sm);
+}
+
+.social-account-row .social-info {
+  flex: 1;
+}
+
+.social-account-row .social-name {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.social-account-row .social-meta {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+}
+
+/* =====================================================================
+   Flow builder — "언제 이 조건이면 → 그러면 이 동작을" read like a sentence,
+   not a canvas. No drag/connect surface: rows and pickers only, so someone
+   who's never seen a rule engine can still build one.
+   ===================================================================== */
+
+.status-badge.neutral {
+  background: var(--surface-alt);
+  color: var(--ink-faint);
+  border-color: var(--line);
+}
+
+.flow-summary-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink-soft);
+  font-size: var(--fs-meta);
+  font-family: var(--font-mono);
+}
+
+.flow-summary-line i {
+  font-size: var(--icon-sm);
+  color: var(--ink-faint);
+}
+
+.flow-step {
+  margin-bottom: var(--sp-6);
+}
+
+.flow-step-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--sp-1);
+}
+
+.flow-step-hint {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  margin-bottom: var(--sp-3);
+}
+
+.condition-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.condition-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.7fr 1fr auto;
+  gap: var(--sp-2);
+  align-items: center;
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-2);
+}
+
+.condition-row select,
+.condition-row input {
+  font-size: var(--fs-body);
+}
+
+.condition-and-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--primary);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.condition-and-label::before,
+.condition-and-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.btn-remove-condition {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-faint);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-remove-condition:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.ttl-field {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 260px;
+}
+
+.ttl-field input {
+  flex: 1;
+}
+
+.action-subfields {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+}
+
+.ai-action-note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  background: var(--primary-tint);
+  border: 1px solid rgba(28, 78, 128, 0.2);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+}
+
+.ai-action-note i {
+  color: var(--primary);
+  font-size: var(--icon-md);
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .condition-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================================================================
+   액추에이터 조작 패널 — 타입별로 켤 수 있는 명령이 고정돼 있어(ActuatorCommandPreset),
+   토글/칩선택/스테퍼 세 가지 위젯만으로 모든 조작을 표현한다.
+   ===================================================================== */
+
+.actuator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-4);
+}
+
+.actuator-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+}
+
+.actuator-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.actuator-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-alt);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  font-size: var(--icon-md);
+}
+
+.actuator-name {
+  font-weight: 600;
+}
+
+.actuator-meta {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+
+.actuator-command-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--line);
+}
+
+.actuator-command-row:first-of-type {
+  border-top: none;
+}
+
+.actuator-command-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch .toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--line-strong);
+  border-radius: 11px;
+  transition: background 0.15s;
+}
+
+.toggle-switch .toggle-track::before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+
+.toggle-switch input:checked + .toggle-track {
+  background: var(--success);
+}
+
+.toggle-switch input:checked + .toggle-track::before {
+  transform: translateX(18px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle-switch .toggle-track,
+  .toggle-switch .toggle-track::before {
+    transition: none;
+  }
+}
+
+.chip-select {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.chip-option {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.chip-option:hover {
+  border-color: var(--line-strong);
+}
+
+.chip-option.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.temp-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.temp-stepper button {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  line-height: 1;
+}
+
+.temp-stepper button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.temp-stepper .temp-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  min-width: 32px;
+  text-align: center;
+}
+
+/* =====================================================================
+   리포트
+   ===================================================================== */
+
+.filter-bar {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.filter-bar .form-select {
+  max-width: 200px;
+}
+
+.report-content {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+
+/* =====================================================================
+   게이트웨이 관리 — 편집 폼 하나만 두면 넓은 화면에서 휑해서, 오른쪽에
+   읽기 전용 상태 요약 패널을 나란히 둬 화면을 채운다.
+   ===================================================================== */
+
+.gateway-layout {
+  display: flex;
+  gap: var(--sp-6);
+  align-items: flex-start;
+}
+
+.gateway-form-card {
+  flex: 1;
+  max-width: none;
+}
+
+.gateway-status-panel {
+  flex: 0 0 300px;
+  flex-direction: column;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-6);
+  text-align: center;
+}
+
+.gateway-status-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary-tint);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: var(--sp-3);
+}
+
+.gateway-status-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+
+.gateway-status-meta {
+  width: 100%;
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+
+.gateway-status-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+}
+
+.gateway-status-meta-value {
+  font-family: var(--font-mono);
+  color: var(--ink);
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .gateway-layout {
+    flex-direction: column;
+  }
+  .gateway-status-panel {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+
+/* =====================================================================
+   목록 + 상세를 한 화면에 — 왼쪽에서 행을 클릭하면 오른쪽에 상세가 뜬다
+   (리포트/제안/엔진알람 공용).
+   ===================================================================== */
+
+.split-view {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: flex-start;
+}
+
+.split-list {
+  flex: 0 0 380px;
+  max-width: 380px;
+}
+
+/* 목록 폭이 380px로 좁아서 위치/날짜를 가로로 배치하는 .location-summary-row 대신
+   제목 한 줄 + 메타 한 줄로 쌓는 전용 행 스타일을 쓴다. */
+.split-row {
+  display: block;
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  text-decoration: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.split-row:last-child {
+  border-bottom: none;
+}
+
+.split-row:hover {
+  background: var(--surface-alt);
+}
+
+.split-row.active {
+  background: var(--surface-alt);
+  border-left-color: var(--primary);
+}
+
+.split-row-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 500;
+  margin-bottom: var(--sp-1);
+}
+
+.split-row-title span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.split-row-meta {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+
+.split-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.split-detail-empty {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-8);
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: var(--fs-meta);
+}
+
+@media (max-width: 900px) {
+  .split-view {
+    flex-direction: column;
+  }
+  .split-list {
+    flex-basis: auto;
+    max-width: none;
+    width: 100%;
+  }
+}
+
+/* =====================================================================
+   날씨 & 대기질 패널 — 그룹 메인의 히어로 섹션. API가 주는 필드를 최대한 보여준다.
+   ===================================================================== */
+
+.weather-panel {
+  display: flex;
+  gap: var(--sp-6);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-6);
+  margin-bottom: var(--sp-4);
+}
+
+.weather-half,
+.air-quality-half {
+  flex: 1;
+  min-width: 0;
+}
+
+.air-quality-half {
+  border-left: 1px solid var(--line);
+  padding-left: var(--sp-6);
+}
+
+.weather-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+.weather-hero-icon {
+  font-size: 2.75rem;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.weather-hero-temp {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.weather-hero-sky {
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  margin-top: var(--sp-1);
+}
+
+.weather-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--sp-4);
+}
+
+.weather-meta-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--line);
+}
+
+.weather-meta-item:nth-child(1),
+.weather-meta-item:nth-child(2) {
+  border-top: none;
+}
+
+.weather-meta-value {
+  font-family: var(--font-mono);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.aq-section-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--sp-3);
+}
+
+.aq-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--line);
+}
+
+.aq-metric:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.aq-metric-name {
+  font-weight: 600;
+  color: var(--ink);
+  display: block;
+}
+
+.aq-metric-caption {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  display: block;
+  margin-top: var(--sp-1);
+}
+
+.aq-metric-value {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-right: var(--sp-2);
+}
+
+@media (max-width: 900px) {
+  .weather-panel {
+    flex-direction: column;
+  }
+  .air-quality-half {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: var(--sp-4);
+  }
+}
+
+/* =====================================================================
+   위치 대시보드 — 위젯이 많아지면 "바로가기"가 한참 아래로 밀려서, 위젯 영역만
+   따로 스크롤되게 하고 바로가기는 화면 하단에 항상 보이게 고정한다.
+   ===================================================================== */
+
+.app-main.dashboard-shell {
+  height: calc(100vh - var(--header-height));
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--sp-1);
+}
+
+.dashboard-shortcuts {
+  flex-shrink: 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line);
+}
