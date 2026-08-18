@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="sidebar" class="app-sidebar d-flex flex-column">
+    <p class="sidebar-label">위치</p>
+    <div class="location-links">
+        <a th:href="@{/my-group/locations/1}" class="location-link">1층 로비</a>
+        <a th:href="@{/my-group/locations/2}" class="location-link">2층 사무실</a>
+        <a th:href="@{/my-group/locations/3}" class="location-link">3층 회의실</a>
+    </div>
+    <a th:href="@{/my-group/locations}" class="add-location-link">
+        <i class="ti ti-plus"></i>위치 추가
+    </a>
+</div>
+
+<div th:fragment="manageSidebar(activeSection)" class="app-sidebar d-flex flex-column">
+    <p class="sidebar-label">그룹 관리</p>
+    <div class="location-links">
+        <a th:href="@{/my-group/manage}" class="location-link" th:classappend="${activeSection == 'info'} ? 'active'">그룹 정보</a>
+        <a th:href="@{/my-group/manage/members}" class="location-link" th:classappend="${activeSection == 'members'} ? 'active'">멤버 관리</a>
+        <a th:href="@{/manage/gateway}" class="location-link" th:classappend="${activeSection == 'gateway'} ? 'active'">게이트웨이 관리</a>
+    </div>
+</div>
+
+<header th:fragment="groupHeader" class="app-header d-flex align-items-center px-4 gap-4">
+    <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
+        <i class="ti ti-chart-line"></i>
+        InsightOn <span class="text-muted-group">· 우리회사</span>
+    </a>
+    <nav class="app-nav d-flex gap-2">
+        <a th:href="@{/reports}" class="nav-link">리포트</a>
+        <a th:href="@{/engine-alerts}" class="nav-link">엔진알람</a>
+        <a th:href="@{/suggestions}" class="nav-link">제안</a>
+        <a th:href="@{/sensors}" class="nav-link">센서</a>
+        <a th:href="@{/flows}" class="nav-link">Flow</a>
+    </nav>
+    <div class="flex-grow-1"></div>
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            그룹 관리
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" th:href="@{/my-group/manage}">그룹 설정</a></li>
+            <li><a class="dropdown-item" th:href="@{/my-group/manage/members}">멤버 관리</a></li>
+            <li><a class="dropdown-item" th:href="@{/manage/gateway}">게이트웨이 관리</a></li>
+        </ul>
+    </div>
+    <div class="dropdown">
+        <button type="button" class="header-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="ti ti-bell"></i>
+            <span class="notif-count">5</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end notif-dropdown">
+            <div class="notif-dropdown-header">
+                알림
+                <span>5건 안 읽음</span>
+            </div>
+            <div class="notif-list">
+                <a href="#" class="notif-item severity-danger">
+                    <div class="notif-item-title">2층 사무실 · 엔진 알람 CRITICAL</div>
+                    <div class="notif-item-meta">2분 전</div>
+                </a>
+                <a href="#" class="notif-item severity-warning">
+                    <div class="notif-item-title">3층 회의실 · 온도 임계치 초과</div>
+                    <div class="notif-item-meta">10분 전</div>
+                </a>
+                <a href="#" class="notif-item severity-warning">
+                    <div class="notif-item-title">2층 사무실 · CO2 농도 상승</div>
+                    <div class="notif-item-meta">32분 전</div>
+                </a>
+                <a href="#" class="notif-item severity-success is-read">
+                    <div class="notif-item-title">1층 로비 · 센서 오프라인 복구</div>
+                    <div class="notif-item-meta">1시간 전</div>
+                </a>
+            </div>
+            <div class="notif-dropdown-footer">
+                <a th:href="@{/my-group/notifications}">전체 알림 보기</a>
+            </div>
+        </div>
+    </div>
+    <div class="dropdown">
+        <button type="button" class="rounded-circle bg-primary-subtle border-0 p-0" style="width:32px;height:32px;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="내 계정"></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" th:href="@{/mypage}">내 정보</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form th:action="@{/logout}" method="post" class="m-0">
+                    <button type="submit" class="dropdown-item">로그아웃</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</header>
+
+<header th:fragment="locationHeader(locationName, locationId)" class="app-header d-flex align-items-center px-4 gap-4">
+    <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
+        <i class="ti ti-chart-line"></i>
+        우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
+        <span th:text="${locationName}">위치명</span>
+    </a>
+    <nav class="app-nav d-flex gap-2">
+        <a th:href="@{/reports(locationId=${locationId})}" class="nav-link active">리포트</a>
+        <a th:href="@{/engine-alerts(locationId=${locationId})}" class="nav-link">엔진알람</a>
+        <a th:href="@{/suggestions(locationId=${locationId})}" class="nav-link">제안</a>
+        <a th:href="@{/sensors(locationId=${locationId})}" class="nav-link">센서</a>
+        <a th:href="@{/locations/{locationId}/actuators(locationId=${locationId})}" class="nav-link">액추에이터</a>
+        <a th:href="@{/flows}" class="nav-link">Flow</a>
+    </nav>
+    <div class="flex-grow-1"></div>
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            위치 관리
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#">이름 수정</a></li>
+            <li><a class="dropdown-item" href="#">자동제어 모드 토글</a></li>
+            <li><a class="dropdown-item text-danger" href="#">위치 삭제</a></li>
+        </ul>
+    </div>
+    <div class="dropdown">
+        <button type="button" class="header-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="ti ti-bell"></i>
+            <span class="notif-count">5</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end notif-dropdown">
+            <div class="notif-dropdown-header">
+                알림
+                <span>5건 안 읽음</span>
+            </div>
+            <div class="notif-list">
+                <a href="#" class="notif-item severity-danger">
+                    <div class="notif-item-title">2층 사무실 · 엔진 알람 CRITICAL</div>
+                    <div class="notif-item-meta">2분 전</div>
+                </a>
+                <a href="#" class="notif-item severity-warning">
+                    <div class="notif-item-title">3층 회의실 · 온도 임계치 초과</div>
+                    <div class="notif-item-meta">10분 전</div>
+                </a>
+                <a href="#" class="notif-item severity-warning">
+                    <div class="notif-item-title">2층 사무실 · CO2 농도 상승</div>
+                    <div class="notif-item-meta">32분 전</div>
+                </a>
+                <a href="#" class="notif-item severity-success is-read">
+                    <div class="notif-item-title">1층 로비 · 센서 오프라인 복구</div>
+                    <div class="notif-item-meta">1시간 전</div>
+                </a>
+            </div>
+            <div class="notif-dropdown-footer">
+                <a th:href="@{/my-group/notifications}">전체 알림 보기</a>
+            </div>
+        </div>
+    </div>
+    <div class="dropdown">
+        <button type="button" class="rounded-circle bg-primary-subtle border-0 p-0" style="width:32px;height:32px;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="내 계정"></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" th:href="@{/mypage}">내 정보</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form th:action="@{/logout}" method="post" class="m-0">
+                    <button type="submit" class="dropdown-item">로그아웃</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</header>
+
+<div th:fragment="chatWidget">
+    <button type="button" class="chat-fab" data-bs-toggle="offcanvas" data-bs-target="#aiChatPanel" aria-controls="aiChatPanel">
+        <i class="ti ti-message-chatbot"></i>
+    </button>
+
+    <div class="offcanvas offcanvas-end chat-offcanvas" tabindex="-1" id="aiChatPanel" aria-labelledby="aiChatPanelLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="aiChatPanelLabel"><i class="ti ti-message-chatbot"></i>AI 어시스턴트</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-0">
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-bubble bot">안녕하세요! InsightOn AI 어시스턴트예요. 무엇을 도와드릴까요?</div>
+            </div>
+            <form class="chat-input-row" id="chatForm">
+                <input type="text" class="form-control" id="chatInput" placeholder="메시지를 입력하세요" autocomplete="off">
+                <button type="submit" class="chat-send-btn"><i class="ti ti-send"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
