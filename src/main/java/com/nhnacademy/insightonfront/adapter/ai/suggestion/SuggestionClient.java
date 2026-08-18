@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -24,4 +25,12 @@ public interface SuggestionClient {
     @GetMapping("/api/v1/suggestions/{suggestionLogId}")
     SuggestionLogResponse getSuggestionLog(@PathVariable("suggestionLogId") Long suggestionLogId,
                                            @RequestHeader("X-User-Id") Long userId);
+
+    @PostMapping("/api/v1/suggestions/{suggestionLogId}/accept")
+    SuggestionLogResponse accept(@PathVariable("suggestionLogId") Long suggestionLogId,
+                                 @RequestHeader("X-User-Id") Long userId);
+
+    @PostMapping("/api/v1/suggestions/{suggestionLogId}/reject")
+    SuggestionLogResponse reject(@PathVariable("suggestionLogId") Long suggestionLogId,
+                                 @RequestHeader("X-User-Id") Long userId);
 }

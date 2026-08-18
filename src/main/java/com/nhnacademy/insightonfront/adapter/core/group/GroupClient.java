@@ -35,6 +35,16 @@ public interface GroupClient {
                                   @PathVariable("group-id") Long groupId,
                                   @RequestParam("inviteToken") String inviteToken);
 
+    /**
+     * 이미 로그인한 유저가 초대 토큰만으로 그룹에 참가한다 — 회원가입 시점에 토큰을 넣는
+     * {@code /internal/v1/groups/join-by-token}(Auth 전용 내부 API)과는 별개의, 나중에 다른
+     * 그룹 초대를 받았을 때 쓰는 public API. 성공 시 200/빈 바디, 실패 시 잘못된/만료된 토큰이나
+     * 이미 대기중인 가입신청이 있으면 400/409.
+     */
+    @PostMapping("/api/v1/groups/join")
+    void joinGroup(@RequestHeader("X-USER-ID") Long userId,
+                   @RequestParam("inviteToken") String inviteToken);
+
     @GetMapping("/api/v1/groups/admin/group-list")
     PageResponse<GroupAdminResponse> getGroupList(@RequestHeader("X-USER-ROLE") String userRole,
                                                    @RequestHeader("X-USER-ID") Long userId,
