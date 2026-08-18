@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.SessionAttribute;
  */
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/my-group/registration")
+@RequestMapping("/group-registration")
 public class GroupRegistrationController {
 
     private final GroupRegistrationClient groupRegistrationClient;
@@ -68,7 +68,7 @@ public class GroupRegistrationController {
         }
         groupRegistrationClient.createRequest(userId,
                 new CreateGroupRegistrationRequest(groupName, description, state, city));
-        return "redirect:/my-group/registration";
+        return "redirect:/group-registration";
     }
 
     @PostMapping("/cancel")
@@ -78,7 +78,7 @@ public class GroupRegistrationController {
             return "redirect:/login";
         }
         groupRegistrationClient.cancelGroupRegistration(userId, groupRegistrationId);
-        return "redirect:/my-group/registration";
+        return "redirect:/group-registration";
     }
 
     /** 신청 폼의 시/도 선택 시 시/군/구 옵션을 채우는 AJAX. */
