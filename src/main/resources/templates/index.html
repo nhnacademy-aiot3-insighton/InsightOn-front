@@ -1,7 +1,167 @@
 <!DOCTYPE html>
-<html>
-<head><title>InsightOn</title></head>
-<body>
-<h1>InsightOn Front 정상 작동 중</h1>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>InsightOn — 빌딩 IoT 통합 관제</title>
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body th:with="state=${authState} ?: 'GUEST'">
+
+<header class="landing-header">
+    <a th:href="@{/}" class="brand">
+        <i class="ti ti-chart-line"></i>InsightOn
+    </a>
+    <nav class="landing-nav">
+        <a href="#features">기능</a>
+        <a href="#how-it-works">작동 방식</a>
+    </nav>
+    <div class="landing-header-actions">
+        <th:block th:if="${state == 'GUEST'}">
+            <a th:href="@{/login}" class="btn-landing-secondary">로그인</a>
+            <a th:href="@{/signup}" class="btn-landing-primary">회원가입</a>
+        </th:block>
+        <th:block th:if="${state == 'NO_GROUP'}">
+            <a th:href="@{/my-group/registration}" class="btn-landing-primary"><i class="ti ti-building-plus"></i>그룹 생성 신청하기</a>
+        </th:block>
+        <th:block th:if="${state == 'HAS_GROUP'}">
+            <a th:href="@{/my-group}" class="btn-landing-primary"><i class="ti ti-layout-dashboard"></i>대시보드로 이동</a>
+        </th:block>
+    </div>
+</header>
+
+<section class="landing-section landing-hero">
+    <div>
+        <span class="landing-eyebrow"><i class="ti ti-bolt"></i>AIOT 빌딩 관제</span>
+        <h1>건물의 모든 신호를<br><em>한 화면</em>에서 통제하세요</h1>
+        <p>센서·액추에이터·게이트웨이를 한 곳에 모으고, 조건만 정하면 알아서 반응하는 Flow 자동화로 빌딩을 관제합니다. 코드 없이, 누구나.</p>
+        <div class="landing-hero-actions">
+            <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="btn-landing-primary">무료로 시작하기<i class="ti ti-arrow-right"></i></a>
+            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/registration}" class="btn-landing-primary">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
+            <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">대시보드로 이동<i class="ti ti-arrow-right"></i></a>
+            <a href="#how-it-works" class="btn-landing-secondary">작동 방식 보기</a>
+        </div>
+    </div>
+
+    <!-- 실제 제품 UI를 그대로 축소한 미니어처 — 클릭되지 않는 정적 미리보기 -->
+    <div class="hero-mockup">
+        <div class="hero-mockup-titlebar">
+            <span class="hero-mockup-dot"></span>
+            <span class="hero-mockup-dot"></span>
+            <span class="hero-mockup-dot"></span>
+            <span class="hero-mockup-path">insighton.io / 2층 사무실</span>
+        </div>
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap: var(--sp-3); margin-bottom: var(--sp-3);">
+            <div style="border:1px solid var(--line); border-radius:var(--radius); padding:var(--sp-3);">
+                <div style="font-family:var(--font-mono); font-size:var(--fs-meta); color:var(--ink-faint); margin-bottom:var(--sp-2);">온습도 센서 · TEMPERATURE</div>
+                <svg viewBox="0 0 220 60" width="100%" height="60" preserveAspectRatio="none">
+                    <polyline points="0,45 30,38 60,42 90,25 120,30 150,15 180,20 220,10" fill="none" stroke="#1c4e80" stroke-width="2"></polyline>
+                </svg>
+            </div>
+            <div style="border:1px solid var(--line); border-radius:var(--radius); padding:var(--sp-3); display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <div style="font-family:var(--font-mono); font-size:var(--fs-meta); color:var(--ink-faint);">CO2</div>
+                <div style="font-size:1.5rem; font-weight:700; color:var(--ink);">612<span style="font-size:0.7rem; color:var(--ink-faint);"> ppm</span></div>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; border:1px solid var(--line); border-radius:var(--radius); padding:var(--sp-2) var(--sp-3);">
+            <span style="font-family:var(--font-mono); font-size:var(--fs-meta); color:var(--ink-soft);">고온 시 냉방 가동</span>
+            <span class="status-badge success" style="margin-top:0;">ACTIVE</span>
+        </div>
+    </div>
+</section>
+
+<section class="landing-section" id="features">
+    <div class="landing-section-head">
+        <div class="landing-section-eyebrow">FEATURES</div>
+        <h2>관제에 필요한 모든 것을 하나로</h2>
+        <p>여러 서비스를 오가지 않고, 한 곳에서 보고·설정하고·대응합니다.</p>
+    </div>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <span class="feature-icon"><i class="ti ti-layout-dashboard"></i></span>
+            <h3>구성 가능한 위젯 대시보드</h3>
+            <p>위치별로 그래프·게이지·현재값 위젯을 자유롭게 배치하고 실시간 센서 데이터를 확인하세요.</p>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon"><i class="ti ti-git-branch"></i></span>
+            <h3>코드 없는 Flow 자동화</h3>
+            <p>"조건을 만족하면 → 이 동작을 실행" 형태로 규칙을 만들면 끝. 노드를 끌어다 연결할 필요 없어요.</p>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon"><i class="ti ti-adjustments"></i></span>
+            <h3>액추에이터 원격 제어</h3>
+            <p>에어컨·공기청정기·환풍기를 화면에서 바로 켜고 끄고, 모드와 온도를 조정하세요.</p>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon"><i class="ti ti-bulb"></i></span>
+            <h3>AI 제안</h3>
+            <p>센서 패턴을 분석해 놓치기 쉬운 최적화 포인트를 먼저 제안합니다.</p>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon"><i class="ti ti-alert-triangle"></i></span>
+            <h3>엔진 알람</h3>
+            <p>이상 징후를 즉시 감지해 심각도별로 분류된 알람을 보내드립니다.</p>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon"><i class="ti ti-file-text"></i></span>
+            <h3>자동 리포트</h3>
+            <p>일별·주별 운영 리포트를 자동으로 만들어 한눈에 흐름을 파악할 수 있어요.</p>
+        </div>
+    </div>
+</section>
+
+<section class="landing-section" id="how-it-works">
+    <div class="landing-section-head">
+        <div class="landing-section-eyebrow">HOW IT WORKS</div>
+        <h2>세 단계면 충분해요</h2>
+    </div>
+    <div class="landing-steps">
+        <div class="landing-step">
+            <h3>게이트웨이 연결</h3>
+            <p>그룹에 게이트웨이 한 대를 등록해 센서·액추에이터와 통신을 시작하세요.</p>
+        </div>
+        <div class="landing-step">
+            <h3>위치·센서 등록</h3>
+            <p>건물의 위치를 나누고, 각 위치에 센서와 액추에이터를 배치하세요.</p>
+        </div>
+        <div class="landing-step">
+            <h3>Flow로 자동화</h3>
+            <p>조건과 동작만 정하면 나머지는 InsightOn이 알아서 반응합니다.</p>
+        </div>
+    </div>
+</section>
+
+<section class="landing-section">
+    <div class="landing-cta">
+        <h2>지금 바로 시작하세요</h2>
+        <p>가입은 무료이며, 그룹 생성은 관리자 승인 후 바로 이용할 수 있어요.</p>
+        <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="btn-landing-primary">무료로 시작하기<i class="ti ti-arrow-right"></i></a>
+        <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">대시보드로 이동<i class="ti ti-arrow-right"></i></a>
+
+        <th:block th:if="${state == 'NO_GROUP'}">
+            <a th:href="@{/my-group/registration}" class="btn-landing-primary">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
+
+            <div style="margin-top: var(--sp-6);">
+                <p style="color: var(--ink-faint); font-size: var(--fs-meta); margin-bottom: var(--sp-2);">
+                    이미 있는 그룹에 참가하시나요?
+                </p>
+                <p th:if="${joinError}" th:text="${joinError}" class="form-text" style="color: var(--danger); margin-bottom: var(--sp-2);"></p>
+                <form th:action="@{/my-group/join}" method="post"
+                      style="display:flex; gap: var(--sp-2); justify-content:center; max-width:360px; margin:0 auto;">
+                    <input type="text" name="inviteToken" class="form-control" placeholder="초대 코드 입력" required>
+                    <button type="submit" class="btn-landing-secondary">참가하기</button>
+                </form>
+            </div>
+        </th:block>
+    </div>
+</section>
+
+<footer class="landing-footer">
+    © InsightOn — AIOT 빌딩 통합 관제
+</footer>
+
 </body>
 </html>
