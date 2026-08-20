@@ -1,9 +1,12 @@
 package com.nhnacademy.insightonfront.controller;
 
+import com.nhnacademy.insightonfront.client.AuthApiClient;
 import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -12,6 +15,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.SessionAttribute;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -30,7 +35,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  */
 @Slf4j
 @Controller
+@RequiredArgsConstructor
 public class AuthController {
+
+    private final AuthApiClient authApiClient;
 
     private static final String DEMO_VERIFY_CODE = "123456";
     private static final String DEMO_TAKEN_EMAIL = "used@insighton.io";
@@ -55,32 +63,34 @@ public class AuthController {
                          @RequestParam String password,
                          HttpSession session,
                          Model model) {
-        Long lockUntil = (Long) session.getAttribute("loginLockUntil");
-        if (lockUntil != null && lockUntil > System.currentTimeMillis()) {
-            model.addAttribute("loginError", "5회 연속 실패해서 로그인이 잠겼어요. " + minutesRemaining(lockUntil) + "분 후 다시 시도해주세요.");
+        try {
+            AuthApiClient.LoginResult result = authApiClient.login(email, password);
+
+            // ★ 핵심: access 를 "서버 세션"에 저장한다.
+            //    -> 다른 컨트롤러가 session.getAttribute("accessToken") 으로 꺼내 게이트웨이로 보낼 수 있다.
+            session.setAttribute("accessToken", result.accessToken());
+            session.setAttribute("refreshToken", result.refreshToken());
+            session.setAttribute("userEmail", email);
+            // TODO: userId 는 accessToken(JWT) 클레임에서 꺼내 session 에 넣어야
+            //       기존 @SessionAttribute("userId") 가드(/mypage 등)가 동작한다.
+
+            return "redirect:/";
+
+        } catch (HttpClientErrorException e) {
+            model.addAttribute("loginError", loginErrorMessage(e.getStatusCode().value()));
+            return "login";
+        } catch (RestClientException e) {
+            model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
             return "login";
         }
+    }
 
-        String status = accountStatusFor(email);
-        if (status != null) {
-            model.addAttribute("loginError", statusMessage(status));
-            return "login";
-        }
-
-        // 실제 BCrypt 검증 전 목업 — "wrong"을 입력하면 의도적으로 실패 흐름을 탄다
-        if ("wrong".equals(password)) {
-            int fails = incrementLoginFail(session);
-            model.addAttribute("loginError", loginFailMessage(fails));
-            return "login";
-        }
-
-        session.setAttribute("userId", 1L);
-        session.setAttribute("userEmail", email);
-        session.setAttribute("hasPassword", true);
-        session.setAttribute("linkedProviders", new ArrayList<String>());
-        session.removeAttribute("loginFailCount");
-        session.removeAttribute("loginLockUntil");
-        return "redirect:/";
+    private String loginErrorMessage(int status) {
+        return switch (status) {
+            case 401, 400 -> "이메일 또는 비밀번호가 올바르지 않아요.";
+            case 423      -> "로그인이 일시적으로 잠겼어요. 잠시 후 다시 시도해주세요.";
+            default       -> "로그인에 실패했어요. 잠시 후 다시 시도해주세요.";
+        };
     }
 
     @PostMapping("/logout")
@@ -122,32 +132,32 @@ public class AuthController {
         return "signup";
     }
 
-    @PostMapping("/signup")
-    public String signup(@RequestParam String email,
-                          @RequestParam String password,
-                          @RequestParam String name,
-                          @RequestParam String phone,
-                          @RequestParam(required = false) String emailVerified,
-                          HttpSession session,
-                          Model model) {
-        String verifiedEmail = (String) session.getAttribute("verifiedEmail");
-        if (!"true".equals(emailVerified) || !email.equalsIgnoreCase(verifiedEmail)) {
-            model.addAttribute("signupError", "이메일 인증을 먼저 완료해주세요.");
-            model.addAttribute("email", email);
-            model.addAttribute("name", name);
-            model.addAttribute("phone", phone);
-            return "signup";
-        }
-
-        // 실제 계정 저장(비밀번호 해시 등)은 백엔드가 붙으면 이 자리
-        log.info("[목업] 회원가입 완료 처리: {}", email);
-        session.removeAttribute("verifiedEmail");
-        session.removeAttribute("verifyAttempts");
-        session.removeAttribute("verifyLockUntil");
-        session.removeAttribute("verifyLastSentAt");
-        session.removeAttribute("verifyTargetEmail");
-        return "redirect:/login?registered=1";
-    }
+//    @PostMapping("/signup")
+//    public String signup(@RequestParam String email,
+//                          @RequestParam String password,
+//                          @RequestParam String name,
+//                          @RequestParam String phone,
+//                          @RequestParam(required = false) String emailVerified,
+//                          HttpSession session,
+//                          Model model) {
+//        String verifiedEmail = (String) session.getAttribute("verifiedEmail");
+//        if (!"true".equals(emailVerified) || !email.equalsIgnoreCase(verifiedEmail)) {
+//            model.addAttribute("signupError", "이메일 인증을 먼저 완료해주세요.");
+//            model.addAttribute("email", email);
+//            model.addAttribute("name", name);
+//            model.addAttribute("phone", phone);
+//            return "signup";
+//        }
+//
+//        // 실제 계정 저장(비밀번호 해시 등)은 백엔드가 붙으면 이 자리
+//        log.info("[목업] 회원가입 완료 처리: {}", email);
+//        session.removeAttribute("verifiedEmail");
+//        session.removeAttribute("verifyAttempts");
+//        session.removeAttribute("verifyLockUntil");
+//        session.removeAttribute("verifyLastSentAt");
+//        session.removeAttribute("verifyTargetEmail");
+//        return "redirect:/login?registered=1";
+//    }
 
     // ================================================================
     // 이메일 인증 (회원가입 전 — 중복 확인 / 코드 발송 / 코드 확인)
