@@ -8,7 +8,7 @@
 //   회원가입  POST /api/v1/auth/signup {email,password,userName,phoneNumber,token} -> 201
 //     (auth 는 리다이렉트를 주지 않으므로 201 을 받으면 JS 가 로그인 페이지로 이동시킨다)
 
-const GATEWAY = 'http://gateway-host'; // TODO: 실제 게이트웨이 주소 (예: 'http://localhost:8000')
+const GATEWAY = 'http://insighton-gateway'; // TODO: 실제 게이트웨이 주소 (예: 'http://localhost:8000')
 
 (function () {
     const form = document.getElementById('signupForm');
