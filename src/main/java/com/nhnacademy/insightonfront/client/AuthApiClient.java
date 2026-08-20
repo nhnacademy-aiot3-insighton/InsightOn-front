@@ -23,8 +23,7 @@ public class AuthApiClient {
     private final RestClient restClient;
 
     public AuthApiClient(RestClient.Builder builder,
-                         @Value("${auth.base-url}") String baseUrl) {
-        // application.yml 의 auth.base-url (예: http://gateway:8000)
+                         @Value("${service-url.gateway}") String baseUrl) {
         this.restClient = builder.baseUrl(baseUrl).build();
     }
 
