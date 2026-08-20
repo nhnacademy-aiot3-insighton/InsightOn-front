@@ -1,6 +1,8 @@
 package com.nhnacademy.insightonfront.controller;
 
-import com.nhnacademy.insightonfront.client.AuthApiClient;
+import com.nhnacademy.insightonfront.client.AuthClient;
+import com.nhnacademy.insightonfront.domain.auth.UserLoginResponse;
+import feign.FeignException;
 import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +10,8 @@ import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,8 +19,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.SessionAttribute;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -38,7 +40,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthApiClient authApiClient;
+    private final AuthClient authClient;
 
     private static final String DEMO_VERIFY_CODE = "123456";
     private static final String DEMO_TAKEN_EMAIL = "used@insighton.io";
@@ -58,31 +60,57 @@ public class AuthController {
         return "login";
     }
 
+    /** 로그인 성공 시 accessToken + refreshToken 반환. 실패면 FeignException. */
     @PostMapping("/login")
     public String login(@RequestParam String email,
-                         @RequestParam String password,
-                         HttpSession session,
-                         Model model) {
+                        @RequestParam String password,
+                        HttpSession session,
+                        Model model) {
         try {
-            AuthApiClient.LoginResult result = authApiClient.login(email, password);
+            // Feign 은 LoginBody 를 받아 ResponseEntity<String> 을 반환
+            ResponseEntity<String> response =
+                    authClient.login(new AuthClient.LoginBody(email, password));
 
-            // ★ 핵심: access 를 "서버 세션"에 저장한다.
-            //    -> 다른 컨트롤러가 session.getAttribute("accessToken") 으로 꺼내 게이트웨이로 보낼 수 있다.
-            session.setAttribute("accessToken", result.accessToken());
-            session.setAttribute("refreshToken", result.refreshToken());
+            String accessToken = response.getBody();                              // body = accessToken
+            String refreshToken = extractCookie(response.getHeaders(), "refreshToken");  // Set-Cookie 파싱
+
+            session.setAttribute("accessToken", accessToken);
+            session.setAttribute("refreshToken", refreshToken);
             session.setAttribute("userEmail", email);
-            // TODO: userId 는 accessToken(JWT) 클레임에서 꺼내 session 에 넣어야
-            //       기존 @SessionAttribute("userId") 가드(/mypage 등)가 동작한다.
 
             return "redirect:/";
 
-        } catch (HttpClientErrorException e) {
-            model.addAttribute("loginError", loginErrorMessage(e.getStatusCode().value()));
+        } catch (FeignException e) {
+            int status = e.status();
+            if (status <= 0) {
+                model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
+            } else {
+                model.addAttribute("loginError", loginErrorMessage(status));
+            }
             return "login";
-        } catch (RestClientException e) {
+
+        } catch (RuntimeException e) {
             model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
             return "login";
         }
+    }
+
+    /** Set-Cookie 헤더에서 특정 쿠키 값만 뽑아낸다. */
+    private String extractCookie(HttpHeaders headers, String name) {
+        List<String> setCookies = headers.get(HttpHeaders.SET_COOKIE);
+        if (setCookies == null) {
+            return null;
+        }
+        String prefix = name + "=";
+        for (String cookie : setCookies) {
+            for (String part : cookie.split(";")) {
+                String trimmed = part.trim();
+                if (trimmed.startsWith(prefix)) {
+                    return trimmed.substring(prefix.length());
+                }
+            }
+        }
+        return null;
     }
 
     private String loginErrorMessage(int status) {
