@@ -10,16 +10,5 @@ import org.springframework.web.client.RestClient;
 @RequiredArgsConstructor
 public class TestGatewayController {
 
-    @LoadBalanced
-    private final RestClient.Builder restClient;
-
-    @GetMapping("/test-gateway")
-    public String callGateway() {
-        return restClient.build()
-                .get()
-                .uri("http://insighton-gateway/dummy/hello")
-                .retrieve()
-                .body(String.class);
-    }
 }
 
