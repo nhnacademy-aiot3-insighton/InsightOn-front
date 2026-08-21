@@ -1,10 +1,12 @@
 package com.nhnacademy.insightonfront.client;
 
+import com.nhnacademy.insightonfront.domain.auth.UserLoginRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 /**
  * 프론트 서버 → 게이트웨이(→ 인증 서버) 로그인 호출.
@@ -17,8 +19,10 @@ public interface AuthClient {
             value = "/api/v1/auth/login",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    ResponseEntity<String> login(@RequestBody LoginBody body);
+    ResponseEntity<String> login(@RequestBody UserLoginRequest userLoginRequest);
 
-    /** 인증 서버 UserLoginRequest(email, password) 와 필드명이 같아야 한다. */
-    record LoginBody(String email, String password) {}
+    // ★ 로그아웃 추가
+    @PostMapping("/api/v1/auth/logout")
+    ResponseEntity<Void> logout(@RequestHeader("Authorization") String authorization);
+
 }
