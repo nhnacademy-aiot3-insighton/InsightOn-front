@@ -4,7 +4,9 @@ import com.nhnacademy.insightonfront.client.AuthClient;
 import com.nhnacademy.insightonfront.domain.auth.UserLoginResponse;
 import feign.FeignException;
 import jakarta.servlet.http.HttpSession;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.SessionAttribute;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 로그인/회원가입/이메일 인증/아이디 찾기/비밀번호 재설정/내 정보 — 인증·계정 관련 목업 페이지를
@@ -41,6 +45,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AuthController {
 
     private final AuthClient authClient;
+    private final ObjectMapper objectMapper;
 
     private static final String DEMO_VERIFY_CODE = "123456";
     private static final String DEMO_TAKEN_EMAIL = "used@insighton.io";
@@ -77,6 +82,7 @@ public class AuthController {
             session.setAttribute("accessToken", accessToken);
             session.setAttribute("refreshToken", refreshToken);
             session.setAttribute("userEmail", email);
+            session.setAttribute("userId", extractUserId(accessToken));
 
             return "redirect:/";
 
@@ -93,6 +99,14 @@ public class AuthController {
             model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
             return "login";
         }
+    }
+
+    /** accessToken(JWT)의 payload에서 sub 클레임(userId)만 꺼낸다. */
+    private Long extractUserId(String accessToken) {
+        String payload = accessToken.split("\\.")[1];
+        String json = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
+        JsonNode claims = objectMapper.readTree(json);
+        return claims.get("sub").asLong();
     }
 
     /** Set-Cookie 헤더에서 특정 쿠키 값만 뽑아낸다. */
