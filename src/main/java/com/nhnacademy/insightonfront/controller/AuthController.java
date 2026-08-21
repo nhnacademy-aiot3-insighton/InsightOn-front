@@ -3,8 +3,12 @@ package com.nhnacademy.insightonfront.controller;
 import com.nhnacademy.insightonfront.client.AuthClient;
 import com.nhnacademy.insightonfront.domain.auth.UserLoginResponse;
 import feign.FeignException;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -13,6 +17,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -65,24 +70,55 @@ public class AuthController {
         return "login";
     }
 
-    /** 로그인 성공 시 accessToken + refreshToken 반환. 실패면 FeignException. */
     @PostMapping("/login")
     public String login(@RequestParam String email,
                         @RequestParam String password,
-                        HttpSession session,
+                        HttpServletResponse servletResponse,   // ★ 세션 대신 쿠키로 내림
                         Model model) {
         try {
-            // Feign 은 LoginBody 를 받아 ResponseEntity<String> 을 반환
             ResponseEntity<String> response =
                     authClient.login(new AuthClient.LoginBody(email, password));
 
-            String accessToken = response.getBody();                              // body = accessToken
-            String refreshToken = extractCookie(response.getHeaders(), "refreshToken");  // Set-Cookie 파싱
+            String accessToken = response.getBody();
+            String refreshToken = extractCookie(response.getHeaders(), "refreshToken");
+            String userName = extractUserName(accessToken);   // ★ 토큰에서 이름 꺼냄
+            Long userId = extractUserId(accessToken);       // ★ 토큰에서 userId 꺼냄
 
-            session.setAttribute("accessToken", accessToken);
-            session.setAttribute("refreshToken", refreshToken);
-            session.setAttribute("userEmail", email);
-            session.setAttribute("userId", extractUserId(accessToken));
+            // accessToken 쿠키
+            servletResponse.addHeader(HttpHeaders.SET_COOKIE,
+                    ResponseCookie.from("accessToken", accessToken)
+                            .httpOnly(true).secure(true).path("/").sameSite("Lax")
+                            .maxAge(Duration.ofMinutes(15))
+                            .build().toString());
+
+            // refreshToken 쿠키
+            servletResponse.addHeader(HttpHeaders.SET_COOKIE,
+                    ResponseCookie.from("refreshToken", refreshToken)
+                            .httpOnly(true).secure(true).path("/").sameSite("Lax")
+                            .maxAge(Duration.ofDays(15))
+                            .build().toString());
+
+            // ★ userId 쿠키 (숫자라 인코딩 불필요)
+            if (userId != null) {
+                servletResponse.addHeader(HttpHeaders.SET_COOKIE,
+                        ResponseCookie.from("userId", userId.toString())
+                                .httpOnly(true).secure(true).path("/").sameSite("Lax")
+                                .maxAge(Duration.ofDays(15))
+                                .build().toString());
+            }
+
+            // ★ userName 쿠키 추가 (한글이라 URL 인코딩 필수)
+            if (userName != null) {
+                servletResponse.addHeader(HttpHeaders.SET_COOKIE,
+                        ResponseCookie.from("userName",
+                                        URLEncoder.encode(userName, StandardCharsets.UTF_8))
+                                .httpOnly(true)      // 서버(Thymeleaf)에서만 읽음
+                                .secure(true)
+                                .path("/")
+                                .sameSite("Lax")
+                                .maxAge(Duration.ofDays(15))
+                                .build().toString());
+            }
 
             return "redirect:/";
 
@@ -94,19 +130,33 @@ public class AuthController {
                 model.addAttribute("loginError", loginErrorMessage(status));
             }
             return "login";
-
         } catch (RuntimeException e) {
             model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
             return "login";
         }
     }
 
-    /** accessToken(JWT)의 payload에서 sub 클레임(userId)만 꺼낸다. */
-    private Long extractUserId(String accessToken) {
-        String payload = accessToken.split("\\.")[1];
-        String json = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
-        JsonNode claims = objectMapper.readTree(json);
-        return claims.get("sub").asLong();
+    /** accessToken(JWT)의 payload에서 sub 클레임(userId)을 꺼낸다. */
+    public Long extractUserId(String accessToken) {
+        try {
+            String payload = accessToken.split("\\.")[1];
+            String json = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
+            JsonNode claims = objectMapper.readTree(json);
+            return claims.has("sub") ? claims.get("sub").asLong() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String extractUserName(String accessToken) {
+        try {
+            String payload = accessToken.split("\\.")[1];
+            String json = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
+            JsonNode claims = objectMapper.readTree(json);
+            return claims.has("name") ? claims.get("name").asText() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** Set-Cookie 헤더에서 특정 쿠키 값만 뽑아낸다. */
