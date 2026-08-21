@@ -1,6 +1,7 @@
 package com.nhnacademy.insightonfront.controller;
 
 import com.nhnacademy.insightonfront.client.AuthClient;
+import com.nhnacademy.insightonfront.domain.auth.UserLoginRequest;
 import com.nhnacademy.insightonfront.domain.auth.UserLoginResponse;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,11 +22,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.SessionAttribute;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -76,8 +73,9 @@ public class AuthController {
                         HttpServletResponse servletResponse,   // ★ 세션 대신 쿠키로 내림
                         Model model) {
         try {
+            log.info("로그인 시도");
             ResponseEntity<String> response =
-                    authClient.login(new AuthClient.LoginBody(email, password));
+                    authClient.login(new UserLoginRequest(email, password));
 
             String accessToken = response.getBody();
             String refreshToken = extractCookie(response.getHeaders(), "refreshToken");
@@ -186,9 +184,39 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public String logout(HttpSession session) {
-        session.invalidate();
+    public String logout(@CookieValue(value = "accessToken", required = false) String accessToken,
+                         @CookieValue(value = "userId", required = false) Long userId,
+                         HttpServletResponse servletResponse) {
+        log.info("로그아웃: {}", userId);
+        // 1. auth 에 로그아웃 알림 (서버 측 토큰 무효화) — 실패해도 진행
+        if (accessToken != null && userId != null) {
+            try {
+                authClient.logout("Bearer " + accessToken);
+            } catch (Exception e) {
+                // auth 로그아웃 실패해도 클라이언트 쿠키는 지운다
+                log.warn("auth 로그아웃 실패: {}", e.getMessage());
+            }
+        }
+
+        // 2. 브라우저 쿠키 삭제
+        expireCookie(servletResponse, "accessToken");
+        expireCookie(servletResponse, "refreshToken");
+        expireCookie(servletResponse, "userId");
+        expireCookie(servletResponse, "userName");
+
         return "redirect:/";
+    }
+
+    /** 같은 이름의 쿠키를 maxAge=0 으로 덮어써 삭제한다. */
+    private void expireCookie(HttpServletResponse response, String name) {
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                ResponseCookie.from(name, "")
+                        .httpOnly(true)
+                        .secure(true)
+                        .path("/")
+                        .sameSite("Lax")
+                        .maxAge(0)          // ★ 즉시 만료 = 삭제
+                        .build().toString());
     }
 
     /**
