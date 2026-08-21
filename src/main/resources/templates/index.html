@@ -20,15 +20,28 @@
         <a href="#how-it-works">작동 방식</a>
     </nav>
     <div class="landing-header-actions">
+        <!-- 미로그인: 로그인 / 회원가입 -->
         <th:block th:if="${state == 'GUEST'}">
             <a th:href="@{/login}" class="btn-landing-secondary">로그인</a>
             <a th:href="@{/signup}" class="btn-landing-primary">회원가입</a>
         </th:block>
-        <th:block th:if="${state == 'NO_GROUP'}">
-            <a th:href="@{/my-group/registration}" class="btn-landing-primary"><i class="ti ti-building-plus"></i>그룹 생성 신청하기</a>
-        </th:block>
-        <th:block th:if="${state == 'HAS_GROUP'}">
-            <a th:href="@{/my-group}" class="btn-landing-primary"><i class="ti ti-layout-dashboard"></i>대시보드로 이동</a>
+
+        <!-- 로그인 상태: 이름 + 로그아웃 -->
+        <th:block th:if="${state != 'GUEST'}">
+        <span class="landing-greeting" th:if="${userName != null}"
+              th:text="|${userName}님|"></span>
+
+            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/registration}" class="btn-landing-primary">
+                <i class="ti ti-building-plus"></i>그룹 생성 신청하기
+            </a>
+            <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">
+                <i class="ti ti-layout-dashboard"></i>대시보드로 이동
+            </a>
+
+            <!-- 로그아웃 -->
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn-landing-secondary">로그아웃</button>
+            </form>
         </th:block>
     </div>
 </header>

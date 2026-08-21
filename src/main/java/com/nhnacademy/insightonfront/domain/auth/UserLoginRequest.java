@@ -1,7 +1,8 @@
 package com.nhnacademy.insightonfront.domain.auth;
 
 public record UserLoginRequest(
-        String email, String password
+        String email,
+        String password
 ) {
 
 }
