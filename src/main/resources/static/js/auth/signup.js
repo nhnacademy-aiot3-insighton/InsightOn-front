@@ -8,7 +8,7 @@
 //   회원가입  POST /api/v1/auth/signup {email,password,userName,phoneNumber,token} -> 201
 //     (auth 는 리다이렉트를 주지 않으므로 201 을 받으면 JS 가 로그인 페이지로 이동시킨다)
 
-const GATEWAY = 'http://insighton-gateway'; // TODO: 실제 게이트웨이 주소 (예: 'http://localhost:8000')
+const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 게이트웨이로 라우팅해준다
 
 (function () {
     const form = document.getElementById('signupForm');
