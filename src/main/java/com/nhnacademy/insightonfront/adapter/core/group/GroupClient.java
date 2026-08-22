@@ -3,6 +3,7 @@ package com.nhnacademy.insightonfront.adapter.core.group;
 import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupAdminResponse;
 import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupRequest;
 import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupResponse;
+import com.nhnacademy.insightonfront.adapter.core.group.dto.MyGroupIdResponse;
 import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,11 +17,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * Core의 퍼블릭 그룹 API를 Gateway 경유로 호출한다.
- * <p><b>알려진 제약</b>: 다른 클라이언트들과 동일 — 로그인/세션 붙을 때 X-USER-ID 대신 Authorization
- * 헤더 전달로 바꿔야 실제로 끝까지 동작한다.
  */
 @FeignClient(name = "insighton-gateway", contextId = "groupClient", url = "${service-url.gateway}")
 public interface GroupClient {
+
+    /**
+     * userId만으로 소속 groupId를 조회 (한 유저 = 한 그룹). 로그인 직후 세션에
+     * groupId를 채우기 위해 호출한다. 아직 어느 그룹에도 속해있지 않으면 404.
+     */
+    @GetMapping("/api/v1/groups/my")
+    MyGroupIdResponse getMyGroupId(@RequestHeader("X-USER-ID") Long userId);
 
     @PostMapping("/api/v1/groups/create")
     void createGroup(@RequestHeader("X-USER-ID") Long userId,
