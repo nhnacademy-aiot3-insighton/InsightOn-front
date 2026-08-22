@@ -1,5 +1,7 @@
 package com.nhnacademy.insightonfront.controller;
 
+import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
+import com.nhnacademy.insightonfront.auth.AccessTokenContext;
 import com.nhnacademy.insightonfront.client.AuthClient;
 import com.nhnacademy.insightonfront.domain.auth.UserLoginRequest;
 import com.nhnacademy.insightonfront.domain.auth.UserLoginResponse;
@@ -47,6 +49,7 @@ import tools.jackson.databind.ObjectMapper;
 public class AuthController {
 
     private final AuthClient authClient;
+    private final GroupClient groupClient;
     private final ObjectMapper objectMapper;
 
     private static final String DEMO_VERIFY_CODE = "123456";
@@ -71,6 +74,7 @@ public class AuthController {
     public String login(@RequestParam String email,
                         @RequestParam String password,
                         HttpServletResponse servletResponse,   // ★ 세션 대신 쿠키로 내림
+                        HttpSession session,
                         Model model) {
         try {
             log.info("로그인 시도");
@@ -118,6 +122,17 @@ public class AuthController {
                                 .build().toString());
             }
 
+            // ★ groupId 쿠키 - 인스턴스가 여러 개 떠도(sticky session 없음) 안전하게 동작하도록
+            // 세션이 아니라 쿠키로 내림. 아직 가입한 그룹이 없으면 쿠키 자체를 안 내려줌(null과 동일).
+            Long groupId = resolveGroupId(userId, accessToken);
+            if (groupId != null) {
+                servletResponse.addHeader(HttpHeaders.SET_COOKIE,
+                        ResponseCookie.from("groupId", groupId.toString())
+                                .httpOnly(true).secure(true).path("/").sameSite("Lax")
+                                .maxAge(Duration.ofDays(15))
+                                .build().toString());
+            }
+
             return "redirect:/";
 
         } catch (FeignException e) {
@@ -154,6 +169,22 @@ public class AuthController {
             return claims.has("name") ? claims.get("name").asText() : null;
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    /**
+     * userId로 소속 groupId를 조회. 아직 가입한 그룹이 없으면(404) null을 반환 - 에러 아님.
+     * 이 시점엔 accessToken이 아직 브라우저 쿠키로 안 내려간 상태라, AuthorizationRequestInterceptor가
+     * 현재 요청의 쿠키에서 못 찾으므로 AccessTokenContext로 잠깐 직접 넘겨준다.
+     */
+    private Long resolveGroupId(Long userId, String accessToken) {
+        try {
+            AccessTokenContext.set(accessToken);
+            return groupClient.getMyGroupId(userId).groupId();
+        } catch (FeignException.NotFound e) {
+            return null;
+        } finally {
+            AccessTokenContext.clear();
         }
     }
 
