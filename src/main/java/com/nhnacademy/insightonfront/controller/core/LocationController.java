@@ -10,6 +10,7 @@ import com.nhnacademy.insightonfront.common.resolver.LocationNameResolver;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -65,19 +66,21 @@ public class LocationController {
         return "";
     }
 
-    @PutMapping("/{location-id}/toggle-mode")
+    @PostMapping("/{location-id}/toggle-mode")
     public String toggleAutoControlMode(@CookieValue("groupId") Long groupId,
-                                        @PathVariable("location-id") Long locationId) {
+                                        @PathVariable("location-id") Long locationId,
+                                        @RequestParam(required = false) String redirect) {
         locationClient.toggleAutoControlMode(groupId, locationId);
         locationNameResolver.invalidate(groupId);
 
         log.info("모드가 변경 되었습니다. Group ID: {}, Location ID: {}", groupId, locationId);
 
-        return "redirect:/my-group/location/" + locationId;
+        return "redirect:" + (redirect != null ? redirect : "/my-group/location/list");
     }
 
     @PutMapping("/{location-id}/update")
-    public String updateName(@CookieValue("groupId") Long groupId,
+    @ResponseBody
+    public ResponseEntity<Void> updateName(@CookieValue("groupId") Long groupId,
                              @PathVariable("location-id") Long locationId,
                              @RequestBody LocationUpdateRequest request) {
 
@@ -86,18 +89,19 @@ public class LocationController {
 
         log.info("location name이 변경 되었습니다. Location ID : {}, 변경된 이름 : {}", locationId, request.newLocationName());
 
-        return "redirect:/my-group/location/" + locationId;
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{location-id}/delete")
-    public String deleteLocation(@CookieValue("groupId") Long groupId,
+    @ResponseBody
+    public ResponseEntity<Void> deleteLocation(@CookieValue("groupId") Long groupId,
                                  @PathVariable("location-id") Long locationId) {
         locationClient.deleteLocation(groupId, locationId);
         locationNameResolver.invalidate(groupId);
 
         log.info("location이 삭제되었습니다. Group ID : {}, 삭제된 Location ID : {}", groupId, locationId);
 
-        return "redirect:/my-group/location/list";
+        return ResponseEntity.noContent().build();
     }
 
 }

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.CookieValue;
  */
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/suggestions")
+@RequestMapping("/my-group/suggestions")
 public class SuggestionController {
 
     private final SuggestionLogViewService suggestionLogViewService;

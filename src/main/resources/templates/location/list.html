@@ -20,16 +20,17 @@
     <main class="app-main">
         <p class="section-label">위치</p>
         <div class="location-summary-list" th:if="${locationList != null and not #lists.isEmpty(locationList)}">
-            <a th:each="loc : ${locationList}"
-               th:href="@{/my-group/location/{id}/dashboard(id=${loc.locationId()})}"
-               class="location-summary-row">
-                <div class="location-summary-name">
+            <div th:each="loc : ${locationList}" class="location-summary-row">
+                <a th:href="@{/my-group/location/{id}/dashboard(id=${loc.locationId()})}" class="location-summary-name" style="text-decoration:none; color:inherit;">
                     <span class="location-avatar" th:text="${#strings.substring(loc.locationName(), 0, 1)}">1</span>
                     <span th:text="${loc.locationName()}">위치명</span>
-                </div>
-                <span class="status-badge neutral" style="margin-top:0;" th:text="${loc.autoControlMode()}">MODE</span>
-                <i class="ti ti-chevron-right"></i>
-            </a>
+                </a>
+                <span class="status-badge neutral" style="margin-top:0; white-space:nowrap;"
+                      th:text="${loc.autoControlMode().name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
+                <form th:action="@{/my-group/location/{id}/toggle-mode(id=${loc.locationId()}, redirect='/my-group/location/list')}" method="post" style="display:inline;">
+                    <button type="submit" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta);">모드 전환</button>
+                </form>
+            </div>
         </div>
         <p class="grid-widget-empty py-5" th:if="${locationList == null or #lists.isEmpty(locationList)}">
             등록된 위치가 없어요.
