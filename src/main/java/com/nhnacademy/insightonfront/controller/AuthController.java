@@ -6,6 +6,7 @@ import com.nhnacademy.insightonfront.client.AuthClient;
 import com.nhnacademy.insightonfront.domain.auth.UserLoginRequest;
 import com.nhnacademy.insightonfront.domain.auth.UserLoginResponse;
 import feign.FeignException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
@@ -73,6 +74,7 @@ public class AuthController {
     @PostMapping("/login")
     public String login(@RequestParam String email,
                         @RequestParam String password,
+                        HttpServletRequest servletRequest,
                         HttpServletResponse servletResponse,   // ★ 세션 대신 쿠키로 내림
                         HttpSession session,
                         Model model) {
@@ -85,18 +87,20 @@ public class AuthController {
             String refreshToken = extractCookie(response.getHeaders(), "refreshToken");
             String userName = extractUserName(accessToken);   // ★ 토큰에서 이름 꺼냄
             Long userId = extractUserId(accessToken);       // ★ 토큰에서 userId 꺼냄
+            // 로컬은 http라 Secure 쿠키를 브라우저가 저장하지 않는다 - 요청 스킴에 맞춰 동적으로 결정
+            boolean secure = servletRequest.isSecure();
 
             // accessToken 쿠키
             servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                     ResponseCookie.from("accessToken", accessToken)
-                            .httpOnly(true).secure(true).path("/").sameSite("Lax")
+                            .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                             .maxAge(Duration.ofMinutes(15))
                             .build().toString());
 
             // refreshToken 쿠키
             servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                     ResponseCookie.from("refreshToken", refreshToken)
-                            .httpOnly(true).secure(true).path("/").sameSite("Lax")
+                            .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                             .maxAge(Duration.ofDays(15))
                             .build().toString());
 
@@ -104,7 +108,7 @@ public class AuthController {
             if (userId != null) {
                 servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                         ResponseCookie.from("userId", userId.toString())
-                                .httpOnly(true).secure(true).path("/").sameSite("Lax")
+                                .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                                 .maxAge(Duration.ofDays(15))
                                 .build().toString());
             }
@@ -115,7 +119,7 @@ public class AuthController {
                         ResponseCookie.from("userName",
                                         URLEncoder.encode(userName, StandardCharsets.UTF_8))
                                 .httpOnly(true)      // 서버(Thymeleaf)에서만 읽음
-                                .secure(true)
+                                .secure(secure)
                                 .path("/")
                                 .sameSite("Lax")
                                 .maxAge(Duration.ofDays(15))
@@ -124,11 +128,11 @@ public class AuthController {
 
             // ★ groupId 쿠키 - 인스턴스가 여러 개 떠도(sticky session 없음) 안전하게 동작하도록
             // 세션이 아니라 쿠키로 내림. 아직 가입한 그룹이 없으면 쿠키 자체를 안 내려줌(null과 동일).
-            Long groupId = resolveGroupId(userId, accessToken);
+            Long groupId = resolveGroupId(accessToken);
             if (groupId != null) {
                 servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                         ResponseCookie.from("groupId", groupId.toString())
-                                .httpOnly(true).secure(true).path("/").sameSite("Lax")
+                                .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                                 .maxAge(Duration.ofDays(15))
                                 .build().toString());
             }
@@ -136,6 +140,7 @@ public class AuthController {
             return "redirect:/";
 
         } catch (FeignException e) {
+            log.warn("로그인 처리 중 FeignException: status={}", e.status(), e);
             int status = e.status();
             if (status <= 0) {
                 model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
@@ -144,6 +149,7 @@ public class AuthController {
             }
             return "login";
         } catch (RuntimeException e) {
+            log.warn("로그인 처리 중 예외 발생", e);
             model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
             return "login";
         }
@@ -173,14 +179,14 @@ public class AuthController {
     }
 
     /**
-     * userId로 소속 groupId를 조회. 아직 가입한 그룹이 없으면(404) null을 반환 - 에러 아님.
+     * 로그인한 유저의 소속 groupId를 조회. 아직 가입한 그룹이 없으면(404) null을 반환 - 에러 아님.
      * 이 시점엔 accessToken이 아직 브라우저 쿠키로 안 내려간 상태라, AuthorizationRequestInterceptor가
      * 현재 요청의 쿠키에서 못 찾으므로 AccessTokenContext로 잠깐 직접 넘겨준다.
      */
-    private Long resolveGroupId(Long userId, String accessToken) {
+    private Long resolveGroupId(String accessToken) {
         try {
             AccessTokenContext.set(accessToken);
-            return groupClient.getMyGroupId(userId).groupId();
+            return groupClient.getMyGroupId().groupId();
         } catch (FeignException.NotFound e) {
             return null;
         } finally {
@@ -217,6 +223,7 @@ public class AuthController {
     @PostMapping("/logout")
     public String logout(@CookieValue(value = "accessToken", required = false) String accessToken,
                          @CookieValue(value = "userId", required = false) Long userId,
+                         HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse) {
         log.info("로그아웃: {}", userId);
         // 1. auth 에 로그아웃 알림 (서버 측 토큰 무효화) — 실패해도 진행
@@ -230,20 +237,22 @@ public class AuthController {
         }
 
         // 2. 브라우저 쿠키 삭제
-        expireCookie(servletResponse, "accessToken");
-        expireCookie(servletResponse, "refreshToken");
-        expireCookie(servletResponse, "userId");
-        expireCookie(servletResponse, "userName");
+        boolean secure = servletRequest.isSecure();
+        expireCookie(servletResponse, "accessToken", secure);
+        expireCookie(servletResponse, "refreshToken", secure);
+        expireCookie(servletResponse, "userId", secure);
+        expireCookie(servletResponse, "userName", secure);
+        expireCookie(servletResponse, "groupId", secure);
 
         return "redirect:/";
     }
 
     /** 같은 이름의 쿠키를 maxAge=0 으로 덮어써 삭제한다. */
-    private void expireCookie(HttpServletResponse response, String name) {
+    private void expireCookie(HttpServletResponse response, String name, boolean secure) {
         response.addHeader(HttpHeaders.SET_COOKIE,
                 ResponseCookie.from(name, "")
                         .httpOnly(true)
-                        .secure(true)
+                        .secure(secure)
                         .path("/")
                         .sameSite("Lax")
                         .maxAge(0)          // ★ 즉시 만료 = 삭제

@@ -16,10 +16,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.SessionAttribute;
+import org.springframework.web.bind.annotation.CookieValue;
 
 /**
- * AI가 생성한 리포트(주간/월간)를 그룹 안에서 조회한다. userId·groupId 둘 다 세션에서 읽는다
+ * AI가 생성한 리포트(주간/월간)를 그룹 안에서 조회한다. groupId는 쿠키에서 읽는다
  * — 한 유저는 그룹 하나에만 속해서 groupId를 URL에 실을 필요가 없다.
  */
 @Controller
@@ -31,8 +31,8 @@ public class ReportController {
     private final LocationClient locationClient;
 
     @GetMapping
-    public String list(@SessionAttribute(value = "userId", required = false) Long userId,
-                        @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String list(@CookieValue(value = "userId", required = false) Long userId,
+                        @CookieValue(value = "groupId", required = false) Long groupId,
                         @RequestParam(required = false) Long locationId,
                         @RequestParam(required = false) ReportType reportType,
                         @RequestParam(required = false) OffsetDateTime from,
@@ -44,8 +44,8 @@ public class ReportController {
             return "redirect:/login";
         }
         PageResponse<ReportListViewModel> reports =
-                reportViewService.getReports(groupId, locationId, reportType, from, to, page, size, userId);
-        List<LocationListResponse> locations = locationClient.getLocationList(groupId, userId);
+                reportViewService.getReports(groupId, locationId, reportType, from, to, page, size);
+        List<LocationListResponse> locations = locationClient.getLocationList(groupId);
 
         model.addAttribute("reports", reports);
         model.addAttribute("locations", locations);
@@ -55,14 +55,14 @@ public class ReportController {
     }
 
     @GetMapping("/{report-id}")
-    public String detail(@SessionAttribute(value = "userId", required = false) Long userId,
-                          @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String detail(@CookieValue(value = "userId", required = false) Long userId,
+                          @CookieValue(value = "groupId", required = false) Long groupId,
                           @PathVariable("report-id") Long reportId,
                           Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        ReportDetailViewModel report = reportViewService.getReport(reportId, userId);
+        ReportDetailViewModel report = reportViewService.getReport(reportId);
         model.addAttribute("report", report);
         return "report/detail";
     }
