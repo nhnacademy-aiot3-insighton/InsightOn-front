@@ -19,10 +19,13 @@
     const LOCATION_ID = DASHBOARD_INIT.locationId;
     const BASE_URL = `/groups/${GROUP_ID}/location/${LOCATION_ID}/dashboard`;
 
-    // sensorEui -> display name, built once from the server-rendered <select>
+    // sensorEui -> display name & sensorId mapping
     const sensorNameByEui = {};
+    const sensorIdByEui = {};
     sensorSelect.querySelectorAll('option[data-eui]').forEach((opt) => {
-        sensorNameByEui[opt.dataset.eui] = opt.textContent.trim();
+        const eui = opt.dataset.eui;
+        sensorNameByEui[eui] = opt.textContent.trim();
+        sensorIdByEui[eui] = opt.value; // sensorId
     });
 
     let uidCounter = 0;
@@ -33,22 +36,88 @@
         yPos: w.yPos,
         width: w.width,
         height: w.height,
-        widgetConfig: w.widgetConfig || {type: 'SINGLE_STAT', sensorEui: null, range: '-1h', aggregateWindow: '1m', fields: []},
-        dirty: false // true whenever widgetConfig no longer matches what's persisted server-side
+        widgetConfig: w.widgetConfig || {
+            type: 'GRAPH',
+            sensorEui: null,
+            range: '-1h',
+            aggregateWindow: '1m',
+            fields: []
+        },
+        dirty: false
     }));
 
     const chartInstances = {};
+    const sseConnections = {};
     let editingUid = null;
 
-    // GridStack owns collision/push behavior: resizing or dragging a widget into a
-    // neighbor moves that neighbor out of the way, cascading through however many
-    // widgets are affected — its 'change' event below is where we hear about all of that.
+    // SSE 구독 처리
+    function subscribeWidgetSse(w, sensorId) {
+        if (!sensorId) return;
+
+        if (sseConnections[w.uid]) {
+            sseConnections[w.uid].close();
+        }
+
+        const eventSource = new EventSource(`/sse/sensors/${sensorId}`);
+        sseConnections[w.uid] = eventSource;
+
+        eventSource.addEventListener('telemetry', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                updateWidgetRealtime(w, data);
+            } catch (e) {
+                console.warn('[SSE Parse Error]', e);
+            }
+        });
+
+        eventSource.onerror = (err) => {
+            console.warn(`[SSE Error] 센서 ${sensorId} SSE 연결 알림`, err);
+        };
+    }
+
+    // SSE 실시간 데이터 갱신
+    function updateWidgetRealtime(w, telemetryData) {
+        const chart = chartInstances[w.uid];
+        const metrics = telemetryData.metrics || {};
+
+        const timeStr = new Date(telemetryData.timestamp).toLocaleTimeString([], {
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        if (w.widgetConfig.type === 'GRAPH' && chart) {
+            chart.data.labels.push(timeStr);
+
+            chart.data.datasets.forEach((ds) => {
+                const val = metrics[ds.label] ?? null;
+                ds.data.push(val);
+            });
+
+            if (chart.data.labels.length > 30) {
+                chart.data.labels.shift();
+                chart.data.datasets.forEach((ds) => ds.data.shift());
+            }
+
+            chart.update('quiet');
+        } else {
+            const el = contentEl(w.uid);
+            if (!el) return;
+            const firstField = (w.widgetConfig.fields || [])[0];
+            const val = metrics[firstField];
+            const valueEl = el.querySelector('.grid-widget-value');
+            if (valueEl && val !== undefined) {
+                valueEl.textContent = Number(val).toLocaleString(undefined, {
+                    maximumFractionDigits: 1
+                });
+            }
+        }
+    }
+
+    // GridStack 초기화
     const grid = GridStack.init({
         column: 12,
         cellHeight: 80,
         margin: 8,
         float: true,
-        handle: '.drag-handle',
         resizable: {handles: 'e, se, s, sw, w'}
     }, gridEl);
 
@@ -66,8 +135,8 @@
     }
 
     function widgetTitle(w) {
-        const sensorName = sensorNameByEui[w.widgetConfig.sensorEui] || '센서 미지정';
-        const fields = (w.widgetConfig.fields || []).join(', ') || '메트릭 미지정';
+        const sensorName = sensorNameByEui[w.widgetConfig.sensorEui] || '미설정 센서';
+        const fields = (w.widgetConfig.fields || []).join(', ') || '메트릭 미선택';
         return {sensorName, fields};
     }
 
@@ -87,19 +156,19 @@
         const {sensorName, fields} = widgetTitle(w);
 
         item.innerHTML = `
-            <div class="grid-stack-item-content grid-widget">
-                <div class="grid-widget-head">
-                    <div class="grid-widget-label">
-                        <i class="ti ti-cpu"></i>
-                        <span title="${sensorName} · ${fields}">${sensorName} · ${fields}</span>
+            <div class="card h-100 grid-widget shadow-sm border-1">
+                <div class="card-status-top bg-primary"></div>
+                <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                    <div class="grid-widget-label d-flex align-items-center gap-2 text-truncate" style="max-width: calc(100% - 95px);">
+                        <i class="ti ti-chart-line text-primary"></i>
+                        <span class="fw-bold text-truncate" title="${sensorName} · ${fields}">${sensorName} · ${fields}</span>
                     </div>
-                    <div class="grid-widget-controls">
-                        <button type="button" class="drag-handle" title="이동" aria-label="위젯 이동"><i class="ti ti-grip-vertical"></i></button>
-                        <button type="button" class="settings" title="설정" aria-label="위젯 설정"><i class="ti ti-settings"></i></button>
-                        <button type="button" class="remove" title="삭제" aria-label="위젯 삭제"><i class="ti ti-trash"></i></button>
+                    <div class="grid-widget-controls d-flex align-items-center gap-1">
+                        <button type="button" class="settings btn btn-icon btn-ghost-secondary btn-sm" title="위젯 설정" aria-label="위젯 설정"><i class="ti ti-settings"></i></button>
+                        <button type="button" class="remove btn btn-icon btn-ghost-danger btn-sm" title="위젯 삭제" aria-label="위젯 삭제"><i class="ti ti-trash"></i></button>
                     </div>
                 </div>
-                <div class="grid-widget-body"></div>
+                <div class="card-body grid-widget-body p-2 d-flex flex-column" style="position: relative; flex: 1; min-height: 0;"></div>
                 <div class="grid-widget-dim">${w.width}×${w.height}</div>
             </div>
         `;
@@ -123,47 +192,49 @@
         if (!el) return;
         const {sensorName, fields} = widgetTitle(w);
         const span = el.querySelector('.grid-widget-label span');
-        span.textContent = `${sensorName} · ${fields}`;
-        span.title = `${sensorName} · ${fields}`;
+        if (span) {
+            span.textContent = `${sensorName} · ${fields}`;
+            span.title = `${sensorName} · ${fields}`;
+        }
     }
 
     function updateDim(w) {
         const el = contentEl(w.uid);
-        if (el) el.querySelector('.grid-widget-dim').textContent = `${w.width}×${w.height}`;
+        if (el) {
+            const dimEl = el.querySelector('.grid-widget-dim');
+            if (dimEl) dimEl.textContent = `${w.width}×${w.height}`;
+        }
     }
 
     function renderWidgetBody(w, el) {
         const body = el.querySelector('.grid-widget-body');
-        const type = w.widgetConfig.type;
+        const type = w.widgetConfig.type || 'GRAPH';
 
-        if (!w.widgetConfig.sensorEui || !(w.widgetConfig.fields || []).length) {
-            body.className = 'grid-widget-body d-flex';
-            body.innerHTML = `<p class="grid-widget-empty">설정 필요 — <i class="ti ti-settings"></i> 아이콘을 눌러 구성하세요</p>`;
+        // 1. 기존 DB에 저장된 위젯일 때 백엔드 데이터를 가져오고 SSE 연결
+        if (w.widgetId && !w.dirty) {
+            if (type === 'GRAPH') {
+                body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
+                body.innerHTML = `<canvas style="width: 100%; height: 100%; flex: 1;"></canvas>`;
+            } else if (type === 'BAR') {
+                body.className = 'card-body grid-widget-body p-2';
+                body.innerHTML = `<span class="grid-widget-value">—</span><span class="grid-widget-unit"></span><div class="grid-widget-sparkline"><canvas></canvas></div>`;
+            } else {
+                body.className = 'card-body grid-widget-body p-2';
+                body.innerHTML = `<span class="grid-widget-value">—</span><span class="grid-widget-unit"></span>`;
+            }
+            fetchAndRenderData(w, el);
             return;
         }
 
-        // chart-data is looked up by widgetId and reflects the last SAVED config —
-        // a brand-new or just-edited widget's data would otherwise show stale/wrong values
-        // until it's actually saved, so show that state honestly instead of pretending it's live.
-        if (!w.widgetId || w.dirty) {
-            body.className = 'grid-widget-body d-flex';
-            const msg = !w.widgetId ? '저장하면 데이터가 표시돼요' : '설정이 변경됐어요 — 저장하면 반영돼요';
-            body.innerHTML = `<p class="grid-widget-empty"><i class="ti ti-device-floppy"></i> ${msg}</p>`;
-            return;
-        }
-
-        if (type === 'GRAPH') {
-            body.className = 'grid-widget-chart grid-widget-body';
-            body.innerHTML = `<canvas></canvas>`;
-        } else if (type === 'GAUGE') {
-            body.className = 'grid-widget-body';
-            body.innerHTML = `<span class="grid-widget-value">—</span><span class="grid-widget-unit"></span><div class="grid-widget-sparkline"><canvas></canvas></div>`;
-        } else {
-            body.className = 'grid-widget-body';
-            body.innerHTML = `<span class="grid-widget-value">—</span><span class="grid-widget-unit"></span>`;
-        }
-
-        fetchAndRenderData(w, el);
+        // 2. 신규 위젯 / 미설정 위젯일 때: 더미 차트 제거 및 "설정 필요" 안내 문구 출력
+        body.className = 'card-body grid-widget-body p-3 d-flex flex-column align-items-center justify-content-center text-center';
+        body.innerHTML = `
+            <div class="text-secondary">
+                <i class="ti ti-settings fs-2 mb-1 text-muted"></i>
+                <div class="fw-bold">위젯 설정을 완료해주세요</div>
+                <small class="text-muted">⚙️ 버튼을 눌러 센서를 선택하세요</small>
+            </div>
+        `;
     }
 
     function fetchAndRenderData(w, el) {
@@ -172,11 +243,19 @@
                 if (!r.ok) throw new Error('chart-data fetch failed');
                 return r.json();
             })
-            .then((data) => paintWidgetData(w, el, data))
+            .then((data) => {
+                paintWidgetData(w, el, data);
+                // InfluxDB 시계열 수신 후 SSE 구독 시작
+                const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
+                if (sensorId) {
+                    subscribeWidgetSse(w, sensorId);
+                }
+            })
             .catch(() => {
-                const body = el.querySelector('.grid-widget-body');
-                const valueEl = body.querySelector('.grid-widget-value');
-                if (valueEl) valueEl.textContent = '데이터 없음';
+                const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
+                if (sensorId) {
+                    subscribeWidgetSse(w, sensorId);
+                }
             });
     }
 
@@ -196,21 +275,22 @@
                     datasets: datasets.map((ds, i) => ({
                         label: ds.label,
                         data: ds.data,
-                        borderColor: i === 0 ? '#1c4e80' : '#b8752a',
-                        backgroundColor: i === 0 ? 'rgba(28, 78, 128, 0.08)' : 'rgba(184, 117, 42, 0.08)',
+                        borderColor: i === 0 ? '#206bc4' : '#b8752a',
+                        backgroundColor: i === 0 ? 'rgba(32, 107, 196, 0.1)' : 'rgba(184, 117, 42, 0.1)',
                         borderWidth: 1.5,
-                        tension: 0.2,
+                        tension: 0.3,
                         fill: i === 0,
                         pointRadius: 0,
                         pointHoverRadius: 3
                     }))
                 },
                 options: {
+                    responsive: true,
                     maintainAspectRatio: false,
                     plugins: {legend: {display: datasets.length > 1, labels: {font: {size: 11}}}},
                     scales: {
-                        x: {ticks: {color: '#56697d', font: {family: 'IBM Plex Mono', size: 10}}, grid: {display: false}},
-                        y: {ticks: {color: '#56697d', font: {family: 'IBM Plex Mono', size: 10}}, grid: {color: '#ccd5e0'}}
+                        x: {ticks: {font: {size: 10}}, grid: {display: false}},
+                        y: {ticks: {font: {size: 10}}, grid: {color: '#eef1f6'}}
                     }
                 }
             });
@@ -220,30 +300,35 @@
         const firstSeries = datasets[0]?.data || [];
         const latest = firstSeries.length ? firstSeries[firstSeries.length - 1] : null;
         const valueEl = body.querySelector('.grid-widget-value');
-        valueEl.textContent = latest === null || latest === undefined ? '데이터 없음' : Number(latest).toLocaleString(undefined, {maximumFractionDigits: 1});
+        if (valueEl) {
+            valueEl.textContent = latest === null || latest === undefined ? '데이터 없음' : Number(latest).toLocaleString(undefined, {maximumFractionDigits: 1});
+        }
 
         if (type === 'GAUGE') {
             const canvas = body.querySelector('.grid-widget-sparkline canvas');
-            destroyChart(w.uid);
-            chartInstances[w.uid] = new Chart(canvas, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        data: firstSeries,
-                        borderColor: '#1c4e80',
-                        borderWidth: 1.5,
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {legend: {display: false}},
-                    scales: {x: {display: false}, y: {display: false}}
-                }
-            });
+            if (canvas) {
+                destroyChart(w.uid);
+                chartInstances[w.uid] = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: firstSeries,
+                            borderColor: '#206bc4',
+                            borderWidth: 1.5,
+                            tension: 0.3,
+                            fill: false,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {legend: {display: false}},
+                        scales: {x: {display: false}, y: {display: false}}
+                    }
+                });
+            }
         }
     }
 
@@ -254,7 +339,7 @@
         }
     }
 
-    // ---------- GridStack layout events: this is where cross-widget interaction happens ----------
+    // ---------- GridStack layout events ----------
 
     grid.on('change', (event, items) => {
         (items || []).forEach((item) => {
@@ -265,17 +350,16 @@
             w.width = item.w;
             w.height = item.h;
             updateDim(w);
+            if (chartInstances[w.uid]) {
+                chartInstances[w.uid].resize();
+            }
         });
     });
 
-    grid.on('resize', (event, el) => {
+    grid.on('resizestop', (event, el) => {
         const uid = el.getAttribute('gs-id');
-        const w = state.find((x) => x.uid === uid);
-        const node = el.gridstackNode;
-        if (w && node) {
-            w.width = node.w;
-            w.height = node.h;
-            updateDim(w);
+        if (uid && chartInstances[uid]) {
+            chartInstances[uid].resize();
         }
     });
 
@@ -338,13 +422,10 @@
         const w = state.find((x) => x.uid === editingUid);
         if (!w) return;
 
-        const type = modalEl.querySelector('input[name="widgetType"]:checked')?.value || 'SINGLE_STAT';
+        const type = modalEl.querySelector('input[name="widgetType"]:checked')?.value || 'GRAPH';
         const sensorOpt = sensorSelect.options[sensorSelect.selectedIndex];
         const sensorEui = sensorOpt ? sensorOpt.dataset.eui : null;
 
-        // if the metric checklist never loaded (fetch failed, or still "불러오는 중"), there are no
-        // checkboxes to read — treat that as "unknown", not "user unchecked everything", and keep
-        // whatever fields were already configured rather than silently wiping them out.
         const checkboxEls = metricListEl.querySelectorAll('input[type="checkbox"]');
         const fields = checkboxEls.length
             ? Array.from(checkboxEls).filter((c) => c.checked).map((c) => c.value)
@@ -363,6 +444,12 @@
         updateLabel(w);
         const el = contentEl(w.uid);
         if (el) renderWidgetBody(w, el);
+
+        // 설정 적용 시 해당 센서 SSE 새로 구독
+        const sensorId = sensorIdByEui[sensorEui];
+        if (sensorId) {
+            subscribeWidgetSse(w, sensorId);
+        }
     });
 
     // ---------- add / remove ----------
@@ -374,18 +461,23 @@
             xPos: 0,
             yPos: nextFreeRow(),
             width: 4,
-            height: 2,
-            widgetConfig: {type: 'SINGLE_STAT', sensorEui: null, range: '-1h', aggregateWindow: '1m', fields: []}
+            height: 4,
+            widgetConfig: {type: 'GRAPH', sensorEui: null, range: '-1h', aggregateWindow: '1m', fields: []}
         };
         state.push(w);
         addItemToGrid(w);
         renderAll();
-        openConfigModal(w);
     });
 
     function removeWidget(uid) {
         if (!confirm('이 위젯을 삭제할까요?')) return;
         destroyChart(uid);
+
+        if (sseConnections[uid]) {
+            sseConnections[uid].close();
+            delete sseConnections[uid];
+        }
+
         const el = itemEl(uid);
         if (el) grid.removeWidget(el);
         const idx = state.findIndex((w) => w.uid === uid);
@@ -415,10 +507,11 @@
             body: JSON.stringify(payload)
         })
             .then((r) => {
-                if (!r.ok) throw new Error('save failed');
+                if (!r.ok) throw new Error(`save failed with status ${r.status}`);
                 location.reload();
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('[Dashboard Save] 저장 실패 원인:', err);
                 saveStatusEl.textContent = '저장에 실패했어요. 잠시 후 다시 시도해주세요.';
                 btnSaveLayout.disabled = false;
             });
@@ -428,13 +521,4 @@
 
     state.forEach((w) => addItemToGrid(w));
     renderAll();
-
-    // GRAPH/GAUGE/SINGLE_STAT widgets refresh on a timer, same cadence chart.js polls at
-    setInterval(() => {
-        state.forEach((w) => {
-            if (!w.widgetId || w.dirty) return;
-            const el = contentEl(w.uid);
-            if (el) fetchAndRenderData(w, el);
-        });
-    }, 30000);
 })();
