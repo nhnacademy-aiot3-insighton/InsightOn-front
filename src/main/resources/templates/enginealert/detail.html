@@ -19,12 +19,12 @@
 
     <main class="app-main">
         <p class="section-label">
-            <a th:href="@{/engine-alerts}" style="color:var(--ink-soft); text-decoration:none;">
+            <a th:href="@{/my-group/engine-alerts}" style="color:var(--ink-soft); text-decoration:none;">
                 <i class="ti ti-arrow-left"></i> 엔진알람
             </a>
         </p>
 
-        <div id="detailContent" class="settings-card" style="max-width: 760px;">
+        <div id="detailContent" class="settings-card" style="max-width: 100%;">
             <div style="display:flex; align-items:center; gap: var(--sp-3); margin-bottom: var(--sp-2);">
                 <span class="status-badge neutral" style="margin-top:0;" th:if="${alert.severity().name() == 'INFO'}">정보</span>
                 <span class="status-badge warning" style="margin-top:0;" th:if="${alert.severity().name() == 'WARNING'}">경고</span>

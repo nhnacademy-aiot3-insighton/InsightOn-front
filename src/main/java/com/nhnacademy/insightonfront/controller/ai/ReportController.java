@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.CookieValue;
  */
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/reports")
+@RequestMapping("/my-group/reports")
 public class ReportController {
 
     private final ReportViewService reportViewService;

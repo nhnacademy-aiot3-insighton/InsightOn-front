@@ -20,7 +20,7 @@
     <main class="app-main">
         <p class="section-label">제안</p>
 
-        <form method="get" th:action="@{/suggestions}" class="filter-bar">
+        <form method="get" th:action="@{/my-group/suggestions}" class="filter-bar">
             <select name="locationId" class="form-select">
                 <option value="">전체 위치</option>
                 <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"
@@ -33,7 +33,7 @@
             <div class="split-list">
                 <div class="location-summary-list" th:if="${not #lists.isEmpty(suggestions.content())}">
                     <a class="split-row" th:each="suggestion : ${suggestions.content()}"
-                       th:href="@{/suggestions/{suggestionId}(suggestionId=${suggestion.suggestionLogId()})}">
+                       th:href="@{/my-group/suggestions/{suggestionId}(suggestionId=${suggestion.suggestionLogId()})}">
                         <div class="split-row-title">
                             <span class="status-badge neutral" style="margin-top:0;" th:if="${suggestion.isAccepted() == null}">대기중</span>
                             <span class="status-badge success" style="margin-top:0;" th:if="${suggestion.isAccepted() == true}">수락됨</span>
@@ -47,6 +47,16 @@
                 <p class="grid-widget-empty py-5" th:if="${#lists.isEmpty(suggestions.content())}">
                     조건에 맞는 제안이 없어요.
                 </p>
+
+                <nav th:if="${suggestions.totalPages() > 1}" class="list-pagination">
+                    <a th:if="${!suggestions.first()}"
+                       th:href="@{/my-group/suggestions(locationId=${selectedLocationId}, page=${suggestions.number()-1})}"
+                       class="btn-landing-secondary">이전</a>
+                    <span th:text="${suggestions.number()+1} + ' / ' + ${suggestions.totalPages()}"></span>
+                    <a th:if="${!suggestions.last()}"
+                       th:href="@{/my-group/suggestions(locationId=${selectedLocationId}, page=${suggestions.number()+1})}"
+                       class="btn-landing-secondary">다음</a>
+                </nav>
             </div>
 
             <div id="detailPanel" class="split-detail">
