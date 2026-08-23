@@ -21,19 +21,27 @@ public class LocationController {
     private final LocationClient locationClient;
 
     @PostMapping("/create")
-    public String createLocation(@RequestHeader Long userId,
-                                 @SessionAttribute("groupId") Long groupId,
+    public String createLocation(@CookieValue(value = "userId", required = false) Long userId,
+                                 @CookieValue(value = "groupId", required = false) Long groupId,
                                  @RequestBody LocationCreateRequest request) {
+        if (userId == null || groupId == null) {
+            return "redirect:/login";
+        }
+
         locationClient.createLocation(groupId, request, userId);
 
         log.info("location이 생성 되었습니다. group ID : {}", groupId);
 
-        return "redirect:/groups/" + groupId + "/location/list";
+        return "redirect:/my-group/location/list";
     }
 
     @GetMapping("/list")
-    public String getLocationList(@RequestHeader Long userId,
-                                  @SessionAttribute("groupId") Long groupId, Model model) {
+    public String getLocationList(@CookieValue(value = "userId", required = false) Long userId,
+                                  @CookieValue(value = "groupId", required = false) Long groupId, Model model) {
+        if (userId == null || groupId == null) {
+            return "redirect:/login";
+        }
+
         List<LocationListResponse> locationList = locationClient.getLocationList(groupId, userId);
 
         model.addAttribute("locationList", locationList);
@@ -41,10 +49,15 @@ public class LocationController {
         return "";
     }
 
-    @GetMapping
-    public String getLocation(@RequestHeader Long userId,
-                              @SessionAttribute("groupId") Long groupId,
-                              @SessionAttribute("locationId") Long locationId, Model model) {
+    // location 상세 정보를 조회할 수 있는 페이지도 필요
+    @GetMapping("/{locationId}")
+    public String getLocation(@CookieValue(value = "userId", required = false) Long userId,
+                              @CookieValue(value = "groupId", required = false) Long groupId,
+                              @PathVariable("locationId") Long locationId, Model model) {
+        if (userId == null || groupId == null) {
+            return "redirect:/login";
+        }
+
         LocationDetailResponse location = locationClient.getLocation(groupId, locationId, userId);
 
         model.addAttribute("location", location);
@@ -52,39 +65,51 @@ public class LocationController {
         return "";
     }
 
-    @PutMapping("/toggle-model")
-    public String toggleAutoControlMode(@RequestHeader Long userId,
-                                        @SessionAttribute("groupId") Long groupId,
-                                        @SessionAttribute("locationId") Long locationId) {
+    @PutMapping("/{locationId}/toggle-mode")
+    public String toggleAutoControlMode(@CookieValue(value = "userId", required = false) Long userId,
+                                        @CookieValue(value = "groupId", required = false) Long groupId,
+                                        @PathVariable("locationId") Long locationId) {
+        if (userId == null || groupId == null) {
+            return "redirect:/login";
+        }
+
         locationClient.toggleAutoControlMode(groupId, locationId, userId);
 
         log.info("모드가 변경 되었습니다. Group ID: {}, Location ID: {}", groupId, locationId);
 
-        return "redirect:/groups/" + groupId + "/location/" + locationId;
+        return "redirect:/my-group/location/" + locationId;
     }
 
-    @PutMapping("/update")
-    public String updateName(@RequestHeader Long userId,
-                             @SessionAttribute("groupId") Long groupId,
-                             @SessionAttribute("locationId") Long locationId,
+    @PutMapping("/{locationId}/update")
+    public String updateName(@CookieValue(value = "userId", required = false) Long userId,
+                             @CookieValue(value = "groupId", required = false) Long groupId,
+                             @PathVariable("locationId") Long locationId,
                              @RequestBody LocationUpdateRequest request) {
+
+        if (userId == null || groupId == null) {
+            return "redirect:/login";
+        }
 
         locationClient.updateName(groupId, locationId, request, userId);
 
         log.info("location name이 변경 되었습니다. Location ID : {}, 변경된 이름 : {}", locationId, request.newLocationName());
 
-        return "redirect:/groups/" + groupId + "/location/" + locationId;
+        return "redirect:/my-group/location/" + locationId;
     }
 
-    @DeleteMapping("/delete")
-    public String deleteLocation(@RequestHeader Long userId,
-                                 @SessionAttribute("groupId") Long groupId,
-                                 @SessionAttribute("locationId") Long locationId) {
+    @DeleteMapping("/{locationId}/delete")
+    public String deleteLocation(@CookieValue(value = "userId", required = false) Long userId,
+                                 @CookieValue(value = "groupId", required = false) Long groupId,
+                                 @PathVariable("locationId") Long locationId) {
+        if (userId == null || groupId == null) {
+            return "redirect:/login";
+        }
+
         locationClient.deleteLocation(groupId, locationId, userId);
 
         log.info("location이 삭제되었습니다. Group ID : {}, 삭제된 Location ID : {}", groupId, locationId);
 
-        return "redirect:/groups/" + groupId + "/location/list";
+        return "redirect:/my-group/location/list";
     }
 
 }

@@ -13,15 +13,17 @@ import com.nhnacademy.insightonfront.adapter.core.sensor.SensorClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.WeatherClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.dto.WeatherDataDto;
 import feign.FeignException;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Controller
@@ -57,8 +59,8 @@ public class GroupController {
      * 다르고 키 이름도 확실치 않아서, 대신 실제로 깔끔하게 셀 수 있는 센서 개수·알람 건수로 채웠다.
      */
     @GetMapping
-    public String getMyGroup(@SessionAttribute(value = "userId", required = false) Long userId,
-                             @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String getMyGroup(@CookieValue(value = "userId", required = false) Long userId,
+                             @CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
@@ -80,8 +82,8 @@ public class GroupController {
 
     /** 그룹 관리 &gt; 그룹 정보 탭 — 실제 그룹 데이터로 이름/소재지/설명/초대 코드를 보여준다. */
     @GetMapping("/manage")
-    public String manageInfo(@SessionAttribute(value = "userId", required = false) Long userId,
-                             @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String manageInfo(@CookieValue(value = "userId", required = false) Long userId,
+                             @CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
@@ -94,7 +96,7 @@ public class GroupController {
 
     /** 초대 토큰으로 기존 그룹에 참가한다 — 그룹 생성 신청과 별개로, 이미 있는 그룹에 들어가는 경로. */
     @PostMapping("/join")
-    public String joinGroup(@SessionAttribute(value = "userId", required = false) Long userId,
+    public String joinGroup(@CookieValue(value = "userId", required = false) Long userId,
                             @RequestParam("inviteToken") String inviteToken,
                             RedirectAttributes redirectAttributes) {
         if (userId == null) {
@@ -112,8 +114,8 @@ public class GroupController {
     }
 
     @GetMapping("/preview")
-    public String getGroupPreview(@RequestHeader Long userId,
-                                  @SessionAttribute("groupId") Long groupId,
+    public String getGroupPreview(@CookieValue(value = "userId", required = false) Long userId,
+                                  @CookieValue("groupId") Long groupId,
                                   @RequestParam("inviteToken") String inviteToken,
                                   Model model) {
 
@@ -126,8 +128,8 @@ public class GroupController {
 
 
     @PostMapping("/invite-token/new")
-    public String newInviteToken(@SessionAttribute(value = "userId", required = false) Long userId,
-                                 @SessionAttribute(value = "groupId", required = false) Long groupId) {
+    public String newInviteToken(@CookieValue(value = "userId", required = false) Long userId,
+                                 @CookieValue(value = "groupId", required = false) Long groupId) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
@@ -140,8 +142,8 @@ public class GroupController {
     }
 
     @PutMapping("/update")
-    public String updateGroup(@RequestHeader Long userId,
-                              @SessionAttribute("groupId") Long groupId,
+    public String updateGroup(@CookieValue(value = "userId", required = false) Long userId,
+                              @CookieValue("groupId") Long groupId,
                               @RequestBody GroupRequest request) {
 
         groupClient.updateGroup(userId, groupId, request);
@@ -150,8 +152,8 @@ public class GroupController {
     }
 
     @DeleteMapping("/delete")
-    public String deleteGroup(@RequestHeader Long userId,
-                              @SessionAttribute("groupId") Long groupId) {
+    public String deleteGroup(@CookieValue(value = "userId", required = false) Long userId,
+                              @CookieValue("groupId") Long groupId) {
 
         groupClient.deleteGroup(userId, groupId);
 
@@ -171,7 +173,7 @@ public class GroupController {
                     .toList();
         } catch (Exception e) {
             log.warn("위치 목록 조회 실패 - groupId:{}", groupId, e);
-            return null;
+            return Collections.emptyList();
         }
     }
 
