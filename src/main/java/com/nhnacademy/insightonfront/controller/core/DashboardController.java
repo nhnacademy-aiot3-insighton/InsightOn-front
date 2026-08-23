@@ -4,6 +4,8 @@ import com.nhnacademy.insightonfront.adapter.core.dashboard.DashboardClient;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.chart.ChartDataResponse;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.dashboard.DashboardResponse;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.widget.WidgetSaveRequest;
+import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
+import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -23,6 +25,7 @@ import java.util.Map;
 public class DashboardController {
 
     private final DashboardClient dashboardClient;
+    private final LocationClient locationClient;
 
     @GetMapping("/my-group/location/{location-id}/dashboard")
     public String getDashboard(
@@ -32,8 +35,11 @@ public class DashboardController {
     ) {
 
         DashboardResponse response = dashboardClient.getDashboard(groupId, locationId);
+        LocationDetailResponse location = locationClient.getLocation(groupId, locationId);
 
         model.addAttribute("dashboard", response);
+        model.addAttribute("locationId", locationId);
+        model.addAttribute("location", location);
 
         return "dashboard/widgets";
     }

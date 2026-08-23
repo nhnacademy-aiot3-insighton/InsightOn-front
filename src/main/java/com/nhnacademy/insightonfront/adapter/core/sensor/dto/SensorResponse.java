@@ -11,4 +11,8 @@ public record SensorResponse(
         OffsetDateTime createdAt,
         OffsetDateTime lastSeenAt
 ) {
+    /** Core와 동일한 기준(최근 5분 이내 통신) - Core가 내려주는 online 필드를 다시 계산한다. */
+    public boolean isOnline() {
+        return lastSeenAt != null && !lastSeenAt.isBefore(OffsetDateTime.now().minusMinutes(5));
+    }
 }
