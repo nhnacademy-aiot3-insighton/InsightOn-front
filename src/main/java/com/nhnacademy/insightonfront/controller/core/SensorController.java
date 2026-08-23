@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.CookieValue;
  */
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/sensors")
+@RequestMapping("/my-group/sensors")
 public class SensorController {
 
     private final SensorClient sensorClient;

@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.CookieValue;
  */
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/engine-alerts")
+@RequestMapping("/my-group/engine-alerts")
 public class EngineAlertController {
 
     private final EngineAlertViewService engineAlertViewService;

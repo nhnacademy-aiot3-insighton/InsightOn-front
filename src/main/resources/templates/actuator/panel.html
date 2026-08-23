@@ -12,7 +12,8 @@
 </head>
 <body>
 
-<header th:replace="~{fragments/layout :: locationHeader(${location.locationName()}, ${locationId})}"></header>
+<header th:replace="~{fragments/layout :: locationHeader(${location.locationName()}, ${locationId}, ${location.autoControlMode()})}"></header>
+<div th:replace="~{fragments/layout :: locationManageModal(${locationId}, ${location.locationName()}, ${location.autoControlMode()})}"></div>
 
 <div class="d-flex">
     <aside th:replace="~{fragments/layout :: sidebar}"></aside>
@@ -130,6 +131,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/actuator-panel.js}"></script>
+<script th:src="@{/js/location-panel.js}"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
 </body>
 </html>

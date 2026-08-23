@@ -20,7 +20,7 @@
     <main class="app-main">
         <p class="section-label">센서</p>
 
-        <form method="get" th:action="@{/sensors}" class="filter-bar">
+        <form method="get" th:action="@{/my-group/sensors}" class="filter-bar">
             <select name="locationId" class="form-select">
                 <option value="">전체 위치</option>
                 <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"
@@ -35,8 +35,9 @@
             <div class="split-list">
                 <div class="location-summary-list" th:if="${not #lists.isEmpty(sensors)}">
                     <a class="split-row" th:each="sensor : ${sensors}"
-                       th:href="@{/sensors/{sensorId}(sensorId=${sensor.sensorId()})}">
+                       th:href="@{/my-group/sensors/{sensorId}(sensorId=${sensor.sensorId()})}">
                         <div class="split-row-title">
+                            <i class="ti ti-circle-filled" th:style="'font-size:0.5rem; color:' + (${sensor.isOnline()} ? 'var(--success)' : 'var(--ink-faint)')"></i>
                             <span th:text="${sensor.sensorName()}"></span>
                         </div>
                         <div class="split-row-meta" th:text="${sensor.sensorEui()}"></div>

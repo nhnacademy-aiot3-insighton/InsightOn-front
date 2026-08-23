@@ -8,9 +8,12 @@ import com.nhnacademy.insightonfront.adapter.core.groupmember.dto.GroupRole;
 import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import com.nhnacademy.insightonfront.common.resolver.LocationNameResolver;
 import com.nhnacademy.insightonfront.domain.suggestion.dto.SuggestionLogViewModel;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,13 +23,27 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SuggestionLogViewService {
 
     private static final String UNKNOWN_LOCATION = "알 수 없는 위치";
 
+    private static final Map<String, String> ACTUATOR_TYPE_LABELS = Map.of(
+            "AIRCON", "에어컨",
+            "AIR_PURIFIER", "공기청정기",
+            "VENTILATION_FAN", "환풍기"
+    );
+    private static final Map<String, String> COMMAND_VALUE_LABELS = Map.ofEntries(
+            Map.entry("ON", "켜기"), Map.entry("OFF", "끄기"),
+            Map.entry("COOL", "냉방"), Map.entry("DRY", "제습"), Map.entry("FAN", "송풍"), Map.entry("AUTO", "자동"),
+            Map.entry("SLEEP", "취침"), Map.entry("TURBO", "터보"),
+            Map.entry("LOW", "약"), Map.entry("MID", "중"), Map.entry("HIGH", "강")
+    );
+
     private final SuggestionClient suggestionClient;
     private final LocationNameResolver locationNameResolver;
     private final GroupMemberClient groupMemberClient;
+    private final ObjectMapper objectMapper;
 
     public PageResponse<SuggestionLogViewModel> getSuggestionLogs(Long groupId, Long locationId,
                                                                     OffsetDateTime from, OffsetDateTime to,
@@ -86,8 +103,34 @@ public class SuggestionLogViewService {
                 log.title(),
                 log.suggestionText(),
                 log.isAccepted(),
-                log.actionPayload(),
+                buildActionSummary(log.actionPayload()),
                 log.createdAt()
         );
+    }
+
+    /** actionPayload JSON({"actuatorType","command","commandValue",...})을 "환풍기 전원 켜기" 같은 문장으로 바꾼다. */
+    private String buildActionSummary(String actionPayloadJson) {
+        if (actionPayloadJson == null || actionPayloadJson.isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode node = objectMapper.readTree(actionPayloadJson);
+            String actuatorType = node.path("actuatorType").asText(null);
+            String command = node.path("command").asText(null);
+            String commandValue = node.path("commandValue").asText(null);
+            if (actuatorType == null || command == null || commandValue == null) {
+                return null;
+            }
+
+            String actuatorLabel = ACTUATOR_TYPE_LABELS.getOrDefault(actuatorType, actuatorType);
+            if ("SET_TEMPERATURE".equals(command)) {
+                return actuatorLabel + " 설정 온도 " + commandValue + "°C로 변경";
+            }
+            String valueLabel = COMMAND_VALUE_LABELS.getOrDefault(commandValue, commandValue);
+            return actuatorLabel + " " + valueLabel;
+        } catch (Exception e) {
+            log.warn("actionPayload 파싱 실패: {}", actionPayloadJson, e);
+            return null;
+        }
     }
 }
