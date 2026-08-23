@@ -20,40 +20,47 @@ public class DashboardController {
 
     private final DashboardClient dashboardClient;
 
-    @GetMapping("/groups/location/dashboard")
+    @GetMapping("/groups/location/{locationId}/dashboard")
     public String getDashboard(
-            //여기서 auth 토큰을 넘겨줘야함(?)
-            @RequestHeader Long userId,
-            @SessionAttribute("groupId") Long groupId,
-            @SessionAttribute("locationId") Long locationId,
-                               Model model
+            @CookieValue(value = "userId", required = false) Long userId,
+            @CookieValue(value = "groupId", required = false) Long groupId,
+            @PathVariable("locationId") Long locationId,
+            Model model
     ) {
+        if (userId == null || groupId == null) {
+            return "redirect:/login";
+        }
 
         DashboardResponse response = dashboardClient.getDashboard(userId, groupId, locationId);
 
         model.addAttribute("dashboard", response);
+        model.addAttribute("groupId", groupId);
+        model.addAttribute("locationId", locationId);
 
         return "dashboard/widgets";
     }
 
-    @PostMapping("/groups/location/dashboard/save")
+    @PostMapping("/groups/location/{locationId}/dashboard/save")
     public String saveDashboard(
-            @RequestHeader Long userId,
-            @SessionAttribute("groupId") Long groupId,
-            @SessionAttribute("locationId") Long locationId,
+            @CookieValue(value = "userId", required = false) Long userId,
+            @CookieValue(value = "groupId", required = false) Long groupId,
+            @PathVariable("locationId") Long locationId,
             @RequestBody List<WidgetSaveRequest> requests,
             Model model) {
 
+        if (userId == null || groupId == null) {
+            return "redirect:/login";
+        }
 
         try {
             Map<Long, ChartDataResponse> responseMap = dashboardClient.saveDashboard(userId, groupId, locationId, requests);
 
-        model.addAttribute("chartData", responseMap);
+            model.addAttribute("chartData", responseMap);
             log.info("HTML 버튼 클릭으로 Front 컨트롤러 세이브 실행됨!");
 
         } catch (Exception e) {
             log.error("저장실패!!");
         }
-        return "redirect:/groups/" + groupId + "/location/" + locationId + "/dashboard";
+        return "redirect:/groups/location/" + locationId + "/dashboard";
     }
 }
