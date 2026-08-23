@@ -30,16 +30,16 @@ public class SuggestionLogViewService {
 
     public PageResponse<SuggestionLogViewModel> getSuggestionLogs(Long groupId, Long locationId,
                                                                     OffsetDateTime from, OffsetDateTime to,
-                                                                    int page, int size, Long userId) {
+                                                                    int page, int size) {
         PageResponse<SuggestionLogResponse> logs =
-                suggestionClient.getSuggestionLogs(groupId, locationId, from, to, page, size, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(groupId, userId);
+                suggestionClient.getSuggestionLogs(groupId, locationId, from, to, page, size);
+        Map<Long, String> locationNames = locationNameResolver.resolve(groupId);
         return logs.map(s -> toViewModel(s, locationNames));
     }
 
-    public SuggestionLogViewModel getSuggestionLog(Long suggestionLogId, Long userId) {
-        SuggestionLogResponse log = suggestionClient.getSuggestionLog(suggestionLogId, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(log.groupId(), userId);
+    public SuggestionLogViewModel getSuggestionLog(Long suggestionLogId) {
+        SuggestionLogResponse log = suggestionClient.getSuggestionLog(suggestionLogId);
+        Map<Long, String> locationNames = locationNameResolver.resolve(log.groupId());
         return toViewModel(log, locationNames);
     }
 
@@ -48,8 +48,8 @@ public class SuggestionLogViewService {
      */
     public SuggestionLogViewModel accept(Long suggestionLogId, Long groupId, Long userId) {
         requireManagerOrAbove(groupId, userId);
-        SuggestionLogResponse log = suggestionClient.accept(suggestionLogId, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(log.groupId(), userId);
+        SuggestionLogResponse log = suggestionClient.accept(suggestionLogId);
+        Map<Long, String> locationNames = locationNameResolver.resolve(log.groupId());
         return toViewModel(log, locationNames);
     }
 
@@ -58,8 +58,8 @@ public class SuggestionLogViewService {
      */
     public SuggestionLogViewModel reject(Long suggestionLogId, Long groupId, Long userId) {
         requireManagerOrAbove(groupId, userId);
-        SuggestionLogResponse log = suggestionClient.reject(suggestionLogId, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(log.groupId(), userId);
+        SuggestionLogResponse log = suggestionClient.reject(suggestionLogId);
+        Map<Long, String> locationNames = locationNameResolver.resolve(log.groupId());
         return toViewModel(log, locationNames);
     }
 
@@ -67,7 +67,7 @@ public class SuggestionLogViewService {
      * 화면에서 수락/거절 버튼을 보여줄지 판단할 때 쓴다. 권한이 없으면 예외 대신 false만 반환한다.
      */
     public boolean isManagerOrAbove(Long groupId, Long userId) {
-        return groupMemberClient.getGroupMemberList(userId, groupId).stream()
+        return groupMemberClient.getGroupMemberList(groupId).stream()
                 .filter(member -> member.userId().equals(userId))
                 .map(GroupMemberListResponse::groupRole)
                 .anyMatch(role -> role.ordinal() >= GroupRole.MANAGER.ordinal());

@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.SessionAttribute;
+import org.springframework.web.bind.annotation.CookieValue;
 
 /**
- * AI가 만든 제안 로그를 조회하고, MANAGER 이상만 수락/거절할 수 있다. userId·groupId는 세션에서 읽는다(한 유저 = 한 그룹).
+ * AI가 만든 제안 로그를 조회하고, MANAGER 이상만 수락/거절할 수 있다. groupId는 쿠키에서 읽는다
+ * (한 유저 = 한 그룹). userId는 수락/거절 권한(그룹 내 역할) 확인에 실제로 필요해서 쿠키값을 쓴다
+ * — 그 외 조회 호출들은 게이트웨이가 Authorization에서 뽑아주는 X-User-Id로 인증된다.
  */
 @Controller
 @RequiredArgsConstructor
@@ -29,8 +31,8 @@ public class SuggestionController {
     private final LocationClient locationClient;
 
     @GetMapping
-    public String list(@SessionAttribute(value = "userId", required = false) Long userId,
-                        @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String list(@CookieValue(value = "userId", required = false) Long userId,
+                        @CookieValue(value = "groupId", required = false) Long groupId,
                         @RequestParam(required = false) Long locationId,
                         @RequestParam(required = false) OffsetDateTime from,
                         @RequestParam(required = false) OffsetDateTime to,
@@ -41,8 +43,8 @@ public class SuggestionController {
             return "redirect:/login";
         }
         PageResponse<SuggestionLogViewModel> suggestions =
-                suggestionLogViewService.getSuggestionLogs(groupId, locationId, from, to, page, size, userId);
-        List<LocationListResponse> locations = locationClient.getLocationList(groupId, userId);
+                suggestionLogViewService.getSuggestionLogs(groupId, locationId, from, to, page, size);
+        List<LocationListResponse> locations = locationClient.getLocationList(groupId);
 
         model.addAttribute("suggestions", suggestions);
         model.addAttribute("locations", locations);
@@ -51,22 +53,22 @@ public class SuggestionController {
     }
 
     @GetMapping("/{suggestion-log-id}")
-    public String detail(@SessionAttribute(value = "userId", required = false) Long userId,
-                          @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String detail(@CookieValue(value = "userId", required = false) Long userId,
+                          @CookieValue(value = "groupId", required = false) Long groupId,
                           @PathVariable("suggestion-log-id") Long suggestionLogId,
                           Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        SuggestionLogViewModel suggestion = suggestionLogViewService.getSuggestionLog(suggestionLogId, userId);
+        SuggestionLogViewModel suggestion = suggestionLogViewService.getSuggestionLog(suggestionLogId);
         model.addAttribute("suggestion", suggestion);
         model.addAttribute("canManage", suggestionLogViewService.isManagerOrAbove(groupId, userId));
         return "suggestion/detail";
     }
 
     @PostMapping("/{suggestion-log-id}/accept")
-    public String accept(@SessionAttribute(value = "userId", required = false) Long userId,
-                          @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String accept(@CookieValue(value = "userId", required = false) Long userId,
+                          @CookieValue(value = "groupId", required = false) Long groupId,
                           @PathVariable("suggestion-log-id") Long suggestionLogId) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
@@ -76,8 +78,8 @@ public class SuggestionController {
     }
 
     @PostMapping("/{suggestion-log-id}/reject")
-    public String reject(@SessionAttribute(value = "userId", required = false) Long userId,
-                          @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String reject(@CookieValue(value = "userId", required = false) Long userId,
+                          @CookieValue(value = "groupId", required = false) Long groupId,
                           @PathVariable("suggestion-log-id") Long suggestionLogId) {
         if (userId == null || groupId == null) {
             return "redirect:/login";

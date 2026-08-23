@@ -157,7 +157,7 @@
 
         <p class="section-label">위치 요약</p>
         <div class="location-summary-list" th:if="${locationSummaries != null and not #lists.isEmpty(locationSummaries)}">
-            <a th:each="loc : ${locationSummaries}" th:href="@{/my-group/locations/{id}(id=${loc.locationId()})}" class="location-summary-row">
+            <a th:each="loc : ${locationSummaries}" th:href="@{/my-group/location/{id}/dashboard(id=${loc.locationId()})}" class="location-summary-row">
                 <div class="location-summary-name">
                     <span class="location-avatar" th:text="${#strings.substring(loc.locationName(), 0, 1)}">1</span>
                     <span th:text="${loc.locationName()}">위치명</span>

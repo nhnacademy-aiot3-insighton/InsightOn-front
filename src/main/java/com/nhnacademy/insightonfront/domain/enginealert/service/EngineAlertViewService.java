@@ -25,16 +25,16 @@ public class EngineAlertViewService {
 
     public PageResponse<EngineAlertViewModel> getEngineAlerts(Long groupId, Long locationId, Severity severity,
                                                                 OffsetDateTime from, OffsetDateTime to,
-                                                                int page, int size, Long userId) {
+                                                                int page, int size) {
         PageResponse<EngineAlertResponse> alerts =
-                engineAlertClient.getEngineAlerts(groupId, locationId, severity, from, to, page, size, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(groupId, userId);
+                engineAlertClient.getEngineAlerts(groupId, locationId, severity, from, to, page, size);
+        Map<Long, String> locationNames = locationNameResolver.resolve(groupId);
         return alerts.map(a -> toViewModel(a, locationNames));
     }
 
-    public EngineAlertViewModel getEngineAlert(Long engineAlertId, Long userId) {
-        EngineAlertResponse alert = engineAlertClient.getEngineAlert(engineAlertId, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(alert.groupId(), userId);
+    public EngineAlertViewModel getEngineAlert(Long engineAlertId) {
+        EngineAlertResponse alert = engineAlertClient.getEngineAlert(engineAlertId);
+        Map<Long, String> locationNames = locationNameResolver.resolve(alert.groupId());
         return toViewModel(alert, locationNames);
     }
 

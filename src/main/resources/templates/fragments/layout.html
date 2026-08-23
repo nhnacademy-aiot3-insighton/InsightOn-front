@@ -5,11 +5,11 @@
 <div th:fragment="sidebar" class="app-sidebar d-flex flex-column">
     <p class="sidebar-label">위치</p>
     <div class="location-links">
-        <a th:href="@{/my-group/locations/1}" class="location-link">1층 로비</a>
-        <a th:href="@{/my-group/locations/2}" class="location-link">2층 사무실</a>
-        <a th:href="@{/my-group/locations/3}" class="location-link">3층 회의실</a>
+        <a th:each="location : ${sidebarLocations}"
+           th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}"
+           class="location-link" th:text="${location.locationName()}"></a>
     </div>
-    <a th:href="@{/my-group/locations}" class="add-location-link">
+    <a th:href="@{/my-group/location/list}" class="add-location-link">
         <i class="ti ti-plus"></i>위치 추가
     </a>
 </div>
@@ -33,7 +33,6 @@
         <a th:href="@{/engine-alerts}" class="nav-link">엔진알람</a>
         <a th:href="@{/suggestions}" class="nav-link">제안</a>
         <a th:href="@{/sensors}" class="nav-link">센서</a>
-        <a th:href="@{/flows}" class="nav-link">Flow</a>
     </nav>
     <div class="flex-grow-1"></div>
     <div class="dropdown">
@@ -105,7 +104,6 @@
         <a th:href="@{/suggestions(locationId=${locationId})}" class="nav-link">제안</a>
         <a th:href="@{/sensors(locationId=${locationId})}" class="nav-link">센서</a>
         <a th:href="@{/locations/{locationId}/actuators(locationId=${locationId})}" class="nav-link">액추에이터</a>
-        <a th:href="@{/flows}" class="nav-link">Flow</a>
     </nav>
     <div class="flex-grow-1"></div>
     <div class="dropdown">

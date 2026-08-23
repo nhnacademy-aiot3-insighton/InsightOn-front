@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.SessionAttribute;
+import org.springframework.web.bind.annotation.CookieValue;
 
 /**
  * 게이트웨이로 자동 등록된 센서를 조회·이름변경·위치재배치·삭제한다. 센서는 물리 장치가 통신을
  * 시작하면 core가 알아서 만들기 때문에(FR 상 발견/등록 API 없음) "센서 추가" 같은 생성 액션은 없다.
- * userId·groupId는 세션에서 읽는다(한 유저 = 한 그룹).
+ * groupId는 쿠키에서 읽는다(한 유저 = 한 그룹). userId는 게이트웨이가 Authorization에서 뽑아 쓴다.
  */
 @Controller
 @RequiredArgsConstructor
@@ -36,16 +36,16 @@ public class SensorController {
     private final LocationClient locationClient;
 
     @GetMapping
-    public String list(@SessionAttribute(value = "userId", required = false) Long userId,
-                        @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String list(@CookieValue(value = "userId", required = false) Long userId,
+                        @CookieValue(value = "groupId", required = false) Long groupId,
                         @RequestParam(required = false) Long locationId,
                         @RequestParam(required = false) String sensorName,
                         Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        List<SensorResponse> sensors = sensorClient.search(userId, groupId, null, null, locationId, sensorName);
-        List<LocationListResponse> locations = locationClient.getLocationList(groupId, userId);
+        List<SensorResponse> sensors = sensorClient.search(groupId, null, null, locationId, sensorName);
+        List<LocationListResponse> locations = locationClient.getLocationList(groupId);
 
         model.addAttribute("sensors", sensors);
         model.addAttribute("locations", locations);
@@ -55,16 +55,16 @@ public class SensorController {
     }
 
     @GetMapping("/{sensor-id}")
-    public String detail(@SessionAttribute(value = "userId", required = false) Long userId,
-                          @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String detail(@CookieValue(value = "userId", required = false) Long userId,
+                          @CookieValue(value = "groupId", required = false) Long groupId,
                           @PathVariable("sensor-id") Long sensorId,
                           Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        SensorResponse sensor = sensorClient.getSensor(userId, sensorId);
-        List<SensorAttributeResponse> attributes = sensorAttributeClient.getSensorAttribute(userId, sensorId);
-        List<LocationListResponse> locations = locationClient.getLocationList(groupId, userId);
+        SensorResponse sensor = sensorClient.getSensor(sensorId);
+        List<SensorAttributeResponse> attributes = sensorAttributeClient.getSensorAttribute(sensorId);
+        List<LocationListResponse> locations = locationClient.getLocationList(groupId);
 
         model.addAttribute("sensor", sensor);
         model.addAttribute("attributes", attributes);
@@ -74,24 +74,21 @@ public class SensorController {
 
     @PutMapping("/{sensor-id}")
     @ResponseBody
-    public void update(@SessionAttribute(value = "userId", required = false) Long userId,
-                        @PathVariable("sensor-id") Long sensorId,
+    public void update(@PathVariable("sensor-id") Long sensorId,
                         @RequestBody SensorUpdateRequest request) {
-        sensorClient.updateSensor(userId, sensorId, request);
+        sensorClient.updateSensor(sensorId, request);
     }
 
     @DeleteMapping("/{sensor-id}")
     @ResponseBody
-    public void delete(@SessionAttribute(value = "userId", required = false) Long userId,
-                        @PathVariable("sensor-id") Long sensorId) {
-        sensorClient.deleteSensor(userId, sensorId);
+    public void delete(@PathVariable("sensor-id") Long sensorId) {
+        sensorClient.deleteSensor(sensorId);
     }
 
     @DeleteMapping("/{sensor-id}/attributes/{metric-key}")
     @ResponseBody
-    public void deleteAttribute(@SessionAttribute(value = "userId", required = false) Long userId,
-                                 @PathVariable("sensor-id") Long sensorId,
+    public void deleteAttribute(@PathVariable("sensor-id") Long sensorId,
                                  @PathVariable("metric-key") String metricKey) {
-        sensorAttributeClient.deleteSensorAttribute(userId, sensorId, metricKey);
+        sensorAttributeClient.deleteSensorAttribute(sensorId, metricKey);
     }
 }

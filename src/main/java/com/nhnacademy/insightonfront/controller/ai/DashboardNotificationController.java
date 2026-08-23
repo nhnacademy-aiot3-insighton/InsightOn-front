@@ -17,16 +17,14 @@ public class DashboardNotificationController {
     private final DashboardNotificationViewService dashboardNotificationViewService;
 
     @GetMapping
-    public List<DashboardNotificationViewModel> getUnreadNotifications(@RequestHeader Long userId,
-                                                                        @SessionAttribute("groupId") Long groupId) {
-        return dashboardNotificationViewService.getUnreadNotifications(groupId, userId);
+    public List<DashboardNotificationViewModel> getUnreadNotifications(@CookieValue("groupId") Long groupId) {
+        return dashboardNotificationViewService.getUnreadNotifications(groupId);
     }
 
     @PostMapping("/{dashboard-notification-id}/read")
-    public DashboardNotificationViewModel markAsRead(@RequestHeader Long userId,
-                                                      @SessionAttribute("groupId") Long groupId,
+    public DashboardNotificationViewModel markAsRead(@CookieValue("groupId") Long groupId,
                                                       @PathVariable("dashboard-notification-id")
                                                       Long dashboardNotificationId) {
-        return dashboardNotificationViewService.markAsRead(dashboardNotificationId, groupId, userId);
+        return dashboardNotificationViewService.markAsRead(dashboardNotificationId, groupId);
     }
 }
