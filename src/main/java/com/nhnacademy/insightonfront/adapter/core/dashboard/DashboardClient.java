@@ -18,7 +18,7 @@ public interface DashboardClient {
      */
     @GetMapping("/api/v1/groups/{group-id}/location/{location-id}/dashboard")
     DashboardResponse getDashboard(
-            @RequestHeader Long userId,
+            @RequestHeader("X-USER-ID") Long userId,
             @PathVariable("group-id") Long groupId,
             @PathVariable("location-id") Long locationId
     );
@@ -28,7 +28,7 @@ public interface DashboardClient {
      */
     @PostMapping("/api/v1/groups/{group-id}/location/{location-id}/dashboard/save")
     Map<Long, ChartDataResponse> saveDashboard(
-            @RequestHeader Long userId,
+            @RequestHeader("X-USER-ID") Long userId,
             @PathVariable("group-id") Long groupId,
             @PathVariable("location-id") Long locationId,
             @RequestBody List<WidgetSaveRequest> requests
@@ -38,6 +38,12 @@ public interface DashboardClient {
     /**
      * chart.js에서 주기적으로 호출할 API
      */
-    @GetMapping("/api/v1/dashboard/widgets/{widget-id}/chart-data")
-    ChartDataResponse getWidgetChartData(@PathVariable("widget-id") Long widgetId);
+    @GetMapping("/api/v1/groups/{group-id}/location/{location-id}/dashboard/widgets/{widget-id}/chart-data")
+    ChartDataResponse getWidgetChartData(
+            @RequestHeader("X-USER-ID") Long userId,
+            @PathVariable("group-id") Long groupId,
+            @PathVariable("location-id") Long locationId,
+            @PathVariable("widget-id") Long widgetId
+    );
+
 }
