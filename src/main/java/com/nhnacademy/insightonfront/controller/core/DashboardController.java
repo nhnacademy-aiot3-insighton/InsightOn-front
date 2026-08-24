@@ -65,6 +65,16 @@ public class DashboardController {
             sensors = sensorClient.search(userId, groupId, null, null, locationId, null);
         } catch (Exception e) {
             log.warn("[DashboardController] 백엔드 센서 목록 조회 실패: {}", e.getMessage());
+            // 로컬 테스트용 sensor list 하드코딩
+//            log.warn("[DashboardController] 백엔드 센서 목록 조회 실패 (테스트 센서 목록 사용): {}", e.getMessage());
+//        }
+//
+//        if (sensors == null || sensors.isEmpty()) {
+//            sensors = List.of(
+//                    new SensorResponse(1L, 1L, locationId, "DEV_TEMP_01", "테스트 온습도 센서 1", java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now()),
+//                    new SensorResponse(2L, 1L, locationId, "DEV_CO2_02", "테스트 CO2 센서 2", java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now()),
+//                    new SensorResponse(3L, 1L, locationId, "DEV_PRESS_03", "테스트 기압 센서 3", java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now())
+//            );
         }
 
         model.addAttribute("dashboard", response);
