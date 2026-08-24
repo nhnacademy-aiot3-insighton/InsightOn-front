@@ -31,7 +31,7 @@
                 <span class="field-hint" style="margin-top:0;" th:text="${#temporals.format(report.createdAt(), 'yyyy-MM-dd HH:mm')}"></span>
             </div>
             <h2 style="font-size:1.25rem; font-weight:700; color:var(--ink); margin-bottom: var(--sp-4);" th:text="${report.title()}"></h2>
-            <div class="report-content" th:text="${report.content()}"></div>
+            <div class="report-content" data-markdown th:text="${report.content()}"></div>
         </div>
     </main>
 </div>
@@ -40,5 +40,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
+<script th:src="@{/js/markdown-render.js}"></script>
 </body>
 </html>
