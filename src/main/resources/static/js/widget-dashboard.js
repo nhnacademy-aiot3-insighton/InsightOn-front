@@ -58,12 +58,14 @@
             sseConnections[w.uid].close();
         }
 
+        console.log(`[SSE Subscribed] 센서 ${sensorId}번 실시간 SSE 연결 개설 완료`);
         const eventSource = new EventSource(`/sse/sensors/${sensorId}`);
         sseConnections[w.uid] = eventSource;
 
         eventSource.addEventListener('telemetry', (event) => {
             try {
                 const data = JSON.parse(event.data);
+                console.log(`[SSE Telemetry Received] 센서 ${sensorId}번 데이터 수신:`, data);
                 updateWidgetRealtime(w, data);
             } catch (e) {
                 console.warn('[SSE Parse Error]', e);
@@ -208,25 +210,18 @@
 
     function renderWidgetBody(w, el) {
         const body = el.querySelector('.grid-widget-body');
-        const type = w.widgetConfig.type || 'GRAPH';
+        if (!body) return;
 
-        // 1. 기존 DB에 저장된 위젯일 때 백엔드 데이터를 가져오고 SSE 연결
-        if (w.widgetId && !w.dirty) {
-            if (type === 'GRAPH') {
-                body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
-                body.innerHTML = `<canvas style="width: 100%; height: 100%; flex: 1;"></canvas>`;
-            } else if (type === 'BAR') {
-                body.className = 'card-body grid-widget-body p-2';
-                body.innerHTML = `<span class="grid-widget-value">—</span><span class="grid-widget-unit"></span><div class="grid-widget-sparkline"><canvas></canvas></div>`;
-            } else {
-                body.className = 'card-body grid-widget-body p-2';
-                body.innerHTML = `<span class="grid-widget-value">—</span><span class="grid-widget-unit"></span>`;
+        // 센서가 설정된 경우 (기존 위젯이든 신규로 설정한 위젯이든) 차트/수치 캔버스 렌더링
+        if (w.widgetConfig && w.widgetConfig.sensorEui) {
+            initEmptyChart(w, el);
+            if (w.widgetId && !w.dirty) {
+                fetchAndRenderData(w, el);
             }
-            fetchAndRenderData(w, el);
             return;
         }
 
-        // 2. 신규 위젯 / 미설정 위젯일 때: 더미 차트 제거 및 "설정 필요" 안내 문구 출력
+        // 미설정 위젯일 때만 안내 문구 출력
         body.className = 'card-body grid-widget-body p-3 d-flex flex-column align-items-center justify-content-center text-center';
         body.innerHTML = `
             <div class="text-secondary">
@@ -237,6 +232,55 @@
         `;
     }
 
+    function initEmptyChart(w, el) {
+        const type = w.widgetConfig.type || 'GRAPH';
+        const body = el.querySelector('.grid-widget-body');
+        if (!body) return;
+
+        if (type === 'GRAPH') {
+            body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
+            body.innerHTML = `<canvas style="width: 100%; height: 100%; flex: 1;"></canvas>`;
+            const canvas = body.querySelector('canvas');
+            destroyChart(w.uid);
+
+            const fields = (w.widgetConfig.fields && w.widgetConfig.fields.length)
+                ? w.widgetConfig.fields
+                : ['temperature', 'humidity'];
+            const colors = ['#206bc4', '#4263eb', '#5ebea3', '#f59f00', '#d63939'];
+
+            chartInstances[w.uid] = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: fields.map((field, idx) => ({
+                        label: field,
+                        data: [],
+                        borderColor: colors[idx % colors.length],
+                        backgroundColor: colors[idx % colors.length] + '20',
+                        borderWidth: 1.5,
+                        fill: idx === 0,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {legend: {display: fields.length > 1}},
+                    scales: {
+                        x: {ticks: {font: {size: 10}}, grid: {display: false}},
+                        y: {ticks: {font: {size: 10}}, grid: {color: '#eef1f6'}}
+                    }
+                }
+            });
+        } else {
+            body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center';
+            body.innerHTML = `<span class="grid-widget-value fs-1 fw-bold">—</span><span class="grid-widget-unit text-muted"></span>`;
+        }
+    }
+
     function fetchAndRenderData(w, el) {
         fetch(`${BASE_URL}/widgets/${w.widgetId}/chart-data`)
             .then((r) => {
@@ -244,6 +288,7 @@
                 return r.json();
             })
             .then((data) => {
+                // influxDB에서 가져온 과거 데이터를 차트에 쭉 그려넣음
                 paintWidgetData(w, el, data);
                 // InfluxDB 시계열 수신 후 SSE 구독 시작
                 const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
@@ -252,6 +297,7 @@
                 }
             })
             .catch(() => {
+                console.warn('[InfluxDB Data Fetch Failed] 실시간 SSE만 연결 시도:', err);
                 const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
                 if (sensorId) {
                     subscribeWidgetSse(w, sensorId);
@@ -349,6 +395,8 @@
             w.yPos = item.y;
             w.width = item.w;
             w.height = item.h;
+            w.dirty = true;
+            console.log(`[Widget Layout Changed] 위젯 (${w.uid}) 위치/크기 변경: x=${w.xPos}, y=${w.yPos}, w=${w.width}, h=${w.height}`);
             updateDim(w);
             if (chartInstances[w.uid]) {
                 chartInstances[w.uid].resize();
@@ -358,6 +406,7 @@
 
     grid.on('resizestop', (event, el) => {
         const uid = el.getAttribute('gs-id');
+        console.log(`[Widget Resize Stopped] 위젯 (${uid}) 리사이즈 완료`);
         if (uid && chartInstances[uid]) {
             chartInstances[uid].resize();
         }
@@ -386,7 +435,17 @@
                 `).join('');
             })
             .catch(() => {
-                metricListEl.innerHTML = `<p class="metric-check-empty">메트릭을 불러오지 못했어요.</p>`;
+                const defaultAttrs = [
+                    {metricKey: 'temperature', displayName: '온도', unit: '°C'},
+                    {metricKey: 'humidity', displayName: '습도', unit: '%'}
+                ];
+                metricListEl.innerHTML = defaultAttrs.map((a) => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${a.metricKey}" id="metric-${a.metricKey}"
+                               ${selectedFields.includes(a.metricKey) || selectedFields.length === 0 ? 'checked' : ''}>
+                        <label class="form-check-label" for="metric-${a.metricKey}">${a.displayName} <span class="text-muted">(${a.unit})</span></label>
+                    </div>
+                `).join('');
             });
     }
 
@@ -446,7 +505,7 @@
         if (el) renderWidgetBody(w, el);
 
         // 설정 적용 시 해당 센서 SSE 새로 구독
-        const sensorId = sensorIdByEui[sensorEui];
+        const sensorId = (sensorOpt && sensorOpt.value) ? sensorOpt.value : (sensorIdByEui[sensorEui] || '1');
         if (sensorId) {
             subscribeWidgetSse(w, sensorId);
         }
