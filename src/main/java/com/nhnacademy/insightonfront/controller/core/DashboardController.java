@@ -4,6 +4,8 @@ import com.nhnacademy.insightonfront.adapter.core.dashboard.DashboardClient;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.chart.ChartDataResponse;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.dashboard.DashboardResponse;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.widget.WidgetSaveRequest;
+import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
+import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -13,40 +15,45 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * groupId는 쿠키에서 읽는다(한 유저 = 한 그룹). locationId는 한 그룹 안에서도 여러 위치를
+ * 오갈 수 있어 세션이 아니라 경로 변수로 받는다.
+ */
 @Controller
 @RequiredArgsConstructor
 @Slf4j
 public class DashboardController {
 
     private final DashboardClient dashboardClient;
+    private final LocationClient locationClient;
 
-    @GetMapping("/groups/location/dashboard")
+    @GetMapping("/my-group/location/{location-id}/dashboard")
     public String getDashboard(
-            //여기서 auth 토큰을 넘겨줘야함(?)
-            @RequestHeader Long userId,
-            @SessionAttribute("groupId") Long groupId,
-            @SessionAttribute("locationId") Long locationId,
+            @CookieValue("groupId") Long groupId,
+            @PathVariable("location-id") Long locationId,
                                Model model
     ) {
 
-        DashboardResponse response = dashboardClient.getDashboard(userId, groupId, locationId);
+        DashboardResponse response = dashboardClient.getDashboard(groupId, locationId);
+        LocationDetailResponse location = locationClient.getLocation(groupId, locationId);
 
         model.addAttribute("dashboard", response);
+        model.addAttribute("locationId", locationId);
+        model.addAttribute("location", location);
 
         return "dashboard/widgets";
     }
 
-    @PostMapping("/groups/location/dashboard/save")
+    @PostMapping("/my-group/location/{location-id}/dashboard/save")
     public String saveDashboard(
-            @RequestHeader Long userId,
-            @SessionAttribute("groupId") Long groupId,
-            @SessionAttribute("locationId") Long locationId,
+            @CookieValue("groupId") Long groupId,
+            @PathVariable("location-id") Long locationId,
             @RequestBody List<WidgetSaveRequest> requests,
             Model model) {
 
 
         try {
-            Map<Long, ChartDataResponse> responseMap = dashboardClient.saveDashboard(userId, groupId, locationId, requests);
+            Map<Long, ChartDataResponse> responseMap = dashboardClient.saveDashboard(groupId, locationId, requests);
 
         model.addAttribute("chartData", responseMap);
             log.info("HTML 버튼 클릭으로 Front 컨트롤러 세이브 실행됨!");
@@ -54,6 +61,6 @@ public class DashboardController {
         } catch (Exception e) {
             log.error("저장실패!!");
         }
-        return "redirect:/groups/" + groupId + "/location/" + locationId + "/dashboard";
+        return "redirect:/my-group/location/" + locationId + "/dashboard";
     }
 }

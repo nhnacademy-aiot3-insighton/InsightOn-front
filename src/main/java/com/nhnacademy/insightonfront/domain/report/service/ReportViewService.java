@@ -27,10 +27,10 @@ public class ReportViewService {
 
     public PageResponse<ReportListViewModel> getReports(Long groupId, Long locationId, ReportType reportType,
                                                           OffsetDateTime from, OffsetDateTime to,
-                                                          int page, int size, Long userId) {
+                                                          int page, int size) {
         PageResponse<ReportListResponse> reports =
-                reportClient.getReports(groupId, locationId, reportType, from, to, page, size, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(groupId, userId);
+                reportClient.getReports(groupId, locationId, reportType, from, to, page, size);
+        Map<Long, String> locationNames = locationNameResolver.resolve(groupId);
         return reports.map(r -> new ReportListViewModel(
                 r.reportId(),
                 locationNames.getOrDefault(r.locationId(), UNKNOWN_LOCATION),
@@ -40,9 +40,9 @@ public class ReportViewService {
         ));
     }
 
-    public ReportDetailViewModel getReport(Long reportId, Long userId) {
-        ReportDetailResponse report = reportClient.getReport(reportId, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(report.groupId(), userId);
+    public ReportDetailViewModel getReport(Long reportId) {
+        ReportDetailResponse report = reportClient.getReport(reportId);
+        Map<Long, String> locationNames = locationNameResolver.resolve(report.groupId());
         return new ReportDetailViewModel(
                 report.reportId(),
                 locationNames.getOrDefault(report.locationId(), UNKNOWN_LOCATION),

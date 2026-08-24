@@ -20,7 +20,7 @@
     <main class="app-main">
         <p class="section-label">엔진알람</p>
 
-        <form method="get" th:action="@{/engine-alerts}" class="filter-bar">
+        <form method="get" th:action="@{/my-group/engine-alerts}" class="filter-bar">
             <select name="locationId" class="form-select">
                 <option value="">전체 위치</option>
                 <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"
@@ -39,7 +39,7 @@
             <div class="split-list">
                 <div class="location-summary-list" th:if="${not #lists.isEmpty(alerts.content())}">
                     <a class="split-row" th:each="alert : ${alerts.content()}"
-                       th:href="@{/engine-alerts/{alertId}(alertId=${alert.engineAlertId()})}">
+                       th:href="@{/my-group/engine-alerts/{alertId}(alertId=${alert.engineAlertId()})}">
                         <div class="split-row-title">
                             <span class="status-badge neutral" style="margin-top:0;" th:if="${alert.severity().name() == 'INFO'}">정보</span>
                             <span class="status-badge warning" style="margin-top:0;" th:if="${alert.severity().name() == 'WARNING'}">경고</span>

@@ -2495,8 +2495,40 @@ button:focus-visible,
 }
 
 .split-list {
-  flex: 0 0 380px;
-  max-width: 380px;
+  flex: 0 0 420px;
+  max-width: 420px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.sensor-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-6);
+  align-items: start;
+}
+
+@media (max-width: 700px) {
+  .sensor-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.list-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding-top: var(--sp-3);
+  margin-top: var(--sp-1);
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+}
+
+.list-pagination .btn-landing-secondary {
+  padding: var(--sp-1) var(--sp-3);
 }
 
 /* 목록 폭이 380px로 좁아서 위치/날짜를 가로로 배치하는 .location-summary-row 대신

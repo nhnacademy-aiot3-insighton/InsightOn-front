@@ -8,9 +8,11 @@ import java.time.OffsetDateTime;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
+/**
+ * userId는 안 넘긴다 — 게이트웨이가 Authorization을 검증해서 X-User-Id로 바꿔 AI 서비스에 넘겨준다.
+ */
 @FeignClient(name = "insighton-gateway", contextId = "reportClient", url = "${service-url.gateway}")
 public interface ReportClient {
 
@@ -21,10 +23,8 @@ public interface ReportClient {
                                                 @RequestParam(value = "from", required = false) OffsetDateTime from,
                                                 @RequestParam(value = "to", required = false) OffsetDateTime to,
                                                 @RequestParam("page") int page,
-                                                @RequestParam("size") int size,
-                                                @RequestHeader("X-User-Id") Long userId);
+                                                @RequestParam("size") int size);
 
     @GetMapping("/api/v1/reports/{reportId}")
-    ReportDetailResponse getReport(@PathVariable("reportId") Long reportId,
-                                   @RequestHeader("X-User-Id") Long userId);
+    ReportDetailResponse getReport(@PathVariable("reportId") Long reportId);
 }
