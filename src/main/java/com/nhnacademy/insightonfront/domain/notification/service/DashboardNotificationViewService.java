@@ -21,19 +21,19 @@ public class DashboardNotificationViewService {
     private final DashboardNotificationClient dashboardNotificationClient;
     private final LocationNameResolver locationNameResolver;
 
-    public List<DashboardNotificationViewModel> getUnreadNotifications(Long groupId, Long userId) {
+    public List<DashboardNotificationViewModel> getUnreadNotifications(Long groupId) {
         List<DashboardNotificationResponse> notifications =
-                dashboardNotificationClient.getUnreadNotifications(groupId, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(groupId, userId);
+                dashboardNotificationClient.getUnreadNotifications(groupId);
+        Map<Long, String> locationNames = locationNameResolver.resolve(groupId);
         return notifications.stream()
                 .map(n -> toViewModel(n, locationNames))
                 .toList();
     }
 
-    public DashboardNotificationViewModel markAsRead(Long dashboardNotificationId, Long groupId, Long userId) {
+    public DashboardNotificationViewModel markAsRead(Long dashboardNotificationId, Long groupId) {
         DashboardNotificationResponse notification =
-                dashboardNotificationClient.markAsRead(dashboardNotificationId, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(groupId, userId);
+                dashboardNotificationClient.markAsRead(dashboardNotificationId);
+        Map<Long, String> locationNames = locationNameResolver.resolve(groupId);
         return toViewModel(notification, locationNames);
     }
 

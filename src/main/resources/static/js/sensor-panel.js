@@ -25,7 +25,7 @@
                 return;
             }
             saveBtn.disabled = true;
-            fetch(`/sensors/${sensorId}`, {
+            fetch(`/my-group/sensors/${sensorId}`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({locationId: Number(locationId), sensorName: name})
@@ -43,10 +43,10 @@
         if (deleteBtn) {
             const card = deleteBtn.closest('#detailContent');
             if (!confirm('이 센서를 삭제할까요? 참조하는 위젯·Flow 조건이 있다면 함께 끊겨요.')) return;
-            fetch(`/sensors/${card.dataset.sensorId}`, {method: 'DELETE'})
+            fetch(`/my-group/sensors/${card.dataset.sensorId}`, {method: 'DELETE'})
                 .then((r) => {
                     if (!r.ok) throw new Error('delete failed');
-                    location.href = '/sensors';
+                    location.href = '/my-group/sensors';
                 })
                 .catch(() => showError(card, '삭제하지 못했어요. 잠시 후 다시 시도해주세요.'));
             return;
@@ -56,7 +56,7 @@
         if (removeAttrBtn) {
             const card = removeAttrBtn.closest('#detailContent');
             const metricKey = removeAttrBtn.dataset.metricKey;
-            fetch(`/sensors/${card.dataset.sensorId}/attributes/${metricKey}`, {method: 'DELETE'})
+            fetch(`/my-group/sensors/${card.dataset.sensorId}/attributes/${metricKey}`, {method: 'DELETE'})
                 .then((r) => {
                     if (!r.ok) throw new Error('delete failed');
                     removeAttrBtn.closest('.chip-option').remove();

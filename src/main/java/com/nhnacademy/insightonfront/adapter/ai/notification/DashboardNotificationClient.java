@@ -6,7 +6,6 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
@@ -15,15 +14,14 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Feign은 블로킹 클라이언트라 응답이 안 끝나는 SSE 스트림을 그대로 소비하는 데 안 맞는다.
  * 실시간 알림은 브라우저가 Gateway의 SSE 엔드포인트에 직접 EventSource로 붙거나, WebClient 기반
  * 별도 컴포넌트로 처리해야 한다.
+ * <p>userId는 안 넘긴다 — 게이트웨이가 Authorization을 검증해서 X-User-Id로 바꿔 넘겨준다.
  */
 @FeignClient(name = "insighton-gateway", contextId = "dashboardNotificationClient", url = "${service-url.gateway}")
 public interface DashboardNotificationClient {
 
     @GetMapping("/api/v1/dashboard-notifications")
-    List<DashboardNotificationResponse> getUnreadNotifications(@RequestParam("groupId") Long groupId,
-                                                                @RequestHeader("X-User-Id") Long userId);
+    List<DashboardNotificationResponse> getUnreadNotifications(@RequestParam("groupId") Long groupId);
 
     @PostMapping("/api/v1/dashboard-notifications/{dashboardNotificationId}/read")
-    DashboardNotificationResponse markAsRead(@PathVariable("dashboardNotificationId") Long dashboardNotificationId,
-                                             @RequestHeader("X-User-Id") Long userId);
+    DashboardNotificationResponse markAsRead(@PathVariable("dashboardNotificationId") Long dashboardNotificationId);
 }

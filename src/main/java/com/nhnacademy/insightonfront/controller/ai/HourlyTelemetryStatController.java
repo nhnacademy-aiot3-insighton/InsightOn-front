@@ -20,8 +20,7 @@ public class HourlyTelemetryStatController {
 
     // locationId는 AI 서비스 API 자체에서 필수 파라미터라 여기도 필수로 받는다.
     @GetMapping
-    public String getHourlyTelemetryStats(@RequestHeader Long userId,
-                                          @SessionAttribute("groupId") Long groupId,
+    public String getHourlyTelemetryStats(@CookieValue("groupId") Long groupId,
                                           @RequestParam Long locationId,
                                           @RequestParam(required = false) OffsetDateTime from,
                                           @RequestParam(required = false) OffsetDateTime to,
@@ -29,8 +28,7 @@ public class HourlyTelemetryStatController {
                                           @RequestParam(defaultValue = "20") int size,
                                           Model model) {
         PageResponse<HourlyTelemetryStatViewModel> stats =
-                hourlyTelemetryStatViewService.getHourlyTelemetryStats(groupId, locationId, from, to, page, size,
-                        userId);
+                hourlyTelemetryStatViewService.getHourlyTelemetryStats(groupId, locationId, from, to, page, size);
 
         model.addAttribute("stats", stats);
 

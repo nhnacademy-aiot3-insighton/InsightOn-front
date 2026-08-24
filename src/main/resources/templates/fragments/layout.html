@@ -5,11 +5,11 @@
 <div th:fragment="sidebar" class="app-sidebar d-flex flex-column">
     <p class="sidebar-label">위치</p>
     <div class="location-links">
-        <a th:href="@{/my-group/locations/1}" class="location-link">1층 로비</a>
-        <a th:href="@{/my-group/locations/2}" class="location-link">2층 사무실</a>
-        <a th:href="@{/my-group/locations/3}" class="location-link">3층 회의실</a>
+        <a th:each="location : ${sidebarLocations}"
+           th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}"
+           class="location-link" th:text="${location.locationName()}"></a>
     </div>
-    <a th:href="@{/my-group/locations}" class="add-location-link">
+    <a th:href="@{/my-group/location/list}" class="add-location-link">
         <i class="ti ti-plus"></i>위치 추가
     </a>
 </div>
@@ -29,11 +29,10 @@
         InsightOn <span class="text-muted-group">· 우리회사</span>
     </a>
     <nav class="app-nav d-flex gap-2">
-        <a th:href="@{/reports}" class="nav-link">리포트</a>
-        <a th:href="@{/engine-alerts}" class="nav-link">엔진알람</a>
-        <a th:href="@{/suggestions}" class="nav-link">제안</a>
-        <a th:href="@{/sensors}" class="nav-link">센서</a>
-        <a th:href="@{/flows}" class="nav-link">Flow</a>
+        <a th:href="@{/my-group/reports}" class="nav-link">리포트</a>
+        <a th:href="@{/my-group/engine-alerts}" class="nav-link">엔진알람</a>
+        <a th:href="@{/my-group/suggestions}" class="nav-link">제안</a>
+        <a th:href="@{/my-group/sensors}" class="nav-link">센서</a>
     </nav>
     <div class="flex-grow-1"></div>
     <div class="dropdown">
@@ -93,31 +92,25 @@
     </div>
 </header>
 
-<header th:fragment="locationHeader(locationName, locationId)" class="app-header d-flex align-items-center px-4 gap-4">
+<header th:fragment="locationHeader(locationName, locationId, autoControlMode)" class="app-header d-flex align-items-center px-4 gap-4">
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <i class="ti ti-chart-line"></i>
         우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
         <span th:text="${locationName}">위치명</span>
     </a>
+    <span th:if="${autoControlMode != null}" class="status-badge neutral" style="margin-top:0; white-space:nowrap;"
+          th:text="${autoControlMode.name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
     <nav class="app-nav d-flex gap-2">
-        <a th:href="@{/reports(locationId=${locationId})}" class="nav-link active">리포트</a>
-        <a th:href="@{/engine-alerts(locationId=${locationId})}" class="nav-link">엔진알람</a>
-        <a th:href="@{/suggestions(locationId=${locationId})}" class="nav-link">제안</a>
-        <a th:href="@{/sensors(locationId=${locationId})}" class="nav-link">센서</a>
+        <a th:href="@{/my-group/reports(locationId=${locationId})}" class="nav-link active">리포트</a>
+        <a th:href="@{/my-group/engine-alerts(locationId=${locationId})}" class="nav-link">엔진알람</a>
+        <a th:href="@{/my-group/suggestions(locationId=${locationId})}" class="nav-link">제안</a>
+        <a th:href="@{/my-group/sensors(locationId=${locationId})}" class="nav-link">센서</a>
         <a th:href="@{/locations/{locationId}/actuators(locationId=${locationId})}" class="nav-link">액추에이터</a>
-        <a th:href="@{/flows}" class="nav-link">Flow</a>
     </nav>
     <div class="flex-grow-1"></div>
-    <div class="dropdown">
-        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            위치 관리
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#">이름 수정</a></li>
-            <li><a class="dropdown-item" href="#">자동제어 모드 토글</a></li>
-            <li><a class="dropdown-item text-danger" href="#">위치 삭제</a></li>
-        </ul>
-    </div>
+    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#locationManageModal">
+        위치 관리
+    </button>
     <div class="dropdown">
         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="ti ti-bell"></i>
@@ -164,6 +157,39 @@
         </ul>
     </div>
 </header>
+
+<div th:fragment="locationManageModal(locationId, locationName, autoControlMode)"
+     class="modal fade" id="locationManageModal" tabindex="-1" aria-hidden="true"
+     th:attr="data-location-id=${locationId}, data-current-mode=${autoControlMode != null ? autoControlMode.name() : 'SUGGESTION'}">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">위치 관리</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="locationManageError" class="field-hint danger" style="display:none; margin-bottom: var(--sp-4);"></div>
+                <div class="settings-field">
+                    <label for="locationManageName">이름</label>
+                    <input type="text" id="locationManageName" class="form-control" th:value="${locationName}">
+                </div>
+                <div class="settings-field">
+                    <label for="locationManageMode">자동 제어 모드</label>
+                    <select id="locationManageMode" class="form-select">
+                        <option value="SUGGESTION" th:selected="${autoControlMode == null or autoControlMode.name() == 'SUGGESTION'}">제안만 받기 (SUGGESTION)</option>
+                        <option value="AI_DIRECT" th:selected="${autoControlMode != null and autoControlMode.name() == 'AI_DIRECT'}">AI 자동 제어 (AI_DIRECT)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnDeleteLocation" class="btn btn-outline-secondary text-danger">위치 삭제</button>
+                <div class="flex-grow-1"></div>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" id="btnSaveLocation" class="btn btn-primary">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div th:fragment="chatWidget">
     <button type="button" class="chat-fab" data-bs-toggle="offcanvas" data-bs-target="#aiChatPanel" aria-controls="aiChatPanel">

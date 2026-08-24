@@ -40,10 +40,9 @@ public class GroupController {
     private final GatewayClient gatewayClient;
 
     @PostMapping("/create")
-    public String createGroup(@RequestHeader Long userId,
-                              @RequestBody GroupRequest request) {
+    public String createGroup(@RequestBody GroupRequest request) {
 
-        groupClient.createGroup(userId, request);
+        groupClient.createGroup(request);
 
         return "redirect:/";
     }
@@ -57,22 +56,22 @@ public class GroupController {
      * 다르고 키 이름도 확실치 않아서, 대신 실제로 깔끔하게 셀 수 있는 센서 개수·알람 건수로 채웠다.
      */
     @GetMapping
-    public String getMyGroup(@SessionAttribute(value = "userId", required = false) Long userId,
-                             @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String getMyGroup(@CookieValue(value = "userId", required = false) Long userId,
+                             @CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
 
-        GroupResponse myGroup = groupClient.getMyGroup(userId, groupId);
-        List<LocationSummary> locationSummaries = safeLocationSummaries(userId, groupId);
+        GroupResponse myGroup = groupClient.getMyGroup(groupId);
+        List<LocationSummary> locationSummaries = safeLocationSummaries(groupId);
 
         model.addAttribute("myGroup", myGroup);
         model.addAttribute("locationCount", locationSummaries != null ? locationSummaries.size() : null);
         model.addAttribute("locationSummaries", locationSummaries);
-        model.addAttribute("sensorCount", safeSensorTotal(userId, groupId));
-        model.addAttribute("criticalAlertCount", safeCriticalAlertCount(userId, groupId));
-        model.addAttribute("gateway", safeGateway(userId, groupId));
+        model.addAttribute("sensorCount", safeSensorTotal(groupId));
+        model.addAttribute("criticalAlertCount", safeCriticalAlertCount(groupId));
+        model.addAttribute("gateway", safeGateway(groupId));
         model.addAttribute("weather", safeWeather(groupId));
 
         return "group/detail";
@@ -80,21 +79,21 @@ public class GroupController {
 
     /** 그룹 관리 &gt; 그룹 정보 탭 — 실제 그룹 데이터로 이름/소재지/설명/초대 코드를 보여준다. */
     @GetMapping("/manage")
-    public String manageInfo(@SessionAttribute(value = "userId", required = false) Long userId,
-                             @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String manageInfo(@CookieValue(value = "userId", required = false) Long userId,
+                             @CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
 
-        model.addAttribute("myGroup", groupClient.getMyGroup(userId, groupId));
+        model.addAttribute("myGroup", groupClient.getMyGroup(groupId));
         model.addAttribute("section", "info");
         return "group/manage";
     }
 
     /** 초대 토큰으로 기존 그룹에 참가한다 — 그룹 생성 신청과 별개로, 이미 있는 그룹에 들어가는 경로. */
     @PostMapping("/join")
-    public String joinGroup(@SessionAttribute(value = "userId", required = false) Long userId,
+    public String joinGroup(@CookieValue(value = "userId", required = false) Long userId,
                             @RequestParam("inviteToken") String inviteToken,
                             RedirectAttributes redirectAttributes) {
         if (userId == null) {
@@ -102,7 +101,7 @@ public class GroupController {
         }
 
         try {
-            groupClient.joinGroup(userId, inviteToken);
+            groupClient.joinGroup(inviteToken);
             return "redirect:/my-group";
         } catch (Exception e) {
             log.warn("그룹 참가 실패 - inviteToken:{}", inviteToken, e);
@@ -112,12 +111,11 @@ public class GroupController {
     }
 
     @GetMapping("/preview")
-    public String getGroupPreview(@RequestHeader Long userId,
-                                  @SessionAttribute("groupId") Long groupId,
+    public String getGroupPreview(@CookieValue("groupId") Long groupId,
                                   @RequestParam("inviteToken") String inviteToken,
                                   Model model) {
 
-        GroupResponse groupPreview = groupClient.getGroupPreview(userId, groupId, inviteToken);
+        GroupResponse groupPreview = groupClient.getGroupPreview(groupId, inviteToken);
 
         model.addAttribute("groupPreview", groupPreview);
 
@@ -126,13 +124,13 @@ public class GroupController {
 
 
     @PostMapping("/invite-token/new")
-    public String newInviteToken(@SessionAttribute(value = "userId", required = false) Long userId,
-                                 @SessionAttribute(value = "groupId", required = false) Long groupId) {
+    public String newInviteToken(@CookieValue(value = "userId", required = false) Long userId,
+                                 @CookieValue(value = "groupId", required = false) Long groupId) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
 
-        groupClient.newInviteToken(userId, groupId);
+        groupClient.newInviteToken(groupId);
 
         log.info("토큰이 새로 발급되었습니다. Group ID : {}", groupId);
 
@@ -140,34 +138,32 @@ public class GroupController {
     }
 
     @PutMapping("/update")
-    public String updateGroup(@RequestHeader Long userId,
-                              @SessionAttribute("groupId") Long groupId,
+    public String updateGroup(@CookieValue("groupId") Long groupId,
                               @RequestBody GroupRequest request) {
 
-        groupClient.updateGroup(userId, groupId, request);
+        groupClient.updateGroup(groupId, request);
 
         return "redirect:/groups/" + groupId + "/my-group";
     }
 
     @DeleteMapping("/delete")
-    public String deleteGroup(@RequestHeader Long userId,
-                              @SessionAttribute("groupId") Long groupId) {
+    public String deleteGroup(@CookieValue("groupId") Long groupId) {
 
-        groupClient.deleteGroup(userId, groupId);
+        groupClient.deleteGroup(groupId);
 
         log.info("성공적으로 삭제되었습니다. Group ID : {}", groupId);
         return "redirect:/";
     }
 
-    private List<LocationSummary> safeLocationSummaries(Long userId, Long groupId) {
+    private List<LocationSummary> safeLocationSummaries(Long groupId) {
         try {
-            List<LocationListResponse> locations = locationClient.getLocationList(groupId, userId);
+            List<LocationListResponse> locations = locationClient.getLocationList(groupId);
             return locations.stream()
                     .map(loc -> new LocationSummary(
                             loc.locationId(),
                             loc.locationName(),
-                            safeSensorCount(userId, groupId, loc.locationId()),
-                            safeLocationAlertCount(userId, groupId, loc.locationId())))
+                            safeSensorCount(groupId, loc.locationId()),
+                            safeLocationAlertCount(groupId, loc.locationId())))
                     .toList();
         } catch (Exception e) {
             log.warn("위치 목록 조회 실패 - groupId:{}", groupId, e);
@@ -175,18 +171,18 @@ public class GroupController {
         }
     }
 
-    private int safeSensorCount(Long userId, Long groupId, Long locationId) {
+    private int safeSensorCount(Long groupId, Long locationId) {
         try {
-            return sensorClient.search(userId, groupId, null, null, locationId, null).size();
+            return sensorClient.search(groupId, null, null, locationId, null).size();
         } catch (Exception e) {
             log.warn("센서 개수 조회 실패 - groupId:{}, locationId:{}", groupId, locationId, e);
             return 0;
         }
     }
 
-    private long safeLocationAlertCount(Long userId, Long groupId, Long locationId) {
+    private long safeLocationAlertCount(Long groupId, Long locationId) {
         try {
-            return engineAlertClient.getEngineAlerts(groupId, locationId, null, null, null, 0, 1, userId)
+            return engineAlertClient.getEngineAlerts(groupId, locationId, null, null, null, 0, 1)
                     .totalElements();
         } catch (Exception e) {
             log.warn("위치별 알람 건수 조회 실패 - groupId:{}, locationId:{}", groupId, locationId, e);
@@ -194,18 +190,18 @@ public class GroupController {
         }
     }
 
-    private Integer safeSensorTotal(Long userId, Long groupId) {
+    private Integer safeSensorTotal(Long groupId) {
         try {
-            return sensorClient.search(userId, groupId, null, null, null, null).size();
+            return sensorClient.search(groupId, null, null, null, null).size();
         } catch (Exception e) {
             log.warn("전체 센서 개수 조회 실패 - groupId:{}", groupId, e);
             return null;
         }
     }
 
-    private GatewayResponse safeGateway(Long userId, Long groupId) {
+    private GatewayResponse safeGateway(Long groupId) {
         try {
-            return gatewayClient.getByGroupId(userId, groupId);
+            return gatewayClient.getByGroupId(groupId);
         } catch (FeignException.NotFound e) {
             return null;
         } catch (Exception e) {
@@ -214,9 +210,9 @@ public class GroupController {
         }
     }
 
-    private Long safeCriticalAlertCount(Long userId, Long groupId) {
+    private Long safeCriticalAlertCount(Long groupId) {
         try {
-            return engineAlertClient.getEngineAlerts(groupId, null, Severity.CRITICAL, null, null, 0, 1, userId)
+            return engineAlertClient.getEngineAlerts(groupId, null, Severity.CRITICAL, null, null, 0, 1)
                     .totalElements();
         } catch (Exception e) {
             log.warn("엔진 알람 건수 조회 실패 - groupId:{}", groupId, e);

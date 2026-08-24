@@ -18,11 +18,10 @@ public class AdminController {
     private final GroupClient groupClient;
 
     @GetMapping("/group-list")
-    public String getGroupList(@RequestHeader Long userId,
-                               @RequestHeader String userRole,
+    public String getGroupList(@RequestHeader String userRole,
                                @RequestParam("page") int page,
                                @RequestParam("size") int size, Model model) {
-        PageResponse<GroupAdminResponse> adminGroupList = groupClient.getGroupList(userRole, userId, page, size);
+        PageResponse<GroupAdminResponse> adminGroupList = groupClient.getGroupList(userRole, page, size);
 
         model.addAttribute("groupList", adminGroupList);
 

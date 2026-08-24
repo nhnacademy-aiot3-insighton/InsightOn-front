@@ -15,23 +15,23 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.SessionAttribute;
+import org.springframework.web.bind.annotation.CookieValue;
 
 /**
- * 엔진 알람(Rule Engine이 조건을 만족했을 때 남기는 알람 로그) 조회. userId·groupId는 세션에서 읽는다
+ * 엔진 알람(Rule Engine이 조건을 만족했을 때 남기는 알람 로그) 조회. groupId는 쿠키에서 읽는다
  * — 한 유저는 그룹 하나에만 속해서 groupId를 URL에 실을 필요가 없다.
  */
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/engine-alerts")
+@RequestMapping("/my-group/engine-alerts")
 public class EngineAlertController {
 
     private final EngineAlertViewService engineAlertViewService;
     private final LocationClient locationClient;
 
     @GetMapping
-    public String list(@SessionAttribute(value = "userId", required = false) Long userId,
-                        @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String list(@CookieValue(value = "userId", required = false) Long userId,
+                        @CookieValue(value = "groupId", required = false) Long groupId,
                         @RequestParam(required = false) Long locationId,
                         @RequestParam(required = false) Severity severity,
                         @RequestParam(required = false) OffsetDateTime from,
@@ -43,8 +43,8 @@ public class EngineAlertController {
             return "redirect:/login";
         }
         PageResponse<EngineAlertViewModel> alerts =
-                engineAlertViewService.getEngineAlerts(groupId, locationId, severity, from, to, page, size, userId);
-        List<LocationListResponse> locations = locationClient.getLocationList(groupId, userId);
+                engineAlertViewService.getEngineAlerts(groupId, locationId, severity, from, to, page, size);
+        List<LocationListResponse> locations = locationClient.getLocationList(groupId);
 
         model.addAttribute("alerts", alerts);
         model.addAttribute("locations", locations);
@@ -54,14 +54,14 @@ public class EngineAlertController {
     }
 
     @GetMapping("/{engine-alert-id}")
-    public String detail(@SessionAttribute(value = "userId", required = false) Long userId,
-                          @SessionAttribute(value = "groupId", required = false) Long groupId,
+    public String detail(@CookieValue(value = "userId", required = false) Long userId,
+                          @CookieValue(value = "groupId", required = false) Long groupId,
                           @PathVariable("engine-alert-id") Long engineAlertId,
                           Model model) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        EngineAlertViewModel alert = engineAlertViewService.getEngineAlert(engineAlertId, userId);
+        EngineAlertViewModel alert = engineAlertViewService.getEngineAlert(engineAlertId);
         model.addAttribute("alert", alert);
         return "enginealert/detail";
     }

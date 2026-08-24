@@ -19,12 +19,12 @@
 
     <main class="app-main">
         <p class="section-label">
-            <a th:href="@{/suggestions}" style="color:var(--ink-soft); text-decoration:none;">
+            <a th:href="@{/my-group/suggestions}" style="color:var(--ink-soft); text-decoration:none;">
                 <i class="ti ti-arrow-left"></i> 제안
             </a>
         </p>
 
-        <div id="detailContent" class="settings-card" style="max-width: 760px;">
+        <div id="detailContent" class="settings-card" style="max-width: 100%;">
             <div style="display:flex; align-items:center; gap: var(--sp-3); margin-bottom: var(--sp-2);">
                 <span class="status-badge neutral" style="margin-top:0;" th:if="${suggestion.isAccepted() == null}">대기중</span>
                 <span class="status-badge success" style="margin-top:0;" th:if="${suggestion.isAccepted() == true}">수락됨</span>
@@ -35,9 +35,22 @@
             <h2 style="font-size:1.25rem; font-weight:700; color:var(--ink); margin-bottom: var(--sp-4);" th:text="${suggestion.title()}"></h2>
             <div class="report-content" th:text="${suggestion.suggestionText()}"></div>
 
-            <div th:if="${suggestion.actionPayload() != null and not #strings.isEmpty(suggestion.actionPayload())}" style="margin-top: var(--sp-6);">
-                <label style="display:block; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--sp-2);">제안된 동작</label>
-                <pre style="background: var(--surface-alt); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3); font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--ink-soft); white-space: pre-wrap; margin: 0;" th:text="${suggestion.actionPayload()}"></pre>
+            <div th:if="${suggestion.actionSummary() != null}"
+                 style="margin-top: var(--sp-6); display:flex; align-items:center; gap: var(--sp-3); background: var(--surface-alt); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-4);">
+                <i class="ti ti-adjustments" style="font-size:1.5rem; color:var(--primary);"></i>
+                <div>
+                    <label style="display:block; font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--sp-1);">제안된 동작</label>
+                    <span style="font-weight:600; color:var(--ink);" th:text="${suggestion.actionSummary()}"></span>
+                </div>
+            </div>
+
+            <div th:if="${canManage and suggestion.isAccepted() == null}" style="margin-top: var(--sp-6); display:flex; gap: var(--sp-3);">
+                <form th:action="@{/my-group/suggestions/{id}/accept(id=${suggestion.suggestionLogId()})}" method="post">
+                    <button type="submit" class="btn-landing-primary"><i class="ti ti-check"></i>수락</button>
+                </form>
+                <form th:action="@{/my-group/suggestions/{id}/reject(id=${suggestion.suggestionLogId()})}" method="post">
+                    <button type="submit" class="btn-landing-secondary"><i class="ti ti-x"></i>거절</button>
+                </form>
             </div>
         </div>
     </main>
