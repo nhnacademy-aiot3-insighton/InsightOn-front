@@ -81,12 +81,13 @@
     function updateWidgetRealtime(w, telemetryData) {
         const chart = chartInstances[w.uid];
         const metrics = telemetryData.metrics || {};
+        const type = w.widgetConfig.type || 'GRAPH';
 
         const timeStr = new Date(telemetryData.timestamp).toLocaleTimeString([], {
             hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
 
-        if (w.widgetConfig.type === 'GRAPH' && chart) {
+        if ((type === 'GRAPH' || type === 'BAR') && chart) {
             chart.data.labels.push(timeStr);
 
             chart.data.datasets.forEach((ds) => {
@@ -100,6 +101,23 @@
             }
 
             chart.update('quiet');
+        } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
+            const el = contentEl(w.uid);
+            const firstField = (w.widgetConfig.fields || [])[0] || 'temperature';
+            const val = metrics[firstField] ?? 0;
+            const numericVal = Number(val);
+
+            const valueEl = el ? el.querySelector('.grid-widget-value') : null;
+            if (valueEl) {
+                valueEl.textContent = numericVal.toLocaleString(undefined, { maximumFractionDigits: 1 });
+            }
+
+            if (chart) {
+                const maxVal = 100;
+                const fillVal = Math.min(Math.max(numericVal, 0), maxVal);
+                chart.data.datasets[0].data = [fillVal, maxVal - fillVal];
+                chart.update('quiet');
+            }
         } else {
             const el = contentEl(w.uid);
             if (!el) return;
@@ -237,7 +255,7 @@
         const body = el.querySelector('.grid-widget-body');
         if (!body) return;
 
-        if (type === 'GRAPH') {
+        if (type === 'GRAPH' || type === 'BAR') {
             body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
             body.innerHTML = `<canvas style="width: 100%; height: 100%; flex: 1;"></canvas>`;
             const canvas = body.querySelector('canvas');
@@ -247,17 +265,20 @@
                 ? w.widgetConfig.fields
                 : ['temperature', 'humidity'];
             const colors = ['#206bc4', '#4263eb', '#5ebea3', '#f59f00', '#d63939'];
+            const chartType = (type === 'BAR') ? 'bar' : 'line';
 
             chartInstances[w.uid] = new Chart(canvas, {
-                type: 'line',
+                type: chartType,
                 data: {
                     labels: [],
                     datasets: fields.map((field, idx) => ({
                         label: field,
                         data: [],
                         borderColor: colors[idx % colors.length],
-                        backgroundColor: colors[idx % colors.length] + '20',
-                        borderWidth: 1.5,
+                        backgroundColor: (type === 'BAR')
+                            ? colors[idx % colors.length] + '80'
+                            : colors[idx % colors.length] + '20',
+                        borderWidth: (type === 'BAR') ? 1 : 1.5,
                         fill: idx === 0,
                         tension: 0.3,
                         pointRadius: 3,
@@ -273,6 +294,39 @@
                         x: {ticks: {font: {size: 10}}, grid: {display: false}},
                         y: {ticks: {font: {size: 10}}, grid: {color: '#eef1f6'}}
                     }
+                }
+            });
+        } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
+            body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center position-relative';
+            body.innerHTML = `
+                <div style="width: 100%; height: 75%; position: relative;">
+                    <canvas style="width: 100%; height: 100%;"></canvas>
+                </div>
+                <div style="position: absolute; bottom: 15px; text-align: center;">
+                    <span class="grid-widget-value fs-2 fw-bold text-primary">0</span>
+                </div>
+            `;
+            const canvas = body.querySelector('canvas');
+            destroyChart(w.uid);
+
+            chartInstances[w.uid] = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['현재값', '잔여'],
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#206bc4', '#eef1f6'],
+                        borderWidth: 0,
+                        cutout: '75%'
+                    }]
+                },
+                options: {
+                    rotation: 270,
+                    circumference: 180,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
                 }
             });
         } else {
@@ -297,7 +351,7 @@
                 }
             })
             .catch(() => {
-                console.warn('[InfluxDB Data Fetch Failed] 실시간 SSE만 연결 시도:', err);
+                console.warn('[InfluxDB Data Fetch Failed] 실시간 SSE만 연결 시도:');
                 const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
                 if (sensorId) {
                     subscribeWidgetSse(w, sensorId);
@@ -306,23 +360,29 @@
     }
 
     function paintWidgetData(w, el, data) {
-        const type = w.widgetConfig.type;
+        const type = w.widgetConfig.type || 'GRAPH';
         const labels = data.labels || [];
         const datasets = data.datasets || [];
         const body = el.querySelector('.grid-widget-body');
 
-        if (type === 'GRAPH') {
+        if (type === 'GRAPH' || type === 'BAR') {
             const canvas = body.querySelector('canvas');
+            if (!canvas) return;
             destroyChart(w.uid);
+            const chartType = (type === 'BAR') ? 'bar' : 'line';
+            const colors = ['#206bc4', '#b8752a', '#5ebea3', '#f59f00', '#d63939'];
+
             chartInstances[w.uid] = new Chart(canvas, {
-                type: 'line',
+                type: chartType,
                 data: {
                     labels,
                     datasets: datasets.map((ds, i) => ({
                         label: ds.label,
                         data: ds.data,
-                        borderColor: i === 0 ? '#206bc4' : '#b8752a',
-                        backgroundColor: i === 0 ? 'rgba(32, 107, 196, 0.1)' : 'rgba(184, 117, 42, 0.1)',
+                        borderColor: colors[i % colors.length],
+                        backgroundColor: (type === 'BAR')
+                            ? colors[i % colors.length] + '80'
+                            : colors[i % colors.length] + '20',
                         borderWidth: 1.5,
                         tension: 0.3,
                         fill: i === 0,
@@ -347,34 +407,15 @@
         const latest = firstSeries.length ? firstSeries[firstSeries.length - 1] : null;
         const valueEl = body.querySelector('.grid-widget-value');
         if (valueEl) {
-            valueEl.textContent = latest === null || latest === undefined ? '데이터 없음' : Number(latest).toLocaleString(undefined, {maximumFractionDigits: 1});
+            valueEl.textContent = latest === null || latest === undefined ? '0' : Number(latest).toLocaleString(undefined, {maximumFractionDigits: 1});
         }
 
-        if (type === 'GAUGE') {
-            const canvas = body.querySelector('.grid-widget-sparkline canvas');
-            if (canvas) {
-                destroyChart(w.uid);
-                chartInstances[w.uid] = new Chart(canvas, {
-                    type: 'line',
-                    data: {
-                        labels,
-                        datasets: [{
-                            data: firstSeries,
-                            borderColor: '#206bc4',
-                            borderWidth: 1.5,
-                            tension: 0.3,
-                            fill: false,
-                            pointRadius: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {legend: {display: false}},
-                        scales: {x: {display: false}, y: {display: false}}
-                    }
-                });
-            }
+        if ((type === 'GAUGE' || type === 'SINGLE_STAT') && chartInstances[w.uid] && latest !== null && latest !== undefined) {
+            const numericVal = Number(latest);
+            const maxVal = 100;
+            const fillVal = Math.min(Math.max(numericVal, 0), maxVal);
+            chartInstances[w.uid].data.datasets[0].data = [fillVal, maxVal - fillVal];
+            chartInstances[w.uid].update('quiet');
         }
     }
 

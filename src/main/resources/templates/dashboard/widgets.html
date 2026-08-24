@@ -114,12 +114,12 @@
                             <i class="ti ti-chart-line"></i>그래프
                         </label>
                         <label class="type-choice">
-                            <input name="widgetType" type="radio" value="GAUGE">
-                            <i class="ti ti-gauge"></i>게이지
+                            <input name="widgetType" type="radio" value="BAR">
+                            <i class="ti ti-chart-bar"></i>막대 그래프
                         </label>
                         <label class="type-choice">
                             <input name="widgetType" type="radio" value="SINGLE_STAT">
-                            <i class="ti ti-123"></i>현재 수치값
+                            <i class="ti ti-gauge"></i>게이지
                         </label>
                     </div>
                 </div>
@@ -181,7 +181,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gridstack@latest/dist/gridstack-all.js"></script>
-<script th:src="@{/js/widget-dashboard.js}"></script>
+<script th:src="@{/js/widget-dashboard.js?v=7}"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
 </body>
 </html>
