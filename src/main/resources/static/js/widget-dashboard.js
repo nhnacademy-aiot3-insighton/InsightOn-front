@@ -107,7 +107,8 @@
             chart.update('quiet');
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
             const el = contentEl(w.uid);
-            const firstField = (w.widgetConfig.fields || [])[0] || 'temperature';
+            const firstField = (w.widgetConfig.fields || [])[0];
+            if (!firstField) return;
             const val = metrics[firstField] ?? 0;
             const numericVal = Number(val);
 
@@ -368,7 +369,7 @@
         if (type === 'GRAPH' || type === 'BAR') {
             const fields = (w.widgetConfig.fields && w.widgetConfig.fields.length)
                 ? w.widgetConfig.fields
-                : ['temperature', 'humidity'];
+                : [];
 
             const legendHtml = fields.map((field, idx) => {
                 const color = getFieldColor(field, idx);
@@ -636,30 +637,21 @@
                 return r.json();
             })
             .then((attrs) => {
-                if (!attrs.length) {
-                    metricListEl.innerHTML = `<p class="metric-check-empty">이 센서는 등록된 메트릭이 없어요.</p>`;
+                if (!attrs || !attrs.length) {
+                    metricListEl.innerHTML = `<p class="metric-check-empty">이 센서에 등록된 메트릭이 없습니다.</p>`;
                     return;
                 }
                 metricListEl.innerHTML = attrs.map((a) => `
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" value="${a.metricKey}" id="metric-${a.metricKey}"
                                ${selectedFields.includes(a.metricKey) ? 'checked' : ''}>
-                        <label class="form-check-label" for="metric-${a.metricKey}">${a.displayName} <span class="text-muted">(${a.unit})</span></label>
+                        <label class="form-check-label" for="metric-${a.metricKey}">${a.displayName || a.metricKey} ${a.unit ? `<span class="text-muted">(${a.unit})</span>` : ''}</label>
                     </div>
                 `).join('');
             })
-            .catch(() => {
-                const defaultAttrs = [
-                    {metricKey: 'temperature', displayName: '온도', unit: '°C'},
-                    {metricKey: 'humidity', displayName: '습도', unit: '%'}
-                ];
-                metricListEl.innerHTML = defaultAttrs.map((a) => `
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="${a.metricKey}" id="metric-${a.metricKey}"
-                               ${selectedFields.includes(a.metricKey) || selectedFields.length === 0 ? 'checked' : ''}>
-                        <label class="form-check-label" for="metric-${a.metricKey}">${a.displayName} <span class="text-muted">(${a.unit})</span></label>
-                    </div>
-                `).join('');
+            .catch((err) => {
+                console.warn('[loadMetrics] 센서 메트릭 조회 실패:', err);
+                metricListEl.innerHTML = `<p class="metric-check-empty text-danger">메트릭 정보를 불러올 수 없습니다.</p>`;
             });
     }
 
