@@ -85,7 +85,7 @@
                 </div>
             </div>
             <div class="flow-detail-node-path"
-                 th:with="hasCondition=${flow.steps().?[roleLabel() == '조건'].size() > 0}">
+                 th:with="hasCondition=${flow.hasCondition()}">
                 <div class="flow-detail-node-column flow-detail-node-column-start">
                     <div class="flow-detail-lane-title">
                         <span>1</span>
