@@ -43,7 +43,8 @@
             aggregateWindow: '1m',
             fields: []
         },
-        dirty: false
+        layoutDirty: false,  // 위치·크기 변경 여부 (드래그, 리사이즈)
+        configDirty: false   // 설정 변경 여부 (위젯 설정 모달 "적용")
     }));
 
     const chartInstances = {};
@@ -235,10 +236,13 @@
         const body = el.querySelector('.grid-widget-body');
         if (!body) return;
 
-        // 센서가 설정된 경우 (기존 위젯이든 신규로 설정한 위젯이든) 차트/수치 캔버스 렌더링
+        // 센서가 설정된 경우 차트/수치 캔버스 렌더링
+        // configDirty(설정 변경)일 때는 btnApplyConfig에서 직접 fetchAndRenderData를 호출하므로 여기서 중복 호출하지 않음
+        // layoutDirty(드래그·리사이즈)일 때는 renderWidgetBody 자체가 호출되지 않으므로 고려 불필요
         if (w.widgetConfig && w.widgetConfig.sensorEui) {
             initEmptyChart(w, el);
-            if (w.widgetId && !w.dirty) {
+            if (w.widgetId && !w.configDirty) {
+                // 초기 로드(페이지 리로드) 시에만 여기서 InfluxDB 조회
                 fetchAndRenderData(w, el);
             }
             return;
@@ -610,7 +614,7 @@
             w.yPos = item.y;
             w.width = item.w;
             w.height = item.h;
-            w.dirty = true;
+            w.layoutDirty = true;  // 위치·크기 변경 — 데이터 재조회 불필요
             console.log(`[Widget Layout Changed] 위젯 (${w.uid}) 위치/크기 변경: x=${w.xPos}, y=${w.yPos}, w=${w.width}, h=${w.height}`);
             updateDim(w);
             if (chartInstances[w.uid]) {
@@ -703,12 +707,18 @@
             aggregateWindow: aggSelect.value,
             fields
         };
-        w.dirty = true;
+        w.configDirty = true;  // 설정 변경 — 저장 필요 + InfluxDB 재조회 필요
 
         modal.hide();
         updateLabel(w);
         const el = contentEl(w.uid);
+
+        // renderWidgetBody는 configDirty=true일 때 fetchAndRenderData를 건너뛰므로
+        // 여기서 명시적으로 호출해 InfluxDB에서 최신 데이터를 가져옴
         if (el) renderWidgetBody(w, el);
+        if (w.widgetId && el) {
+            fetchAndRenderData(w, el);
+        }
 
         // 설정 적용 시 해당 센서 SSE 새로 구독
         const sensorId = (sensorOpt && sensorOpt.value) ? sensorOpt.value : (sensorIdByEui[sensorEui] || '1');
@@ -773,7 +783,39 @@
         })
             .then((r) => {
                 if (!r.ok) throw new Error(`save failed with status ${r.status}`);
-                location.reload();
+                return r.json();
+            })
+            .then((savedWidgetIds) => {
+                // 저장 성공: 서버에서 반환된 widgetId를 state에 반영 (신규 위젯 ID 확정)
+                if (Array.isArray(savedWidgetIds)) {
+                    state.forEach((w, idx) => {
+                        if (savedWidgetIds[idx] != null) {
+                            w.widgetId = savedWidgetIds[idx];
+                            // uid도 widgetId 기반으로 갱신 (gridstack gs-id는 유지)
+                        }
+                    });
+                }
+
+                // dirty 플래그 초기화
+                state.forEach((w) => {
+                    const wasDirty = w.layoutDirty || w.configDirty;
+                    w.layoutDirty = false;
+                    w.configDirty = false;
+
+                    // 설정이 변경됐던 위젯은 InfluxDB 데이터 즉시 재조회
+                    if (wasDirty && w.widgetId) {
+                        const el = contentEl(w.uid);
+                        if (el) {
+                            console.log(`[Save] 위젯 (${w.uid}) 저장 완료, InfluxDB 데이터 재조회`);
+                            fetchAndRenderData(w, el);
+                        }
+                    }
+                });
+
+                saveStatusEl.textContent = '저장 완료 ✓';
+                btnSaveLayout.disabled = false;
+                setTimeout(() => { saveStatusEl.style.display = 'none'; }, 2000);
+                console.log('[Dashboard Save] 저장 완료, widgetIds:', savedWidgetIds);
             })
             .catch((err) => {
                 console.error('[Dashboard Save] 저장 실패 원인:', err);
