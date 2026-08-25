@@ -36,6 +36,6 @@ public interface AuthClient {
 
     // ★ 로그아웃 추가
     @PostMapping("/api/v1/auth/logout")
-    ResponseEntity<Void> logout(@RequestHeader("Authorization") String authorization);
+    ResponseEntity<Void> logout();
 
 }
