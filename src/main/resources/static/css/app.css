@@ -4198,27 +4198,11 @@ button:focus-visible,
 }
 
 /* =====================================================================
-   Flow "signal" 브랜드 톤 — Flow 화면 전용 룩앤필.
-   --primary/--radius를 .flow-page .app-main 스코프에서만 재정의한다.
-   기존 버튼·배지·테두리·아이콘 대부분이 이미 이 변수를 쓰고 있어서
-   스코프 재정의만으로 퍼플-블루 톤 + 큰 radius를 물려받는다.
-   헤더/사이드바는 레이아웃상 <main> 바깥이라 영향이 없고, 다른 화면은
-   .flow-page 클래스 자체가 없어 그대로 유지된다.
+   Flow 화면 레이아웃 보정 — 색상/radius/그림자는 앱 공통(blueprint) 톤을
+   그대로 따른다(디자인 통일은 프론트 담당 결정 사항). 여기서는 색과 무관한
+   레이아웃 버그(배지 줄바꿈, 폼 폰트 크기)만 Flow 스코프 안에서 보정하고,
+   다른 화면이 공유하는 .status-badge/.form-control 기본 규칙은 그대로 둔다.
    ===================================================================== */
-
-.flow-page .app-main {
-  --primary: #6c4bf0;
-  --primary-tint: #eef0fd;
-  --paper: #f4f2fb;
-  --radius: 10px;
-  --flow-accent2: #3f8cf0;
-  --flow-shadow: 0 6px 20px rgba(20, 30, 70, 0.08);
-  background-image: linear-gradient(180deg, #ffffff 0%, var(--paper) 420px);
-  background-repeat: no-repeat;
-}
-
-/* 아래 두 개는 원래 다른 화면과 공유하는 규칙(.status-badge, .form-control/.form-select)에
-   직접 손대지 않고, Flow 스코프 안에서만 재정의해서 다른 화면 코드에 영향을 주지 않는다. */
 
 .flow-page .app-main .status-badge {
   white-space: nowrap;
@@ -4227,72 +4211,4 @@ button:focus-visible,
 .flow-page .app-main .form-control,
 .flow-page .app-main .form-select {
   font-size: var(--fs-body);
-}
-
-.flow-page .app-main .flow-detail-guide {
-  background: var(--primary-tint);
-  border-color: transparent;
-}
-
-.flow-page .app-main .flow-detail-guide > i {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--flow-accent2));
-  color: #fff;
-  font-size: var(--icon-sm);
-}
-
-.flow-page .app-main .flow-list-empty i,
-.flow-page .app-main .split-detail-empty i {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  margin-bottom: var(--sp-1);
-  border-radius: 50%;
-  background: var(--primary-tint);
-  color: var(--primary);
-  font-size: 22px;
-}
-
-.flow-page .app-main .split-detail-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--sp-1);
-}
-
-.flow-page .app-main .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--flow-accent2));
-  border-color: transparent;
-}
-
-.flow-page .app-main .btn-primary:hover,
-.flow-page .app-main .btn-primary:focus-visible {
-  background: linear-gradient(135deg, #5c3ce0, #2f7de0);
-}
-
-.flow-page .app-main .flow-detail-node .actuator-icon,
-.flow-page .app-main .flow-list-item-icon,
-.flow-page .app-main .flow-card-index,
-.flow-page .app-main .flow-node-icon {
-  background: linear-gradient(135deg, var(--primary), var(--flow-accent2));
-  color: #fff;
-  border-color: transparent;
-}
-
-.flow-page .app-main .flow-detail-card,
-.flow-page .app-main .flow-meta-card,
-.flow-page .app-main .flow-builder-card,
-.flow-page .app-main .split-list,
-.flow-page .app-main .flow-detail-node,
-.flow-page .app-main .flow-path,
-.flow-page .app-main .flow-node {
-  box-shadow: var(--flow-shadow);
 }
