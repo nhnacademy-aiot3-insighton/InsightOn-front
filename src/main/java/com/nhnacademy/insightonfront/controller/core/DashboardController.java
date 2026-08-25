@@ -4,10 +4,10 @@ import com.nhnacademy.insightonfront.adapter.core.dashboard.DashboardClient;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.chart.ChartDataResponse;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.dashboard.DashboardResponse;
 import com.nhnacademy.insightonfront.adapter.core.dashboard.dto.widget.WidgetSaveRequest;
-import com.nhnacademy.insightonfront.adapter.core.sensor.SensorClient;
-import com.nhnacademy.insightonfront.adapter.core.sensor.dto.SensorResponse;
 import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
 import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
+import com.nhnacademy.insightonfront.adapter.core.sensor.SensorClient;
+import com.nhnacademy.insightonfront.adapter.core.sensor.dto.SensorResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -27,6 +27,7 @@ import java.util.Map;
 public class DashboardController {
 
     private final DashboardClient dashboardClient;
+    private final SensorClient sensorClient;
     private final LocationClient locationClient;
 
     @GetMapping("/my-group/location/{location-id}/dashboard")
@@ -106,6 +107,5 @@ public class DashboardController {
             log.error("[DashboardController] InfluxDB 차트 데이터 조회 실패. widgetId: {}", widgetId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        return "redirect:/my-group/location/" + locationId + "/dashboard";
     }
 }
