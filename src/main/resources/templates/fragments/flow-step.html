@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<article th:fragment="card(step)" class="actuator-card flow-detail-node"
+         th:attr="data-node-type=${step.nodeType()}">
+    <div class="flow-detail-step-heading">
+        <div class="actuator-icon"><i th:class="|ti ${step.icon()}|"></i></div>
+        <div class="flow-detail-step-title">
+            <span class="flow-node-kind" th:text="${step.roleLabel()}">시작</span>
+            <h3 th:text="${step.title()}">센서 측정값</h3>
+        </div>
+    </div>
+    <p class="flow-detail-step-description" th:text="${step.description()}"></p>
+    <div class="flow-detail-step-fields" th:if="${not #lists.isEmpty(step.fields())}">
+        <div class="flow-detail-step-field" th:each="field : ${step.fields()}">
+            <span th:text="${field.label()}">중요도</span>
+            <strong th:text="${field.value()}">경고</strong>
+        </div>
+    </div>
+</article>
+</body>
+</html>
