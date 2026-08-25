@@ -45,7 +45,7 @@
         toggle.addEventListener('change', () => {
             const card = toggle.closest('.actuator-card');
             const actuatorId = actuatorIdOf(toggle);
-            const state = buildFullState(card);
+            const state = buildFullState(card); // 카드에 있는 모든값을 다보냄
             state[toggle.dataset.command] = toggle.checked ? 'ON' : 'OFF';
             sendState(actuatorId, state).catch(() => {
                 toggle.checked = !toggle.checked;
@@ -69,7 +69,7 @@
                 chip.classList.add('active');
                 if (toggle) toggle.checked = true; // 모드를 선택하면 전원도 자동으로 켜짐
 
-                const state = buildFullState(card);
+                const state = buildFullState(card); // 반영된 모든카드를 다보냄
                 sendState(actuatorId, state).catch(() => {
                     chip.classList.remove('active');
                     if (previousActive) previousActive.classList.add('active');
