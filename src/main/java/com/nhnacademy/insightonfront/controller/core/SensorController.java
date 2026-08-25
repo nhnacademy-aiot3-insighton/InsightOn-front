@@ -85,6 +85,12 @@ public class SensorController {
         sensorClient.deleteSensor(sensorId);
     }
 
+    @GetMapping("/{sensor-id}/attributes")
+    @ResponseBody
+    public List<SensorAttributeResponse> attributes(@PathVariable("sensor-id") Long sensorId) {
+        return sensorAttributeClient.getSensorAttribute(sensorId);
+    }
+
     @DeleteMapping("/{sensor-id}/attributes/{metric-key}")
     @ResponseBody
     public void deleteAttribute(@PathVariable("sensor-id") Long sensorId,
