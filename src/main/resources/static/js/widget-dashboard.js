@@ -95,10 +95,14 @@
                 ds.data.push(val);
             });
 
-            if (chart.data.labels.length > 30) {
-                chart.data.labels.shift();
-                chart.data.datasets.forEach((ds) => ds.data.shift());
-            }
+            // 데이터 개수가 많아지면 좌우 스크롤 폭 확장
+            adjustChartScroll(w, chart.data.labels.length);
+
+            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 동적 갱신 (redis-cli / SSE 실시간 수치 반영)
+            const allDataPoints = chart.data.datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
+            const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
+            const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
+            syncYAxis(w, minVal, maxVal);
 
             chart.update('quiet');
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
@@ -132,12 +136,13 @@
         }
     }
 
-    // GridStack 초기화
+    // GridStack 초기화 (위젯 카드 이동은 헤더 바를 잡았을 때만 가능하도록 한정)
     const grid = GridStack.init({
         column: 12,
         cellHeight: 80,
         margin: 8,
         float: true,
+        handle: '.grid-widget-header',
         resizable: {handles: 'e, se, s, sw, w'}
     }, gridEl);
 
@@ -176,11 +181,10 @@
         const {sensorName, fields} = widgetTitle(w);
 
         item.innerHTML = `
-            <div class="card h-100 grid-widget shadow-sm border-1">
-                <div class="card-status-top bg-primary"></div>
-                <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+            <div class="card grid-widget h-100 border shadow-sm rounded-3">
+                <div class="card-header grid-widget-header px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="cursor: move;">
                     <div class="grid-widget-label d-flex align-items-center gap-2 text-truncate" style="max-width: calc(100% - 95px);">
-                        <i class="ti ti-chart-line text-primary"></i>
+                        <i class="ti ti-drag-drop text-muted fs-3" title="드래그하여 위젯 이동"></i>
                         <span class="fw-bold text-truncate" title="${sensorName} · ${fields}">${sensorName} · ${fields}</span>
                     </div>
                     <div class="grid-widget-controls d-flex align-items-center gap-1">
@@ -250,52 +254,186 @@
         `;
     }
 
+    function adjustChartScroll(w, labelCount, forceScroll = false) {
+        const el = contentEl(w.uid);
+        if (!el) return;
+        const inner = el.querySelector('.chart-inner-canvas');
+        const wrapper = el.querySelector('.chart-scroll-wrapper');
+        if (inner && wrapper && labelCount > 0) {
+            const minWidth = Math.max(wrapper.clientWidth, labelCount * 50);
+            inner.style.width = minWidth + 'px';
+
+            const isNearRight = (wrapper.scrollWidth - wrapper.clientWidth - wrapper.scrollLeft) < 80;
+            if (forceScroll || isNearRight) {
+                wrapper.scrollLeft = wrapper.scrollWidth;
+            }
+
+            if (!wrapper.dataset.dragBound) {
+                wrapper.dataset.dragBound = 'true';
+                let isDown = false;
+                let startX, scrollLeftPos;
+
+                wrapper.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    wrapper.style.cursor = 'grabbing';
+                    startX = e.pageX - wrapper.offsetLeft;
+                    scrollLeftPos = wrapper.scrollLeft;
+                });
+                wrapper.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    wrapper.style.cursor = 'grab';
+                });
+                wrapper.addEventListener('mouseup', () => {
+                    isDown = false;
+                    wrapper.style.cursor = 'grab';
+                });
+                wrapper.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - wrapper.offsetLeft;
+                    const walk = (x - startX) * 1.5;
+                    wrapper.scrollLeft = scrollLeftPos - walk;
+                });
+            }
+        }
+    }
+
+    function getFieldColor(field, index) {
+        const name = String(field || '').toLowerCase();
+        if (name.includes('temp') || name.includes('온도')) {
+            return '#ff6b6b'; // 모던 코랄 소프트 레드 (온도)
+        }
+        if (name.includes('humid') || name.includes('습도')) {
+            return '#4ecdc4'; // 세련된 틸 민트 블루 (습도)
+        }
+        if (name.includes('co2') || name.includes('co')) {
+            return '#00b894'; // 에메랄드 그린 (CO2)
+        }
+        if (name.includes('press') || name.includes('기압')) {
+            return '#fdcb6e'; // 앰버 옐로우 (기압)
+        }
+        if (name.includes('light') || name.includes('illumi') || name.includes('조도')) {
+            return '#e17055'; // 테라코타 오렌지 (조도)
+        }
+        if (name.includes('battery') || name.includes('배터리')) {
+            return '#a29bfe'; // 소프트 라벤더 바이올렛 (배터리)
+        }
+
+        const fallbackColors = ['#ff6b6b', '#4ecdc4', '#00b894', '#fdcb6e', '#a29bfe', '#e17055', '#0984e3'];
+        return fallbackColors[index % fallbackColors.length];
+    }
+
+    function syncYAxis(w, minVal, maxVal) {
+        const el = contentEl(w.uid);
+        if (!el) return;
+        const yCanvas = el.querySelector('.y-axis-canvas');
+        if (!yCanvas) return;
+
+        destroyChart(w.uid + '_y');
+        chartInstances[w.uid + '_y'] = new Chart(yCanvas, {
+            type: 'line',
+            data: { labels: [''], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        min: (minVal !== undefined && minVal !== null) ? Math.floor(minVal) : 0,
+                        max: (maxVal !== undefined && maxVal !== null) ? Math.ceil(maxVal) : 100,
+                        ticks: {
+                            font: { size: 10, weight: '600' },
+                            color: '#475569',
+                            precision: 0,
+                            callback: function(val) {
+                                if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                                if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
+                                return Number(val).toLocaleString();
+                            }
+                        },
+                        grid: { color: 'transparent' }
+                    }
+                }
+            }
+        });
+    }
+
     function initEmptyChart(w, el) {
         const type = w.widgetConfig.type || 'GRAPH';
         const body = el.querySelector('.grid-widget-body');
         if (!body) return;
 
         if (type === 'GRAPH' || type === 'BAR') {
-            body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
-            body.innerHTML = `<canvas style="width: 100%; height: 100%; flex: 1;"></canvas>`;
-            const canvas = body.querySelector('canvas');
-            destroyChart(w.uid);
-
             const fields = (w.widgetConfig.fields && w.widgetConfig.fields.length)
                 ? w.widgetConfig.fields
                 : ['temperature', 'humidity'];
-            const colors = ['#206bc4', '#4263eb', '#5ebea3', '#f59f00', '#d63939'];
+
+            const legendHtml = fields.map((field, idx) => {
+                const color = getFieldColor(field, idx);
+                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: #334155;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
+                    <span>${field}</span>
+                </div>`;
+            }).join('');
+
+            body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
+            body.innerHTML = `
+                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: #ffffff;">
+                    ${legendHtml}
+                </div>
+                <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
+                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
+                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
+                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                </div>
+            `;
+            const canvas = body.querySelector('.main-canvas');
+            destroyChart(w.uid);
+
             const chartType = (type === 'BAR') ? 'bar' : 'line';
 
             chartInstances[w.uid] = new Chart(canvas, {
                 type: chartType,
                 data: {
                     labels: [],
-                    datasets: fields.map((field, idx) => ({
-                        label: field,
-                        data: [],
-                        borderColor: colors[idx % colors.length],
-                        backgroundColor: (type === 'BAR')
-                            ? colors[idx % colors.length] + '80'
-                            : colors[idx % colors.length] + '20',
-                        borderWidth: (type === 'BAR') ? 1 : 1.5,
-                        fill: idx === 0,
-                        tension: 0.3,
-                        pointRadius: 3,
-                        pointHoverRadius: 5
-                    }))
+                    datasets: fields.map((field, idx) => {
+                        const color = getFieldColor(field, idx);
+                        return {
+                            label: field,
+                            data: [],
+                            borderColor: color,
+                            backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
+                            borderWidth: (type === 'BAR') ? 1 : 1.5,
+                            fill: idx === 0,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        };
+                    })
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: false,
-                    plugins: {legend: {display: fields.length > 1}},
+                    plugins: {
+                        legend: { display: false }
+                    },
                     scales: {
-                        x: {ticks: {font: {size: 10}}, grid: {display: false}},
-                        y: {ticks: {font: {size: 10}}, grid: {color: '#eef1f6'}}
+                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                        y: {
+                            ticks: { display: false },
+                            grid: { color: '#e2e8f0' }
+                        }
                     }
                 }
             });
+
+            syncYAxis(w, 0, 100);
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
             body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center position-relative';
             body.innerHTML = `
@@ -366,40 +504,75 @@
         const body = el.querySelector('.grid-widget-body');
 
         if (type === 'GRAPH' || type === 'BAR') {
-            const canvas = body.querySelector('canvas');
+            const legendHtml = datasets.map((ds, i) => {
+                const color = getFieldColor(ds.label, i);
+                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: #334155;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
+                    <span>${ds.label}</span>
+                </div>`;
+            }).join('');
+
+            body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
+            body.innerHTML = `
+                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: #ffffff;">
+                    ${legendHtml}
+                </div>
+                <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
+                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
+                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
+                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                </div>
+            `;
+            const canvas = body.querySelector('.main-canvas');
             if (!canvas) return;
             destroyChart(w.uid);
             const chartType = (type === 'BAR') ? 'bar' : 'line';
-            const colors = ['#206bc4', '#b8752a', '#5ebea3', '#f59f00', '#d63939'];
 
             chartInstances[w.uid] = new Chart(canvas, {
                 type: chartType,
                 data: {
                     labels,
-                    datasets: datasets.map((ds, i) => ({
-                        label: ds.label,
-                        data: ds.data,
-                        borderColor: colors[i % colors.length],
-                        backgroundColor: (type === 'BAR')
-                            ? colors[i % colors.length] + '80'
-                            : colors[i % colors.length] + '20',
-                        borderWidth: 1.5,
-                        tension: 0.3,
-                        fill: i === 0,
-                        pointRadius: 0,
-                        pointHoverRadius: 3
-                    }))
+                    datasets: datasets.map((ds, i) => {
+                        const color = getFieldColor(ds.label, i);
+                        return {
+                            label: ds.label,
+                            data: ds.data,
+                            borderColor: color,
+                            backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
+                            borderWidth: 1.5,
+                            tension: 0.3,
+                            fill: i === 0,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        };
+                    })
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {legend: {display: datasets.length > 1, labels: {font: {size: 11}}}},
+                    plugins: {
+                        legend: { display: false }
+                    },
                     scales: {
-                        x: {ticks: {font: {size: 10}}, grid: {display: false}},
-                        y: {ticks: {font: {size: 10}}, grid: {color: '#eef1f6'}}
+                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                        y: {
+                            ticks: { display: false },
+                            grid: { color: '#e2e8f0' }
+                        }
                     }
                 }
             });
+
+            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 렌더링
+            const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
+            const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
+            const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
+            syncYAxis(w, minVal, maxVal);
+
+            adjustChartScroll(w, labels.length, true);
             return;
         }
 
