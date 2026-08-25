@@ -46,6 +46,7 @@ public final class ActuatorCommandPreset {
         Map<String, Object> commands = new LinkedHashMap<>();
         RULES.get(type).forEach((commandType, rule) -> {
             Map<String, Object> widget = new LinkedHashMap<>();
+            widget.put("stateKey", commandType.getStateKey()); // 화면(panel.html)이 실제 통신 키를 알 수 있도록 노출
             if (rule instanceof CommandValueRule.AllowedValues allowed) {
                 widget.put("kind", "SELECT");
                 widget.put("values", allowed.values());

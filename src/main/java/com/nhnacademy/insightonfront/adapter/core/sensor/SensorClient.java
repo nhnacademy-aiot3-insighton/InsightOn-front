@@ -28,6 +28,10 @@ public interface SensorClient {
                                 @RequestParam(value = "locationId", required = false) Long locationId,
                                 @RequestParam(value = "sensorName", required = false) String sensorName);
 
+    // 게이트웨이 autoProvision으로 등록만 되고 아직 위치가 안 정해진 센서 목록
+    @GetMapping("/api/v1/sensor/unassigned")
+    List<SensorResponse> getUnassignedSensors(@RequestParam("groupId") Long groupId);
+
     @PutMapping("/api/v1/sensor/{id}")
     void updateSensor(@PathVariable("id") Long id,
                       @RequestBody SensorUpdateRequest request);

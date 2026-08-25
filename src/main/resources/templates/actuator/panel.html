@@ -45,33 +45,38 @@
                     <div class="dropdown">
                         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <!-- 클릭 시 #actuatorLogsModal을 열고 actuator-panel.js가 액추에이터 실행 로그를 채운다 -->
+                            <li><a class="dropdown-item btn-view-logs" href="#">실행 이력</a></li>
                             <li><a class="dropdown-item btn-delete-actuator" href="#">삭제</a></li>
                         </ul>
                     </div>
                 </div>
 
+                <!-- cmd.key(POWER_STATUS 등 enum 이름)는 화면 라벨용으로만 쓰고,
+                     실제로 core에 보내고 currentState에서 읽는 키는 cmd.value.get('stateKey')("power" 등)다.
+                     예전엔 cmd.key를 그대로 보내서 core가 "알 수 없는 명령키"로 거부했었다(500 에러 원인). -->
                 <div th:each="cmd : ${commandRules.get(actuator.actuatorType().name())}">
                     <div class="actuator-command-row">
                         <span class="actuator-command-label" th:text="${cmd.key}">POWER_STATUS</span>
 
                         <label th:if="${cmd.key == 'POWER_STATUS'}" class="toggle-switch">
                             <input type="checkbox" class="cmd-toggle"
-                                   th:attr="data-command=${cmd.key}"
-                                   th:checked="${actuator.currentState().get(cmd.key)} == 'ON'">
+                                   th:attr="data-command=${cmd.value.get('stateKey')}"
+                                   th:checked="${actuator.currentState().get(cmd.value.get('stateKey'))} == 'ON'">
                             <span class="toggle-track"></span>
                         </label>
 
                         <div th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}"
-                             class="chip-select" th:attr="data-command=${cmd.key}">
+                             class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}">
                             <button type="button" class="chip-option cmd-chip" th:each="v : ${cmd.value.get('values')}"
                                     th:text="${v}" th:attr="data-value=${v}"
-                                    th:classappend="${actuator.currentState().get(cmd.key)} == ${v} ? ' active' : ''"></button>
+                                    th:classappend="${actuator.currentState().get(cmd.value.get('stateKey'))} == ${v} ? ' active' : ''"></button>
                         </div>
 
                         <div th:if="${cmd.value.get('kind') == 'RANGE'}"
-                             class="temp-stepper" th:attr="data-command=${cmd.key},data-min=${cmd.value.get('min')},data-max=${cmd.value.get('max')}">
+                             class="temp-stepper" th:attr="data-command=${cmd.value.get('stateKey')},data-min=${cmd.value.get('min')},data-max=${cmd.value.get('max')}">
                             <button type="button" class="cmd-step-down" aria-label="내리기">&minus;</button>
-                            <span class="temp-value cmd-range-value" th:text="${actuator.currentState().get(cmd.key)}">24</span>
+                            <span class="temp-value cmd-range-value" th:text="${actuator.currentState().get(cmd.value.get('stateKey'))}">24</span>
                             <button type="button" class="cmd-step-up" aria-label="올리기">+</button>
                         </div>
                     </div>
@@ -116,6 +121,37 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
                 <button type="button" id="btnCreateActuator" class="btn btn-primary">추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 실행 이력 모델 -->
+<div class="modal fade" id="actuatorLogsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="actuatorLogsTitle">실행 이력</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="actuatorLogsEmpty" class="field-hint" style="display:none;">실행 이력이 없어요.</p>
+                <table class="table" id="actuatorLogsTable">
+                    <thead>
+                        <tr>
+                            <th>시각</th>
+                            <th>명령</th>
+                            <th>값</th>
+                            <th>실행 주체</th>
+                        </tr>
+                    </thead>
+                    <tbody id="actuatorLogsBody"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" id="actuatorLogsPrev" class="btn btn-outline-secondary btn-sm">이전</button>
+                <span id="actuatorLogsPageInfo" class="field-hint"></span>
+                <button type="button" id="actuatorLogsNext" class="btn btn-outline-secondary btn-sm">다음</button>
             </div>
         </div>
     </div>
