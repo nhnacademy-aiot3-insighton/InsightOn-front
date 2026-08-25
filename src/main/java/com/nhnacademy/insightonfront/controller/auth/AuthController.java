@@ -5,6 +5,7 @@ import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
 import com.nhnacademy.insightonfront.auth.AccessTokenContext;
 import com.nhnacademy.insightonfront.adapter.auth.auth.AuthClient;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
+import com.nhnacademy.insightonfront.domain.mypage.MypageService;
 import com.nhnacademy.insightonfront.domain.signup.SignupService;
 import com.nhnacademy.insightonfront.domain.signup.dto.*;
 import feign.FeignException;
@@ -54,6 +55,7 @@ public class AuthController {
 
     private final AuthClient authClient;
     private final SignupService signupService;
+    private final MypageService mypageService;
     private final GroupClient groupClient;
     private final ObjectMapper objectMapper;
 
@@ -362,87 +364,33 @@ public class AuthController {
     // ================================================================
 
     @GetMapping("/mypage")
-    public String myPage(@SessionAttribute(value = "userId", required = false) Long userId,
-                         @SessionAttribute(value = "userEmail", required = false) String userEmail,
-                         HttpSession session,
-                         Model model) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        model.addAttribute("email", userEmail != null ? userEmail : "user@insighton.io");
-        model.addAttribute("name", attrOrDefault(session, "userName", "사용자"));
-        model.addAttribute("phone", attrOrDefault(session, "userPhone", ""));
-        model.addAttribute("linkedProviders", linkedProviders(session));
-        model.addAttribute("hasPassword", hasPassword(session));
+    public String myPage(Model model) {
+        log.info("[Mypage] 내 정보 조회 요청");
+        var info = mypageService.findMyInfo();
+        model.addAttribute("email", info.email());
+        model.addAttribute("name", info.userName());
+        model.addAttribute("phone", info.phoneNumber());
+        model.addAttribute("linkedProviders", mypageService.findMyOauths());
         return "mypage";
     }
 
     @PostMapping("/mypage/update")
-    public String updateProfile(@SessionAttribute(value = "userId", required = false) Long userId,
-                                @RequestParam String name,
-                                @RequestParam String phone,
-                                HttpSession session) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        session.setAttribute("userName", name);
-        session.setAttribute("userPhone", phone);
+    public String updateProfile(@RequestParam String name, @RequestParam String phone) {
+        log.info("[Mypage] 정보 수정 요청");
+        mypageService.updateMyInfo(name, phone);
         return "redirect:/mypage";
     }
 
     @PostMapping("/mypage/password")
-    public String changePassword(@SessionAttribute(value = "userId", required = false) Long userId,
-                                 @RequestParam String currentPassword,
+    public String changePassword(@RequestParam String currentPassword,
                                  @RequestParam String newPassword,
-                                 HttpSession session,
                                  RedirectAttributes redirectAttributes) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        if (!hasPassword(session)) {
-            redirectAttributes.addFlashAttribute("passwordError", "소셜 로그인 전용 계정은 비밀번호를 바꿀 수 없어요.");
-            return "redirect:/mypage";
-        }
-        if ("wrong".equals(currentPassword)) {
+        try {
+            mypageService.changePassword(currentPassword, newPassword);
+            redirectAttributes.addFlashAttribute("passwordSuccess", "비밀번호를 바꿨어요.");
+        } catch (FeignException e) {
             redirectAttributes.addFlashAttribute("passwordError", "현재 비밀번호가 올바르지 않아요.");
-            return "redirect:/mypage";
         }
-        log.info("[목업] 비밀번호 변경 처리");
-        redirectAttributes.addFlashAttribute("passwordSuccess", "비밀번호를 바꿨어요.");
-        return "redirect:/mypage";
-    }
-
-    @PostMapping("/mypage/social/link")
-    public String linkSocial(@SessionAttribute(value = "userId", required = false) Long userId,
-                             @RequestParam String provider,
-                             HttpSession session) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        List<String> linked = linkedProviders(session);
-        if (!linked.contains(provider)) {
-            linked.add(provider);
-            session.setAttribute("linkedProviders", linked);
-        }
-        return "redirect:/mypage";
-    }
-
-    @PostMapping("/mypage/social/unlink")
-    public String unlinkSocial(@SessionAttribute(value = "userId", required = false) Long userId,
-                               @RequestParam String provider,
-                               HttpSession session,
-                               RedirectAttributes redirectAttributes) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        List<String> linked = linkedProviders(session);
-        boolean isLastMethod = linked.size() <= 1 && !hasPassword(session);
-        if (isLastMethod) {
-            redirectAttributes.addFlashAttribute("socialError", "마지막 남은 로그인 수단은 해제할 수 없어요.");
-            return "redirect:/mypage";
-        }
-        linked.remove(provider);
-        session.setAttribute("linkedProviders", linked);
         return "redirect:/mypage";
     }
 
