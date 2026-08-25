@@ -285,12 +285,12 @@ public class FlowController {
         return new FlowErrorResponse(status, message);
     }
 
-    /** 페이지 이동(GET) 중 발생한 오류는 JSON이 아니라 화면(flow/error)으로 보여준다. */
+    /** 페이지 이동(GET) 중 발생한 오류는 JSON이 아니라 화면(전역 error.html)으로 보여준다. */
     private String renderFlowError(HttpServletResponse response, Model model, FlowErrorResponse error) {
         response.setStatus(error.status());
-        model.addAttribute("errorStatus", error.status());
+        model.addAttribute("status", error.status());
         model.addAttribute("errorMessage", error.message());
-        return "flow/error";
+        return "error";
     }
 
     private String extractDownstreamMessage(FeignException exception) {

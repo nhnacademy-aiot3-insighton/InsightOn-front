@@ -10,7 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<body th:with="isNotFound=${status == 404}, isForbidden=${status == 403}, isDownstream=${status != null and status >= 500}">
+<body th:with="isBadRequest=${status == 400},
+                isUnauthorized=${status == 401},
+                isForbidden=${status == 403},
+                isNotFound=${status == 404},
+                isConflict=${status == 409},
+                isServerError=${status == 500},
+                isDownstream=${status == 502 or status == 503},
+                isKnown=${status == 400 or status == 401 or status == 403 or status == 404 or status == 409 or status == 500 or status == 502 or status == 503}">
 
 <header class="landing-header">
     <a th:href="@{/}" class="brand">
@@ -18,26 +25,46 @@
     </a>
 </header>
 
-<div class="flow-detail-main" style="padding: var(--sp-8) var(--sp-4);">
-    <div class="flow-detail-card" style="max-width: 480px; margin: 0 auto;">
-        <div class="flow-error-state">
-            <span class="flow-error-icon warning" th:if="${isForbidden}"><i class="ti ti-lock"></i></span>
-            <span class="flow-error-icon neutral" th:if="${isNotFound}"><i class="ti ti-search"></i></span>
-            <span class="flow-error-icon danger" th:if="${isDownstream}"><i class="ti ti-plug-off"></i></span>
-            <span class="flow-error-icon warning" th:if="${!isForbidden and !isNotFound and !isDownstream}"><i class="ti ti-alert-triangle"></i></span>
+<div class="app-error-page">
+    <div class="app-error-card">
+        <div class="app-error-state">
+            <span class="app-error-icon warning" th:if="${isBadRequest}"><i class="ti ti-alert-circle"></i></span>
+            <span class="app-error-icon warning" th:if="${isUnauthorized}"><i class="ti ti-user-off"></i></span>
+            <span class="app-error-icon warning" th:if="${isForbidden}"><i class="ti ti-lock"></i></span>
+            <span class="app-error-icon neutral" th:if="${isNotFound}"><i class="ti ti-search"></i></span>
+            <span class="app-error-icon warning" th:if="${isConflict}"><i class="ti ti-alert-octagon"></i></span>
+            <span class="app-error-icon danger" th:if="${isServerError}"><i class="ti ti-alert-hexagon"></i></span>
+            <span class="app-error-icon danger" th:if="${isDownstream}"><i class="ti ti-plug-off"></i></span>
+            <span class="app-error-icon warning" th:if="${!isKnown}"><i class="ti ti-alert-triangle"></i></span>
 
+            <h2 th:if="${isBadRequest}">잘못된 요청이에요</h2>
+            <h2 th:if="${isUnauthorized}">로그인이 필요해요</h2>
             <h2 th:if="${isForbidden}">권한이 없어요</h2>
             <h2 th:if="${isNotFound}">페이지를 찾을 수 없어요</h2>
+            <h2 th:if="${isConflict}">요청이 충돌했어요</h2>
+            <h2 th:if="${isServerError}">서버에 오류가 생겼어요</h2>
             <h2 th:if="${isDownstream}">일시적으로 서비스를 이용할 수 없어요</h2>
-            <h2 th:if="${!isForbidden and !isNotFound and !isDownstream}">요청을 처리하지 못했어요</h2>
+            <h2 th:if="${!isKnown}">요청을 처리하지 못했어요</h2>
 
-            <p th:if="${isNotFound}">주소가 바뀌었거나 삭제된 페이지예요. 주소를 다시 확인해주세요.</p>
-            <p th:if="${isForbidden}">이 페이지에 접근할 권한이 없어요.</p>
-            <p th:if="${isDownstream}">잠시 후 다시 시도해주세요. 계속되면 관리자에게 문의해주세요.</p>
-            <p th:if="${!isForbidden and !isNotFound and !isDownstream}">알 수 없는 문제가 발생했어요. 잠시 후 다시 시도해주세요.</p>
+            <!-- Flow처럼 특정 기능이 더 정확한 메시지를 넘겨주면(errorMessage) 그걸 우선 보여주고,
+                 없으면(사이트 전역 404/500 등 아무 맥락이 없는 경우) 상태코드별 기본 문구를 보여준다. -->
+            <p th:if="${errorMessage != null}" th:text="${errorMessage}"></p>
+            <th:block th:if="${errorMessage == null}">
+                <p th:if="${isBadRequest}">요청 형식이 올바르지 않아요. 주소를 다시 확인해주세요.</p>
+                <p th:if="${isUnauthorized}">세션이 만료됐어요. 다시 로그인해주세요.</p>
+                <p th:if="${isForbidden}">이 페이지에 접근할 권한이 없어요.</p>
+                <p th:if="${isNotFound}">주소가 바뀌었거나 삭제된 페이지예요. 주소를 다시 확인해주세요.</p>
+                <p th:if="${isConflict}">다른 변경 사항과 충돌했어요. 새로고침 후 다시 시도해주세요.</p>
+                <p th:if="${isServerError}">서버에서 문제가 발생했어요. 잠시 후 다시 시도해주세요.</p>
+                <p th:if="${isDownstream}">잠시 후 다시 시도해주세요. 계속되면 관리자에게 문의해주세요.</p>
+                <p th:if="${!isKnown}">알 수 없는 문제가 발생했어요. 잠시 후 다시 시도해주세요.</p>
+            </th:block>
 
-            <p class="flow-error-code" th:if="${status != null}" th:text="'오류 코드 ' + ${status}"></p>
-            <div class="flow-error-actions">
+            <p class="app-error-code" th:if="${status != null}" th:text="'오류 코드 ' + ${status}"></p>
+            <div class="app-error-actions">
+                <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                    <i class="ti ti-arrow-left"></i> 뒤로가기
+                </button>
                 <a th:href="@{/}" class="btn btn-primary">홈으로</a>
             </div>
         </div>
