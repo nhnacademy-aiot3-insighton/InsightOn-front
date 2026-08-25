@@ -475,7 +475,7 @@
     }
 
     function fetchAndRenderData(w, el) {
-        fetch(`${BASE_URL}/widgets/${w.widgetId}/chart-data`)
+        fetch(`/groups/location/${LOCATION_ID}/dashboard/widgets/${w.widgetId}/chart-data`)
             .then((r) => {
                 if (!r.ok) throw new Error('chart-data fetch failed');
                 return r.json();
@@ -631,7 +631,7 @@
 
     function loadMetrics(sensorId, selectedFields) {
         metricListEl.innerHTML = `<p class="metric-check-empty">불러오는 중...</p>`;
-        fetch(`${BASE_URL}/sensors/${sensorId}/attributes`)
+        fetch(`/my-group/sensors/${sensorId}/attributes`)
             .then((r) => {
                 if (!r.ok) throw new Error('attributes fetch failed');
                 return r.json();
