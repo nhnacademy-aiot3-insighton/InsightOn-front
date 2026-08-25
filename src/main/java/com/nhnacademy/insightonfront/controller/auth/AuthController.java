@@ -220,9 +220,9 @@ public class AuthController {
         log.info("로그아웃: {}", userId);
         if (accessToken != null && userId != null) {
             try {
-                authClient.logout("Bearer " + accessToken);
+                authClient.logout();
             } catch (Exception e) {
-                log.warn("auth 로그아웃 실패: {}", e.getMessage());
+                log.warn("[Auth] 로그아웃 실패: {}", e.getMessage());
             }
         }
 
@@ -274,23 +274,29 @@ public class AuthController {
         return "signup";
     }
 
+    /** 이메일 중복 확인 */
     @PostMapping("/signup/check-email")
     @ResponseBody
     public Map<String, Object> checkEmailDuplicate(@RequestBody EmailAvailableRequest request) {
+        log.info("[Signup] 이메일 중복 확인: email={}", maskEmail(request.email()));
         boolean available = signupService.checkEmailAvailable(request.email());
         return Map.of("available", available);
     }
 
+    /** 이메일 인증 코드 요청 */
     @PostMapping("/signup/send-code")
     @ResponseBody
     public ResponseEntity<Void> sendVerificationCode(@RequestBody EmailVerifyRequest request) {
+        log.info("[Signup] 이메일 인증 코드 요청: email={}", maskEmail(request.email()));
         signupService.sendEmailVerify(request.email());
         return ResponseEntity.noContent().build();
     }
 
+    /** 이메일 인증 코드 확인 → 검증된 토큰 반환 */
     @PostMapping("/signup/verify-code")
     @ResponseBody
     public Map<String, Object> verifyCode(@RequestBody EmailVerifyConfirmRequest request) {
+        log.info("[Signup] 이메일 인증 코드 확인: email={}", maskEmail(request.email()));
         String verificationToken = signupService.confirmEmailVerify(request.email(), request.code());
         if (verificationToken == null) {
             return Map.of("ok", false, "message", "인증코드가 올바르지 않습니다.");
@@ -298,12 +304,15 @@ public class AuthController {
         return Map.of("ok", true, "verificationToken", verificationToken);
     }
 
+    /** 회원가입 */
     @PostMapping("/signup/submit")
     @ResponseBody
     public ResponseEntity<UserSignupResponse> signup(@RequestBody UserSignupRequest request) {
+        log.info("[Signup] 회원가입 요청: email={}", maskEmail(request.email()));
         UserSignupResponse response = signupService.signup(
                 request.email(), request.password(), request.userName(),
                 request.phoneNumber(), request.token());
+        log.info("[Signup] 회원가입 성공: email={}", maskEmail(request.email()));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -311,9 +320,11 @@ public class AuthController {
     // 아이디(이메일) 찾기 — SignupService를 통해 auth로 위임
     // ================================================================
 
-    @PostMapping("/find-id/submit")
+    /** 이메일 찾기 */
+    @PostMapping("/find-email")
     @ResponseBody
     public Map<String, Object> findId(@RequestBody FindEmailRequest request) {
+        log.info("[FindId] 이메일 찾기 요청: userName={}", request.userName());
         String maskedEmail = signupService.findEmail(request.userName(), request.phoneNumber());
         return Map.of("maskedEmail", maskedEmail);
     }
@@ -322,9 +333,11 @@ public class AuthController {
     // 비밀번호 재설정 — SignupService를 통해 auth로 위임
     // ================================================================
 
+    /** 비밀번호 재설정 요청 */
     @PostMapping("/reset-password/request")
     @ResponseBody
     public ResponseEntity<Void> requestReset(@RequestBody PasswordResetRequest request) {
+        log.info("[ResetPassword] 재설정 요청: email={}", maskEmail(request.email()));
         signupService.requestPasswordReset(request.email());
         return ResponseEntity.noContent().build();
     }
@@ -335,9 +348,11 @@ public class AuthController {
         return "reset-password-confirm";
     }
 
+    /** 비밀번호 재설정 확인 */
     @PostMapping("/reset-password/confirm/submit")
     @ResponseBody
     public ResponseEntity<Void> resetPasswordConfirm(@RequestBody PasswordResetConfirmRequest request) {
+        log.info("[ResetPassword] 재설정 확인 요청");
         signupService.confirmPasswordReset(request.token(), request.password());
         return ResponseEntity.ok().build();
     }
