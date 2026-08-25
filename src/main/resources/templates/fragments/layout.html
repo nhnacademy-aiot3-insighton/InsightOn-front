@@ -49,30 +49,15 @@
     <div class="dropdown">
         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="ti ti-bell"></i>
-            <span class="notif-count">5</span>
+            <span class="notif-count">0</span>
         </button>
         <div class="dropdown-menu dropdown-menu-end notif-dropdown">
             <div class="notif-dropdown-header">
                 알림
-                <span>5건 안 읽음</span>
+                <span>0건 안 읽음</span>
             </div>
             <div class="notif-list">
-                <a href="#" class="notif-item severity-danger">
-                    <div class="notif-item-title">2층 사무실 · 엔진 알람 CRITICAL</div>
-                    <div class="notif-item-meta">2분 전</div>
-                </a>
-                <a href="#" class="notif-item severity-warning">
-                    <div class="notif-item-title">3층 회의실 · 온도 임계치 초과</div>
-                    <div class="notif-item-meta">10분 전</div>
-                </a>
-                <a href="#" class="notif-item severity-warning">
-                    <div class="notif-item-title">2층 사무실 · CO2 농도 상승</div>
-                    <div class="notif-item-meta">32분 전</div>
-                </a>
-                <a href="#" class="notif-item severity-success is-read">
-                    <div class="notif-item-title">1층 로비 · 센서 오프라인 복구</div>
-                    <div class="notif-item-meta">1시간 전</div>
-                </a>
+                <div style="padding:12px;color:var(--ink-faint);">불러오는 중...</div>
             </div>
             <div class="notif-dropdown-footer">
                 <a th:href="@{/my-group/notifications}">전체 알림 보기</a>
@@ -91,6 +76,7 @@
             </li>
         </ul>
     </div>
+    <script th:src="@{/js/notification.js}"></script>
 </header>
 
 <header th:fragment="locationHeader(locationName, locationId, autoControlMode)" class="app-header d-flex align-items-center px-4 gap-4">
@@ -115,30 +101,15 @@
     <div class="dropdown">
         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="ti ti-bell"></i>
-            <span class="notif-count">5</span>
+            <span class="notif-count">0</span>
         </button>
         <div class="dropdown-menu dropdown-menu-end notif-dropdown">
             <div class="notif-dropdown-header">
                 알림
-                <span>5건 안 읽음</span>
+                <span>0건 안 읽음</span>
             </div>
             <div class="notif-list">
-                <a href="#" class="notif-item severity-danger">
-                    <div class="notif-item-title">2층 사무실 · 엔진 알람 CRITICAL</div>
-                    <div class="notif-item-meta">2분 전</div>
-                </a>
-                <a href="#" class="notif-item severity-warning">
-                    <div class="notif-item-title">3층 회의실 · 온도 임계치 초과</div>
-                    <div class="notif-item-meta">10분 전</div>
-                </a>
-                <a href="#" class="notif-item severity-warning">
-                    <div class="notif-item-title">2층 사무실 · CO2 농도 상승</div>
-                    <div class="notif-item-meta">32분 전</div>
-                </a>
-                <a href="#" class="notif-item severity-success is-read">
-                    <div class="notif-item-title">1층 로비 · 센서 오프라인 복구</div>
-                    <div class="notif-item-meta">1시간 전</div>
-                </a>
+                <div style="padding:12px;color:var(--ink-faint);">불러오는 중...</div>
             </div>
             <div class="notif-dropdown-footer">
                 <a th:href="@{/my-group/notifications}">전체 알림 보기</a>
@@ -157,6 +128,7 @@
             </li>
         </ul>
     </div>
+    <script th:src="@{/js/notification.js}"></script>
 </header>
 
 <div th:fragment="locationManageModal(locationId, locationName, autoControlMode)"
