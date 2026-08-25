@@ -95,7 +95,7 @@ public class DashboardController {
             log.error("[DashboardController] 대시보드 위젯 저장 실패: {}", e.getMessage());
         }
 
-        return "redirect:/groups/location/" + locationId + "/dashboard";
+        return "redirect:/my-group/location/" + locationId + "/dashboard";
     }
 
     @GetMapping("/groups/location/{location-id}/dashboard/widgets/{widget-id}/chart-data")
