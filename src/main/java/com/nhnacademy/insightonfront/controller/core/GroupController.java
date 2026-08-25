@@ -13,15 +13,17 @@ import com.nhnacademy.insightonfront.adapter.core.sensor.SensorClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.WeatherClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.dto.WeatherDataDto;
 import feign.FeignException;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Controller
@@ -56,12 +58,8 @@ public class GroupController {
      * 다르고 키 이름도 확실치 않아서, 대신 실제로 깔끔하게 셀 수 있는 센서 개수·알람 건수로 채웠다.
      */
     @GetMapping
-    public String getMyGroup(@CookieValue(value = "userId", required = false) Long userId,
-                             @CookieValue(value = "groupId", required = false) Long groupId,
+    public String getMyGroup(@CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
-        if (userId == null || groupId == null) {
-            return "redirect:/login";
-        }
 
         GroupResponse myGroup = groupClient.getMyGroup(groupId);
         List<LocationSummary> locationSummaries = safeLocationSummaries(groupId);
@@ -79,12 +77,8 @@ public class GroupController {
 
     /** 그룹 관리 &gt; 그룹 정보 탭 — 실제 그룹 데이터로 이름/소재지/설명/초대 코드를 보여준다. */
     @GetMapping("/manage")
-    public String manageInfo(@CookieValue(value = "userId", required = false) Long userId,
-                             @CookieValue(value = "groupId", required = false) Long groupId,
+    public String manageInfo(@CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
-        if (userId == null || groupId == null) {
-            return "redirect:/login";
-        }
 
         model.addAttribute("myGroup", groupClient.getMyGroup(groupId));
         model.addAttribute("section", "info");
@@ -124,11 +118,7 @@ public class GroupController {
 
 
     @PostMapping("/invite-token/new")
-    public String newInviteToken(@CookieValue(value = "userId", required = false) Long userId,
-                                 @CookieValue(value = "groupId", required = false) Long groupId) {
-        if (userId == null || groupId == null) {
-            return "redirect:/login";
-        }
+    public String newInviteToken(@CookieValue(value = "groupId", required = false) Long groupId) {
 
         groupClient.newInviteToken(groupId);
 
@@ -167,7 +157,7 @@ public class GroupController {
                     .toList();
         } catch (Exception e) {
             log.warn("위치 목록 조회 실패 - groupId:{}", groupId, e);
-            return null;
+            return Collections.emptyList();
         }
     }
 

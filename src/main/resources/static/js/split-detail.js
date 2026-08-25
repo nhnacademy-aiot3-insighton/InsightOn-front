@@ -26,6 +26,7 @@ function initSplitDetail(options) {
                     panel.innerHTML = content
                         ? content.outerHTML
                         : '<p class="split-detail-empty">불러오지 못했어요.</p>';
+                    if (window.renderMarkdownIn) renderMarkdownIn(panel);
                 })
                 .catch(() => {
                     panel.innerHTML = '<p class="split-detail-empty">불러오지 못했어요. 잠시 후 다시 시도해주세요.</p>';

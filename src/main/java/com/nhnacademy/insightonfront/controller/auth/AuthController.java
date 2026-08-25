@@ -1,10 +1,9 @@
-package com.nhnacademy.insightonfront.controller;
+package com.nhnacademy.insightonfront.controller.auth;
 
 import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
 import com.nhnacademy.insightonfront.auth.AccessTokenContext;
-import com.nhnacademy.insightonfront.client.AuthClient;
-import com.nhnacademy.insightonfront.domain.auth.UserLoginRequest;
-import com.nhnacademy.insightonfront.domain.auth.UserLoginResponse;
+import com.nhnacademy.insightonfront.adapter.auth.auth.AuthClient;
+import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -79,7 +78,7 @@ public class AuthController {
                         HttpSession session,
                         Model model) {
         try {
-            log.info("로그인 시도");
+            log.info("[Auth] 로그인 시도: email={}", maskEmail(email));
             ResponseEntity<String> response =
                     authClient.login(new UserLoginRequest(email, password));
 
@@ -137,10 +136,12 @@ public class AuthController {
                                 .build().toString());
             }
 
+            log.info("[Auth] 로그인 시도 성공: email={}", maskEmail(email));
+
             return "redirect:/";
 
         } catch (FeignException e) {
-            log.warn("로그인 처리 중 FeignException: status={}", e.status(), e);
+            log.warn("[Auth] 로그인 처리 중 FeignException: status={}", e.status(), e);
             int status = e.status();
             if (status <= 0) {
                 model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
@@ -149,7 +150,7 @@ public class AuthController {
             }
             return "login";
         } catch (RuntimeException e) {
-            log.warn("로그인 처리 중 예외 발생", e);
+            log.warn("[Auth] 로그인 처리 중 예외 발생", e);
             model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
             return "login";
         }
