@@ -20,6 +20,7 @@ import com.nhnacademy.insightonfront.domain.flow.service.FlowViewService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,17 +69,13 @@ public class FlowController {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        try {
+        return renderOrError(response, model, () -> {
             List<FlowViewModel> flows = flowViewService.getFlows(groupId, status);
             model.addAttribute("flows", flows);
             model.addAttribute("selectedStatus", status);
             model.addAttribute("canManage", flowPermissionService.isManagerOrAbove(groupId, userId));
             return "flow/list";
-        } catch (ResponseStatusException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        } catch (FeignException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        }
+        });
     }
 
     @GetMapping("/trash")
@@ -88,15 +85,11 @@ public class FlowController {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        try {
+        return renderOrError(response, model, () -> {
             model.addAttribute("flows", flowViewService.getFlows(groupId, FlowStatus.ARCHIVED));
             model.addAttribute("canManage", flowPermissionService.isManagerOrAbove(groupId, userId));
             return "flow/trash";
-        } catch (ResponseStatusException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        } catch (FeignException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        }
+        });
     }
 
     @GetMapping("/new")
@@ -106,18 +99,14 @@ public class FlowController {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        try {
+        return renderOrError(response, model, () -> {
             flowPermissionService.requireManagerOrAbove(groupId, userId);
             List<SensorResponse> sensors = sensorClient.search(groupId, null, null, null, null);
             model.addAttribute("mode", "create");
             model.addAttribute("flow", null);
             model.addAttribute("sensors", sensors);
             return "flow/editor";
-        } catch (ResponseStatusException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        } catch (FeignException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        }
+        });
     }
 
     @GetMapping("/{flowId}/edit")
@@ -128,7 +117,7 @@ public class FlowController {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        try {
+        return renderOrError(response, model, () -> {
             flowPermissionService.requireManagerOrAbove(groupId, userId);
             FlowEditViewModel flow = flowViewService.getFlowForEdit(flowId, groupId);
             List<SensorResponse> sensors = sensorClient.search(groupId, null, null, null, null);
@@ -136,11 +125,7 @@ public class FlowController {
             model.addAttribute("flow", flow);
             model.addAttribute("sensors", sensors);
             return "flow/editor";
-        } catch (ResponseStatusException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        } catch (FeignException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        }
+        });
     }
 
     @GetMapping("/{flowId}")
@@ -151,16 +136,12 @@ public class FlowController {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        try {
+        return renderOrError(response, model, () -> {
             FlowDetailViewModel flow = flowViewService.getFlow(flowId, groupId);
             model.addAttribute("flow", flow);
             model.addAttribute("canManage", flowPermissionService.isManagerOrAbove(groupId, userId));
             return "flow/detail";
-        } catch (ResponseStatusException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        } catch (FeignException exception) {
-            return renderFlowError(response, model, toErrorResponse(exception));
-        }
+        });
     }
 
     @GetMapping("/sensors/{sensorId}/attributes")
@@ -283,6 +264,20 @@ public class FlowController {
         int status = exception.getStatusCode().value();
         String message = exception.getReason() == null ? "요청을 처리하지 못했습니다." : exception.getReason();
         return new FlowErrorResponse(status, message);
+    }
+
+    /**
+     * 페이지 렌더링 GET 5개(list/trash/new/edit/detail)가 전부 "본문 실행 → 실패 시
+     * 에러 화면"이라는 같은 모양이라, 그 반복되는 try/catch를 여기 한 곳으로 모았다.
+     */
+    private String renderOrError(HttpServletResponse response, Model model, Supplier<String> viewSupplier) {
+        try {
+            return viewSupplier.get();
+        } catch (ResponseStatusException exception) {
+            return renderFlowError(response, model, toErrorResponse(exception));
+        } catch (FeignException exception) {
+            return renderFlowError(response, model, toErrorResponse(exception));
+        }
     }
 
     /** 페이지 이동(GET) 중 발생한 오류는 JSON이 아니라 화면(전역 error.html)으로 보여준다. */
