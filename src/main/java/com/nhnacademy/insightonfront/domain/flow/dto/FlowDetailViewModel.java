@@ -17,4 +17,7 @@ public record FlowDetailViewModel(
         List<FlowNodeResponse> nodes,
         List<FlowLinkResponse> links
 ) {
+    public boolean hasCondition() {
+        return steps.stream().anyMatch(step -> "조건".equals(step.roleLabel()));
+    }
 }
