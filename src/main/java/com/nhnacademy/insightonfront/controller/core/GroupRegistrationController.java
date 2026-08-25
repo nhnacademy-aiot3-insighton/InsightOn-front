@@ -10,12 +10,12 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.SessionAttribute;
 
 /**
  * 그룹이 없는 사용자가 로그인 후 도착하는 곳 — 신청서를 작성하거나, 이미 낸 신청의 승인 대기
@@ -35,16 +35,20 @@ public class GroupRegistrationController {
     private final RegionClient regionClient;
 
     @GetMapping
-    public String view(@SessionAttribute(value = "userId", required = false) Long userId, Model model) {
-        if (userId == null) {
+    public String view(@CookieValue(value = "accessToken", required = false) String accessToken,
+                       @CookieValue(value = "userId", required = false) Long userId,
+                       @CookieValue(value = "groupId", required = false) Long groupId,
+                       Model model) {
+        if (accessToken == null || userId == null) {
             return "redirect:/login";
         }
-
-        GroupRegistrationResponse latest = groupRegistrationStatusService.findLatest(userId);
-
-        if (latest != null && latest.status() == GroupRegistrationStatus.APPROVED) {
+        // groupId는 로그인 시점에 GroupMember 조회로 쿠키에 캐싱해둔 값 — 이미 그룹이 있으면
+        // 신청서를 볼 필요 없이 바로 그룹 메인으로.
+        if (groupId != null) {
             return "redirect:/my-group";
         }
+
+        GroupRegistrationResponse latest = groupRegistrationStatusService.findLatest();
 
         if (latest != null && latest.status() == GroupRegistrationStatus.PENDING) {
             model.addAttribute("state", "PENDING");
@@ -58,7 +62,7 @@ public class GroupRegistrationController {
     }
 
     @PostMapping
-    public String submit(@SessionAttribute(value = "userId", required = false) Long userId,
+    public String submit(@CookieValue(value = "userId", required = false) Long userId,
                           @RequestParam String groupName,
                           @RequestParam String state,
                           @RequestParam String city,
@@ -66,18 +70,18 @@ public class GroupRegistrationController {
         if (userId == null) {
             return "redirect:/login";
         }
-        groupRegistrationClient.createRequest(userId,
+        groupRegistrationClient.createRequest(
                 new CreateGroupRegistrationRequest(groupName, description, state, city));
         return "redirect:/group-registration";
     }
 
     @PostMapping("/cancel")
-    public String cancel(@SessionAttribute(value = "userId", required = false) Long userId,
+    public String cancel(@CookieValue(value = "userId", required = false) Long userId,
                           @RequestParam Long groupRegistrationId) {
         if (userId == null) {
             return "redirect:/login";
         }
-        groupRegistrationClient.cancelGroupRegistration(userId, groupRegistrationId);
+        groupRegistrationClient.cancelGroupRegistration(groupRegistrationId);
         return "redirect:/group-registration";
     }
 

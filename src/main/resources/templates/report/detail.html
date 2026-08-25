@@ -19,19 +19,19 @@
 
     <main class="app-main">
         <p class="section-label">
-            <a th:href="@{/reports}" style="color:var(--ink-soft); text-decoration:none;">
+            <a th:href="@{/my-group/reports}" style="color:var(--ink-soft); text-decoration:none;">
                 <i class="ti ti-arrow-left"></i> 리포트
             </a>
         </p>
 
-        <div id="detailContent" class="settings-card" style="max-width: 760px;">
+        <div id="detailContent" class="settings-card" style="max-width: 100%;">
             <div style="display:flex; align-items:center; gap: var(--sp-3); margin-bottom: var(--sp-2);">
                 <span class="status-badge neutral" style="margin-top:0;" th:text="${report.reportType().name() == 'WEEKLY'} ? '주간' : '월간'"></span>
                 <span class="field-hint" style="margin-top:0;" th:text="${report.locationName()}"></span>
                 <span class="field-hint" style="margin-top:0;" th:text="${#temporals.format(report.createdAt(), 'yyyy-MM-dd HH:mm')}"></span>
             </div>
             <h2 style="font-size:1.25rem; font-weight:700; color:var(--ink); margin-bottom: var(--sp-4);" th:text="${report.title()}"></h2>
-            <div class="report-content" th:text="${report.content()}"></div>
+            <div class="report-content" data-markdown th:text="${report.content()}"></div>
         </div>
     </main>
 </div>
@@ -40,5 +40,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
+<script th:src="@{/js/markdown-render.js}"></script>
 </body>
 </html>

@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * userId는 안 넘긴다 — 게이트웨이가 Authorization을 검증해서 X-User-Id로 바꿔 Core에 넘겨준다.
+ */
 @FeignClient(name = "insighton-gateway", url = "${service-url.gateway}")
 public interface DashboardClient {
 
@@ -18,7 +21,6 @@ public interface DashboardClient {
      */
     @GetMapping("/api/v1/groups/{group-id}/location/{location-id}/dashboard")
     DashboardResponse getDashboard(
-            @RequestHeader("X-USER-ID") Long userId,
             @PathVariable("group-id") Long groupId,
             @PathVariable("location-id") Long locationId
     );
@@ -28,7 +30,6 @@ public interface DashboardClient {
      */
     @PostMapping("/api/v1/groups/{group-id}/location/{location-id}/dashboard/save")
     Map<Long, ChartDataResponse> saveDashboard(
-            @RequestHeader("X-USER-ID") Long userId,
             @PathVariable("group-id") Long groupId,
             @PathVariable("location-id") Long locationId,
             @RequestBody List<WidgetSaveRequest> requests
@@ -40,7 +41,6 @@ public interface DashboardClient {
      */
     @GetMapping("/api/v1/groups/{group-id}/location/{location-id}/dashboard/widgets/{widget-id}/chart-data")
     ChartDataResponse getWidgetChartData(
-            @RequestHeader("X-USER-ID") Long userId,
             @PathVariable("group-id") Long groupId,
             @PathVariable("location-id") Long locationId,
             @PathVariable("widget-id") Long widgetId

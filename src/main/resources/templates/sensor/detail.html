@@ -19,39 +19,48 @@
 
     <main class="app-main">
         <p class="section-label">
-            <a th:href="@{/sensors}" style="color:var(--ink-soft); text-decoration:none;">
+            <a th:href="@{/my-group/sensors}" style="color:var(--ink-soft); text-decoration:none;">
                 <i class="ti ti-arrow-left"></i> 센서
             </a>
         </p>
 
-        <div id="detailContent" class="settings-card" th:attr="data-sensor-id=${sensor.sensorId()}" style="max-width: 600px;">
+        <div id="detailContent" class="settings-card" th:attr="data-sensor-id=${sensor.sensorId()}" style="max-width: 100%;">
+            <div style="display:flex; align-items:center; gap: var(--sp-3); margin-bottom: var(--sp-4);">
+                <span class="status-badge success" style="margin-top:0;" th:if="${sensor.isOnline()}"><i class="ti ti-plug-connected"></i> 온라인</span>
+                <span class="status-badge neutral" style="margin-top:0;" th:unless="${sensor.isOnline()}"><i class="ti ti-plug-connected-x"></i> 오프라인</span>
+                <span class="field-hint" style="margin-top:0;" th:text="${sensor.sensorEui()}"></span>
+            </div>
             <div id="saveStatus" class="field-hint danger" style="display:none; margin-bottom: var(--sp-4);"></div>
 
-            <div class="settings-field">
-                <label for="sensorName">이름</label>
-                <input type="text" id="sensorName" class="form-control" th:value="${sensor.sensorName()}">
-            </div>
-            <div class="settings-field">
-                <label for="sensorLocation">위치</label>
-                <select id="sensorLocation" class="form-select">
-                    <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"
-                            th:selected="${loc.locationId() == sensor.locationId()}"></option>
-                </select>
-            </div>
+            <div class="sensor-detail-grid">
+                <div>
+                    <div class="settings-field">
+                        <label for="sensorName">이름</label>
+                        <input type="text" id="sensorName" class="form-control" th:value="${sensor.sensorName()}">
+                    </div>
+                    <div class="settings-field">
+                        <label for="sensorLocation">위치</label>
+                        <select id="sensorLocation" class="form-select">
+                            <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"
+                                    th:selected="${loc.locationId() == sensor.locationId()}"></option>
+                        </select>
+                    </div>
+                </div>
 
-            <div class="gateway-status-meta" style="border-top:none; margin-top:0; padding-top:0;">
-                <div class="gateway-status-meta-row">
-                    <span>EUI</span>
-                    <span class="gateway-status-meta-value" th:text="${sensor.sensorEui()}"></span>
-                </div>
-                <div class="gateway-status-meta-row">
-                    <span>등록일</span>
-                    <span class="gateway-status-meta-value" th:text="${#temporals.format(sensor.createdAt(), 'yyyy-MM-dd')}"></span>
-                </div>
-                <div class="gateway-status-meta-row">
-                    <span>마지막 통신</span>
-                    <span class="gateway-status-meta-value"
-                          th:text="${sensor.lastSeenAt() != null ? #temporals.format(sensor.lastSeenAt(), 'yyyy-MM-dd HH:mm') : '기록 없음'}"></span>
+                <div class="gateway-status-meta" style="border-top:none; margin-top:0; padding-top:0;">
+                    <div class="gateway-status-meta-row">
+                        <span>EUI</span>
+                        <span class="gateway-status-meta-value" th:text="${sensor.sensorEui()}"></span>
+                    </div>
+                    <div class="gateway-status-meta-row">
+                        <span>등록일</span>
+                        <span class="gateway-status-meta-value" th:text="${#temporals.format(sensor.createdAt(), 'yyyy-MM-dd')}"></span>
+                    </div>
+                    <div class="gateway-status-meta-row">
+                        <span>마지막 통신</span>
+                        <span class="gateway-status-meta-value"
+                              th:text="${sensor.lastSeenAt() != null ? #temporals.format(sensor.lastSeenAt(), 'yyyy-MM-dd HH:mm') : '기록 없음'}"></span>
+                    </div>
                 </div>
             </div>
 
@@ -60,7 +69,7 @@
                 <div class="chip-select" style="flex-wrap: wrap; gap: var(--sp-2);" th:if="${not #lists.isEmpty(attributes)}">
                     <span class="chip-option" style="cursor:default; display:inline-flex; align-items:center; gap: var(--sp-2);"
                           th:each="attr : ${attributes}">
-                        <span th:text="${attr.displayName()} + ' (' + ${attr.unit()} + ')'"></span>
+                        <span th:text="${attr.unit() != null and not #strings.isEmpty(attr.unit())} ? ${attr.displayName()} + ' (' + ${attr.unit()} + ')' : ${attr.displayName()}"></span>
                         <button type="button" class="btn-remove-attribute" aria-label="필드 삭제"
                                 th:attr="data-metric-key=${attr.metricKey()}"
                                 style="border:none; background:none; color:var(--ink-faint); line-height:1; padding:0;">
