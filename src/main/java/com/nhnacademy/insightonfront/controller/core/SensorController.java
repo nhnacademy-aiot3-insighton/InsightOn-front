@@ -35,7 +35,7 @@ public class SensorController {
     private final SensorAttributeClient sensorAttributeClient;
     private final LocationClient locationClient;
 
-    // 위치 필터 select에 "미배정"을 끼워넣기 위한 sentinel 값 — 실제 locationId(PK)는 항상 양수라 겹치지 않는다.
+    // 위치 필터 select에 "미배정"을 끼워넣기 위한 sentinel 값 — 실제 locationId(PK)는 항상 양수라 안겹침
     private static final long UNASSIGNED_LOCATION_ID = -1L;
 
     @GetMapping
@@ -48,7 +48,7 @@ public class SensorController {
             return "redirect:/login";
         }
 
-        // 미배정이면 위치별 검색 대신 core의 미배정 센서 전용 API를 탄다(위치 없는 센서는 search로는 못 찾음)
+        // 미배정이면 위치별 검색 대신 core의 미배정 센서 전용 API를 사용
         boolean unassignedOnly = locationId != null && locationId == UNASSIGNED_LOCATION_ID;
 
         List<SensorResponse> sensors = unassignedOnly

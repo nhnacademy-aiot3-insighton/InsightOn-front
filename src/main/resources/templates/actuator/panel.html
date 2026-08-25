@@ -45,7 +45,7 @@
                     <div class="dropdown">
                         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <!-- 클릭 시 #actuatorLogsModal을 열고 actuator-panel.js가 액추에이터 실행 로그를 채운다 -->
+                            <!-- 클릭 시 #actuatorLogsModal을 열고 actuator-panel.js가 액추에이터 실행 로그를 채움 -->
                             <li><a class="dropdown-item btn-view-logs" href="#">실행 이력</a></li>
                             <li><a class="dropdown-item btn-delete-actuator" href="#">삭제</a></li>
                         </ul>
@@ -53,8 +53,8 @@
                 </div>
 
                 <!-- cmd.key(POWER_STATUS 등 enum 이름)는 화면 라벨용으로만 쓰고,
-                     실제로 core에 보내고 currentState에서 읽는 키는 cmd.value.get('stateKey')("power" 등)다.
-                     예전엔 cmd.key를 그대로 보내서 core가 "알 수 없는 명령키"로 거부했었다(500 에러 원인). -->
+                     실제로 core에 보내고 currentState에서 읽는 키는 cmd.value.get('stateKey')("power" 등)
+                     예전엔 cmd.key를 그대로 보내서 core가 "알 수 없는 명령키"로 거부함(500 에러) -->
                 <div th:each="cmd : ${commandRules.get(actuator.actuatorType().name())}">
                     <div class="actuator-command-row">
                         <span class="actuator-command-label" th:text="${cmd.key}">POWER_STATUS</span>
