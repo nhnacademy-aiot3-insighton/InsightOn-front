@@ -45,6 +45,14 @@ public class DashboardController {
             log.warn("[DashboardController] 백엔드 대시보드 데이터 조회 실패: {}", e.getMessage());
         }
 
+        // 백엔드 Core 대시보드 구성 조회
+        LocationDetailResponse location = null;
+        try {
+            location = locationClient.getLocation(groupId, locationId);
+        } catch (Exception e) {
+            log.warn("[DashboardController] 백엔드 Location 데이터 조회 실패: {}", e.getMessage());
+        }
+
         // 백엔드 Core DB의 해당 위치 연결 센서 목록 조회
         List<SensorResponse> sensors = Collections.emptyList();
         try {
@@ -62,13 +70,12 @@ public class DashboardController {
 //                    new SensorResponse(3L, 1L, locationId, "DEV_PRESS_03", "테스트 기압 센서 3", java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now())
 //            );
         }
-        LocationDetailResponse location = locationClient.getLocation(groupId, locationId);
       
         model.addAttribute("dashboard", response);
-        model.addAttribute("groupId", groupId);
         model.addAttribute("locationId", locationId);
-        model.addAttribute("sensors", sensors);
         model.addAttribute("location", location);
+        model.addAttribute("groupId", groupId);
+        model.addAttribute("sensors", sensors);
 
         return "dashboard/widgets";
     }
