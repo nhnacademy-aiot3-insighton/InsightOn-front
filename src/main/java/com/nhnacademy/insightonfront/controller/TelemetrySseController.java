@@ -44,6 +44,15 @@ public class TelemetrySseController {
             return null;
         }
 
+//        로컬 테스트용 코드
+//        Long targetUserId = (userId != null) ? userId : 1L;
+//
+//        try {
+//            sensorClient.getSensor(targetUserId, sensorId);
+//        } catch (FeignException e) {
+//            log.warn("[TelemetrySseController] 백엔드 센서 검증 패스 (로컬 테스트): {}", e.getMessage());
+//        }
+
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         sseEmitterRegistry.register(sensorId, emitter);
         return emitter;
