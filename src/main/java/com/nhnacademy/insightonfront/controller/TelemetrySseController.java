@@ -36,7 +36,7 @@ public class TelemetrySseController {
         }
 
         try {
-            sensorClient.getSensor(userId, sensorId);
+            sensorClient.getSensor(sensorId);
         } catch (FeignException e) {
             log.warn("[TelemetrySseController] 구독 거부 - userId: {}, sensorId: {}, status: {}",
                     userId, sensorId, e.status());

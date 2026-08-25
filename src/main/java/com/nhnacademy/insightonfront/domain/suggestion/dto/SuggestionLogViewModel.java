@@ -8,7 +8,7 @@ public record SuggestionLogViewModel(
         String title,
         String suggestionText,
         Boolean isAccepted,
-        String actionPayload,
+        String actionSummary,
         OffsetDateTime createdAt
 ) {
 }

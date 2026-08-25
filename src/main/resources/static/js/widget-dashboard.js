@@ -17,7 +17,7 @@
 
     const GROUP_ID = DASHBOARD_INIT.groupId;
     const LOCATION_ID = DASHBOARD_INIT.locationId;
-    const BASE_URL = `/groups/${GROUP_ID}/location/${LOCATION_ID}/dashboard`;
+    const BASE_URL = `/my-group/location/${LOCATION_ID}/dashboard`;
 
     // sensorEui -> display name & sensorId mapping
     const sensorNameByEui = {};

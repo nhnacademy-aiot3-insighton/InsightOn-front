@@ -24,10 +24,10 @@ public class HourlyTelemetryStatViewService {
 
     public PageResponse<HourlyTelemetryStatViewModel> getHourlyTelemetryStats(Long groupId, Long locationId,
                                                                                 OffsetDateTime from, OffsetDateTime to,
-                                                                                int page, int size, Long userId) {
+                                                                                int page, int size) {
         PageResponse<HourlyTelemetryStatResponse> stats =
-                hourlyTelemetryStatClient.getHourlyTelemetryStats(groupId, locationId, from, to, page, size, userId);
-        Map<Long, String> locationNames = locationNameResolver.resolve(groupId, userId);
+                hourlyTelemetryStatClient.getHourlyTelemetryStats(groupId, locationId, from, to, page, size);
+        Map<Long, String> locationNames = locationNameResolver.resolve(groupId);
         return stats.map(s -> new HourlyTelemetryStatViewModel(
                 s.hourlyTelemetryStatId(),
                 locationNames.getOrDefault(s.locationId(), UNKNOWN_LOCATION),

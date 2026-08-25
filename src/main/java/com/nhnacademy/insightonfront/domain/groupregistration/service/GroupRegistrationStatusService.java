@@ -20,10 +20,10 @@ public class GroupRegistrationStatusService {
     private final GroupRegistrationClient groupRegistrationClient;
 
     /** 사용자의 최신 그룹 신청 내역을 반환. 신청 이력이 없으면(404) null. */
-    public GroupRegistrationResponse findLatest(Long userId) {
+    public GroupRegistrationResponse findLatest() {
         try {
             PageResponse<GroupRegistrationResponse> page =
-                    groupRegistrationClient.getMyGroupRegistrations(userId, 0, 1);
+                    groupRegistrationClient.getMyGroupRegistrations(0, 1);
 
             if (page == null || page.content() == null || page.content().isEmpty()) {
                 return null;

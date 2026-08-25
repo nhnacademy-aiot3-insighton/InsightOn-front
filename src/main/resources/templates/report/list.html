@@ -20,7 +20,7 @@
     <main class="app-main">
         <p class="section-label">리포트</p>
 
-        <form method="get" th:action="@{/reports}" class="filter-bar">
+        <form method="get" th:action="@{/my-group/reports}" class="filter-bar">
             <select name="locationId" class="form-select">
                 <option value="">전체 위치</option>
                 <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"
@@ -38,7 +38,7 @@
             <div class="split-list">
                 <div class="location-summary-list" th:if="${not #lists.isEmpty(reports.content())}">
                     <a class="split-row" th:each="report : ${reports.content()}"
-                       th:href="@{/reports/{reportId}(reportId=${report.reportId()})}">
+                       th:href="@{/my-group/reports/{reportId}(reportId=${report.reportId()})}">
                         <div class="split-row-title">
                             <span class="status-badge neutral" style="margin-top:0;" th:text="${report.reportType().name() == 'WEEKLY'} ? '주간' : '월간'"></span>
                             <span th:text="${report.title()}"></span>
@@ -64,6 +64,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/split-detail.js}"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
+<script th:src="@{/js/markdown-render.js}"></script>
 <script>
     initSplitDetail({rowSelector: '.split-list .split-row', panelId: 'detailPanel', contentId: 'detailContent'});
 </script>
