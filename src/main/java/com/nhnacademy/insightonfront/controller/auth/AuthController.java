@@ -1,9 +1,12 @@
 package com.nhnacademy.insightonfront.controller.auth;
 
+import com.nhnacademy.insightonfront.adapter.auth.signup.dto.UserSignupResponse;
 import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
 import com.nhnacademy.insightonfront.auth.AccessTokenContext;
 import com.nhnacademy.insightonfront.adapter.auth.auth.AuthClient;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
+import com.nhnacademy.insightonfront.domain.signup.SignupService;
+import com.nhnacademy.insightonfront.domain.signup.dto.*;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,6 +23,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -49,6 +53,7 @@ import tools.jackson.databind.ObjectMapper;
 public class AuthController {
 
     private final AuthClient authClient;
+    private final SignupService signupService;
     private final GroupClient groupClient;
     private final ObjectMapper objectMapper;
 
@@ -74,7 +79,7 @@ public class AuthController {
     public String login(@RequestParam String email,
                         @RequestParam String password,
                         HttpServletRequest servletRequest,
-                        HttpServletResponse servletResponse,   // ★ 세션 대신 쿠키로 내림
+                        HttpServletResponse servletResponse,
                         HttpSession session,
                         Model model) {
         try {
@@ -84,26 +89,22 @@ public class AuthController {
 
             String accessToken = response.getBody();
             String refreshToken = extractCookie(response.getHeaders(), "refreshToken");
-            String userName = extractUserName(accessToken);   // ★ 토큰에서 이름 꺼냄
-            Long userId = extractUserId(accessToken);       // ★ 토큰에서 userId 꺼냄
-            // 로컬은 http라 Secure 쿠키를 브라우저가 저장하지 않는다 - 요청 스킴에 맞춰 동적으로 결정
+            String userName = extractUserName(accessToken);
+            Long userId = extractUserId(accessToken);
             boolean secure = servletRequest.isSecure();
 
-            // accessToken 쿠키
             servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                     ResponseCookie.from("accessToken", accessToken)
                             .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                             .maxAge(Duration.ofMinutes(15))
                             .build().toString());
 
-            // refreshToken 쿠키
             servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                     ResponseCookie.from("refreshToken", refreshToken)
                             .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                             .maxAge(Duration.ofDays(15))
                             .build().toString());
 
-            // ★ userId 쿠키 (숫자라 인코딩 불필요)
             if (userId != null) {
                 servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                         ResponseCookie.from("userId", userId.toString())
@@ -112,12 +113,11 @@ public class AuthController {
                                 .build().toString());
             }
 
-            // ★ userName 쿠키 추가 (한글이라 URL 인코딩 필수)
             if (userName != null) {
                 servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                         ResponseCookie.from("userName",
                                         URLEncoder.encode(userName, StandardCharsets.UTF_8))
-                                .httpOnly(true)      // 서버(Thymeleaf)에서만 읽음
+                                .httpOnly(true)
                                 .secure(secure)
                                 .path("/")
                                 .sameSite("Lax")
@@ -125,8 +125,6 @@ public class AuthController {
                                 .build().toString());
             }
 
-            // ★ groupId 쿠키 - 인스턴스가 여러 개 떠도(sticky session 없음) 안전하게 동작하도록
-            // 세션이 아니라 쿠키로 내림. 아직 가입한 그룹이 없으면 쿠키 자체를 안 내려줌(null과 동일).
             Long groupId = resolveGroupId(accessToken);
             if (groupId != null) {
                 servletResponse.addHeader(HttpHeaders.SET_COOKIE,
@@ -156,7 +154,6 @@ public class AuthController {
         }
     }
 
-    /** accessToken(JWT)의 payload에서 sub 클레임(userId)을 꺼낸다. */
     public Long extractUserId(String accessToken) {
         try {
             String payload = accessToken.split("\\.")[1];
@@ -179,11 +176,6 @@ public class AuthController {
         }
     }
 
-    /**
-     * 로그인한 유저의 소속 groupId를 조회. 아직 가입한 그룹이 없으면(404) null을 반환 - 에러 아님.
-     * 이 시점엔 accessToken이 아직 브라우저 쿠키로 안 내려간 상태라, AuthorizationRequestInterceptor가
-     * 현재 요청의 쿠키에서 못 찾으므로 AccessTokenContext로 잠깐 직접 넘겨준다.
-     */
     private Long resolveGroupId(String accessToken) {
         try {
             AccessTokenContext.set(accessToken);
@@ -195,7 +187,6 @@ public class AuthController {
         }
     }
 
-    /** Set-Cookie 헤더에서 특정 쿠키 값만 뽑아낸다. */
     private String extractCookie(HttpHeaders headers, String name) {
         List<String> setCookies = headers.get(HttpHeaders.SET_COOKIE);
         if (setCookies == null) {
@@ -216,8 +207,8 @@ public class AuthController {
     private String loginErrorMessage(int status) {
         return switch (status) {
             case 401, 400 -> "이메일 또는 비밀번호가 올바르지 않아요.";
-            case 423      -> "로그인이 일시적으로 잠겼어요. 잠시 후 다시 시도해주세요.";
-            default       -> "로그인에 실패했어요. 잠시 후 다시 시도해주세요.";
+            case 423 -> "로그인이 일시적으로 잠겼어요. 잠시 후 다시 시도해주세요.";
+            default -> "로그인에 실패했어요. 잠시 후 다시 시도해주세요.";
         };
     }
 
@@ -227,17 +218,14 @@ public class AuthController {
                          HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse) {
         log.info("로그아웃: {}", userId);
-        // 1. auth 에 로그아웃 알림 (서버 측 토큰 무효화) — 실패해도 진행
         if (accessToken != null && userId != null) {
             try {
                 authClient.logout("Bearer " + accessToken);
             } catch (Exception e) {
-                // auth 로그아웃 실패해도 클라이언트 쿠키는 지운다
                 log.warn("auth 로그아웃 실패: {}", e.getMessage());
             }
         }
 
-        // 2. 브라우저 쿠키 삭제
         boolean secure = servletRequest.isSecure();
         expireCookie(servletResponse, "accessToken", secure);
         expireCookie(servletResponse, "refreshToken", secure);
@@ -248,7 +236,6 @@ public class AuthController {
         return "redirect:/";
     }
 
-    /** 같은 이름의 쿠키를 maxAge=0 으로 덮어써 삭제한다. */
     private void expireCookie(HttpServletResponse response, String name, boolean secure) {
         response.addHeader(HttpHeaders.SET_COOKIE,
                 ResponseCookie.from(name, "")
@@ -256,15 +243,10 @@ public class AuthController {
                         .secure(secure)
                         .path("/")
                         .sameSite("Lax")
-                        .maxAge(0)          // ★ 즉시 만료 = 삭제
+                        .maxAge(0)
                         .build().toString());
     }
 
-    /**
-     * 실제 Google OAuth(spring-oauth2-client + 클라이언트 등록)가 붙기 전까지, 같은 목업 세션을
-     * 심는 것으로 대신한다. 버튼 자체는 실제로 클릭 가능하고 로그인 흐름을 그대로 타지만,
-     * "구글 계정으로 인증됨"은 아직 아니다.
-     */
     @PostMapping("/login/google")
     public String loginWithGoogle(HttpSession session) {
         session.setAttribute("userId", 1L);
@@ -274,7 +256,6 @@ public class AuthController {
         return "redirect:/";
     }
 
-    /** GitHub도 동일 — 실제 OAuth 붙기 전 목업. */
     @PostMapping("/login/github")
     public String loginWithGithub(HttpSession session) {
         session.setAttribute("userId", 1L);
@@ -285,7 +266,7 @@ public class AuthController {
     }
 
     // ================================================================
-    // 회원가입
+    // 회원가입 — SignupService를 통해 auth로 위임
     // ================================================================
 
     @GetMapping("/signup")
@@ -293,134 +274,59 @@ public class AuthController {
         return "signup";
     }
 
-//    @PostMapping("/signup")
-//    public String signup(@RequestParam String email,
-//                          @RequestParam String password,
-//                          @RequestParam String name,
-//                          @RequestParam String phone,
-//                          @RequestParam(required = false) String emailVerified,
-//                          HttpSession session,
-//                          Model model) {
-//        String verifiedEmail = (String) session.getAttribute("verifiedEmail");
-//        if (!"true".equals(emailVerified) || !email.equalsIgnoreCase(verifiedEmail)) {
-//            model.addAttribute("signupError", "이메일 인증을 먼저 완료해주세요.");
-//            model.addAttribute("email", email);
-//            model.addAttribute("name", name);
-//            model.addAttribute("phone", phone);
-//            return "signup";
-//        }
-//
-//        // 실제 계정 저장(비밀번호 해시 등)은 백엔드가 붙으면 이 자리
-//        log.info("[목업] 회원가입 완료 처리: {}", email);
-//        session.removeAttribute("verifiedEmail");
-//        session.removeAttribute("verifyAttempts");
-//        session.removeAttribute("verifyLockUntil");
-//        session.removeAttribute("verifyLastSentAt");
-//        session.removeAttribute("verifyTargetEmail");
-//        return "redirect:/login?registered=1";
-//    }
-
-    // ================================================================
-    // 이메일 인증 (회원가입 전 — 중복 확인 / 코드 발송 / 코드 확인)
-    // ================================================================
-
-    @PostMapping("/signup/email/check-duplicate")
+    @PostMapping("/signup/check-email")
     @ResponseBody
-    public Map<String, Object> checkEmailDuplicate(@RequestParam String email) {
-        boolean available = !DEMO_TAKEN_EMAIL.equalsIgnoreCase(email.trim());
+    public Map<String, Object> checkEmailDuplicate(@RequestBody EmailAvailableRequest request) {
+        boolean available = signupService.checkEmailAvailable(request.email());
         return Map.of("available", available);
     }
 
-    @PostMapping("/signup/email/send-code")
+    @PostMapping("/signup/send-code")
     @ResponseBody
-    public Map<String, Object> sendVerificationCode(@RequestParam String email, HttpSession session) {
-        Long lockUntil = (Long) session.getAttribute("verifyLockUntil");
-        if (lockUntil != null && lockUntil > System.currentTimeMillis()) {
-            return Map.of("ok", false, "message", "인증 시도가 잠겼어요. " + minutesRemaining(lockUntil) + "분 후 다시 시도해주세요.");
-        }
-
-        Long lastSent = (Long) session.getAttribute("verifyLastSentAt");
-        if (lastSent != null && System.currentTimeMillis() - lastSent < RESEND_COOLDOWN_SECONDS * 1000L) {
-            return Map.of("ok", false, "message", secondsRemaining(lastSent) + "초 후에 재발송할 수 있어요.");
-        }
-
-        session.setAttribute("verifyTargetEmail", email);
-        session.setAttribute("verifyLastSentAt", System.currentTimeMillis());
-        session.setAttribute("verifyAttempts", 0);
-        session.removeAttribute("verifyLockUntil");
-        log.info("[목업] {}로 인증코드 발송 (실제 이메일 발송 전 — 데모 코드는 항상 {})", email, DEMO_VERIFY_CODE);
-
-        return Map.of("ok", true, "message", "인증코드를 보냈어요. 메일함을 확인해주세요.", "cooldownSeconds", RESEND_COOLDOWN_SECONDS);
+    public ResponseEntity<Void> sendVerificationCode(@RequestBody EmailVerifyRequest request) {
+        signupService.sendEmailVerify(request.email());
+        return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/signup/email/verify-code")
+    @PostMapping("/signup/verify-code")
     @ResponseBody
-    public Map<String, Object> verifyCode(@RequestParam String code, HttpSession session) {
-        Long lockUntil = (Long) session.getAttribute("verifyLockUntil");
-        if (lockUntil != null && lockUntil > System.currentTimeMillis()) {
-            return Map.of("ok", false, "locked", true, "message", "인증 시도가 잠겼어요. " + minutesRemaining(lockUntil) + "분 후 다시 시도해주세요.");
+    public Map<String, Object> verifyCode(@RequestBody EmailVerifyConfirmRequest request) {
+        String verificationToken = signupService.confirmEmailVerify(request.email(), request.code());
+        if (verificationToken == null) {
+            return Map.of("ok", false, "message", "인증코드가 올바르지 않습니다.");
         }
+        return Map.of("ok", true, "verificationToken", verificationToken);
+    }
 
-        String target = (String) session.getAttribute("verifyTargetEmail");
-        if (target == null) {
-            return Map.of("ok", false, "message", "인증코드를 먼저 발송해주세요.");
-        }
-
-        if (DEMO_VERIFY_CODE.equals(code.trim())) {
-            session.setAttribute("verifiedEmail", target);
-            session.removeAttribute("verifyAttempts");
-            return Map.of("ok", true, "message", "이메일 인증이 완료됐어요.");
-        }
-
-        int attempts = intAttr(session, "verifyAttempts") + 1;
-        session.setAttribute("verifyAttempts", attempts);
-        if (attempts >= MAX_VERIFY_ATTEMPTS) {
-            session.setAttribute("verifyLockUntil", System.currentTimeMillis() + VERIFY_LOCK_MINUTES * 60_000L);
-            return Map.of("ok", false, "locked", true, "message", "5회 실패해서 " + VERIFY_LOCK_MINUTES + "분간 잠겼어요.");
-        }
-        return Map.of("ok", false, "message", "인증코드가 올바르지 않아요. (" + attempts + "/" + MAX_VERIFY_ATTEMPTS + ")");
+    @PostMapping("/signup/submit")
+    @ResponseBody
+    public ResponseEntity<UserSignupResponse> signup(@RequestBody UserSignupRequest request) {
+        UserSignupResponse response = signupService.signup(
+                request.email(), request.password(), request.userName(),
+                request.phoneNumber(), request.token());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // ================================================================
-    // 아이디(이메일) 찾기 — 로그인 페이지의 모달에서 AJAX로 호출한다 (페이지 이동 없음)
+    // 아이디(이메일) 찾기 — SignupService를 통해 auth로 위임
     // ================================================================
 
-    @PostMapping("/find-id")
+    @PostMapping("/find-id/submit")
     @ResponseBody
-    public Map<String, Object> findId(@RequestParam String name, @RequestParam String phone) {
-        // 실제 사용자 조회 전 목업 — 입력한 이름으로 그럴듯한 마스킹 이메일을 만들어 보여준다
-        String demoEmail = name.toLowerCase().replaceAll("\\s", "") + "@insighton.io";
-        return Map.of("maskedEmail", maskEmail(demoEmail));
+    public Map<String, Object> findId(@RequestBody FindEmailRequest request) {
+        String maskedEmail = signupService.findEmail(request.userName(), request.phoneNumber());
+        return Map.of("maskedEmail", maskedEmail);
     }
 
     // ================================================================
-    // 비밀번호 재설정 — 요청 단계는 로그인 페이지 모달에서 AJAX로 호출한다.
-    // 이메일로 받는 재설정 링크(/reset-password/confirm)는 로그인 페이지 맥락이 없는 채로
-    // 열리니 그것만 별도 페이지로 남겨둔다.
+    // 비밀번호 재설정 — SignupService를 통해 auth로 위임
     // ================================================================
 
-    @PostMapping("/reset-password")
+    @PostMapping("/reset-password/request")
     @ResponseBody
-    public Map<String, Object> requestReset(@RequestParam String email, HttpSession session) {
-        Long lockUntil = (Long) session.getAttribute("resetLockUntil");
-        if (lockUntil != null && lockUntil > System.currentTimeMillis()) {
-            return Map.of("ok", false, "message", "요청이 너무 많아요. " + minutesRemaining(lockUntil) + "분 후 다시 시도해주세요.");
-        }
-
-        Long lastSent = (Long) session.getAttribute("resetLastSentAt");
-        if (lastSent != null && System.currentTimeMillis() - lastSent < RESEND_COOLDOWN_SECONDS * 1000L) {
-            return Map.of("ok", false, "message", secondsRemaining(lastSent) + "초 후에 다시 요청할 수 있어요.");
-        }
-
-        int sends = intAttr(session, "resetSendCount") + 1;
-        session.setAttribute("resetSendCount", sends);
-        session.setAttribute("resetLastSentAt", System.currentTimeMillis());
-        if (sends >= MAX_RESET_SENDS) {
-            session.setAttribute("resetLockUntil", System.currentTimeMillis() + LOGIN_LOCK_MINUTES * 60_000L);
-        }
-        // 계정 존재 여부와 무관하게 항상 같은 결과를 보여준다 — 가입 여부가 새어나가지 않도록
-        log.info("[목업] {} 비밀번호 재설정 요청 처리 (실제 존재 여부는 항상 숨김)", email);
-        return Map.of("ok", true, "message", "입력하신 이메일로 재설정 링크를 보냈어요. (가입되지 않은 이메일이어도 같은 안내가 표시돼요)");
+    public ResponseEntity<Void> requestReset(@RequestBody PasswordResetRequest request) {
+        signupService.requestPasswordReset(request.email());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/reset-password/confirm")
@@ -429,25 +335,22 @@ public class AuthController {
         return "reset-password-confirm";
     }
 
-    @PostMapping("/reset-password/confirm")
-    public String resetPasswordConfirm(@RequestParam String password,
-                                        @RequestParam(required = false) String token,
-                                        Model model) {
-        // 실제 토큰 검증 및 비밀번호 저장은 백엔드가 붙으면 이 자리
-        log.info("[목업] 토큰 {}로 비밀번호 재설정 완료 처리", token);
-        model.addAttribute("done", true);
-        return "reset-password-confirm";
+    @PostMapping("/reset-password/confirm/submit")
+    @ResponseBody
+    public ResponseEntity<Void> resetPasswordConfirm(@RequestBody PasswordResetConfirmRequest request) {
+        signupService.confirmPasswordReset(request.token(), request.password());
+        return ResponseEntity.ok().build();
     }
 
     // ================================================================
-    // 내 정보
+    // 내 정보 (아직 세션 기반 목업)
     // ================================================================
 
     @GetMapping("/mypage")
     public String myPage(@SessionAttribute(value = "userId", required = false) Long userId,
-                          @SessionAttribute(value = "userEmail", required = false) String userEmail,
-                          HttpSession session,
-                          Model model) {
+                         @SessionAttribute(value = "userEmail", required = false) String userEmail,
+                         HttpSession session,
+                         Model model) {
         if (userId == null) {
             return "redirect:/login";
         }
@@ -461,9 +364,9 @@ public class AuthController {
 
     @PostMapping("/mypage/update")
     public String updateProfile(@SessionAttribute(value = "userId", required = false) Long userId,
-                                 @RequestParam String name,
-                                 @RequestParam String phone,
-                                 HttpSession session) {
+                                @RequestParam String name,
+                                @RequestParam String phone,
+                                HttpSession session) {
         if (userId == null) {
             return "redirect:/login";
         }
@@ -474,10 +377,10 @@ public class AuthController {
 
     @PostMapping("/mypage/password")
     public String changePassword(@SessionAttribute(value = "userId", required = false) Long userId,
-                                  @RequestParam String currentPassword,
-                                  @RequestParam String newPassword,
-                                  HttpSession session,
-                                  RedirectAttributes redirectAttributes) {
+                                 @RequestParam String currentPassword,
+                                 @RequestParam String newPassword,
+                                 HttpSession session,
+                                 RedirectAttributes redirectAttributes) {
         if (userId == null) {
             return "redirect:/login";
         }
@@ -485,7 +388,6 @@ public class AuthController {
             redirectAttributes.addFlashAttribute("passwordError", "소셜 로그인 전용 계정은 비밀번호를 바꿀 수 없어요.");
             return "redirect:/mypage";
         }
-        // 실제 현재 비밀번호 검증 전 목업 — "wrong"을 입력하면 실패 흐름을 볼 수 있다
         if ("wrong".equals(currentPassword)) {
             redirectAttributes.addFlashAttribute("passwordError", "현재 비밀번호가 올바르지 않아요.");
             return "redirect:/mypage";
@@ -497,8 +399,8 @@ public class AuthController {
 
     @PostMapping("/mypage/social/link")
     public String linkSocial(@SessionAttribute(value = "userId", required = false) Long userId,
-                              @RequestParam String provider,
-                              HttpSession session) {
+                             @RequestParam String provider,
+                             HttpSession session) {
         if (userId == null) {
             return "redirect:/login";
         }
@@ -512,9 +414,9 @@ public class AuthController {
 
     @PostMapping("/mypage/social/unlink")
     public String unlinkSocial(@SessionAttribute(value = "userId", required = false) Long userId,
-                                @RequestParam String provider,
-                                HttpSession session,
-                                RedirectAttributes redirectAttributes) {
+                               @RequestParam String provider,
+                               HttpSession session,
+                               RedirectAttributes redirectAttributes) {
         if (userId == null) {
             return "redirect:/login";
         }
@@ -532,41 +434,6 @@ public class AuthController {
     // ================================================================
     // 공용 헬퍼
     // ================================================================
-
-    private int incrementLoginFail(HttpSession session) {
-        int fails = intAttr(session, "loginFailCount") + 1;
-        session.setAttribute("loginFailCount", fails);
-        if (fails >= MAX_LOGIN_ATTEMPTS) {
-            session.setAttribute("loginLockUntil", System.currentTimeMillis() + LOGIN_LOCK_MINUTES * 60_000L);
-            session.removeAttribute("loginFailCount");
-        }
-        return fails;
-    }
-
-    private String loginFailMessage(int fails) {
-        if (fails >= MAX_LOGIN_ATTEMPTS) {
-            return "5회 연속 실패해서 " + LOGIN_LOCK_MINUTES + "분간 로그인이 잠겼어요.";
-        }
-        return "이메일 또는 비밀번호가 올바르지 않아요. (" + fails + "/" + MAX_LOGIN_ATTEMPTS + ")";
-    }
-
-    /** 실제 계정 상태 조회 전 목업 — 이메일 접두어로 휴면/차단/탈퇴 분기를 흉내 낸다. */
-    private String accountStatusFor(String email) {
-        String lower = email.toLowerCase();
-        if (lower.startsWith("dormant@")) return "DORMANT";
-        if (lower.startsWith("banned@")) return "BANNED";
-        if (lower.startsWith("withdrawn@")) return "WITHDRAWN";
-        return null;
-    }
-
-    private String statusMessage(String status) {
-        return switch (status) {
-            case "DORMANT" -> "휴면 계정이에요. 본인 확인 후 이용할 수 있어요.";
-            case "BANNED" -> "이용이 제한된 계정이에요. 고객센터로 문의해주세요.";
-            case "WITHDRAWN" -> "탈퇴한 계정이에요. 새로 가입해주세요.";
-            default -> "로그인할 수 없는 계정이에요.";
-        };
-    }
 
     private String maskEmail(String email) {
         int at = email.indexOf('@');
@@ -597,18 +464,5 @@ public class AuthController {
     private String attrOrDefault(HttpSession session, String key, String defaultValue) {
         Object v = session.getAttribute(key);
         return v != null ? (String) v : defaultValue;
-    }
-
-    private int intAttr(HttpSession session, String key) {
-        Object v = session.getAttribute(key);
-        return v != null ? (Integer) v : 0;
-    }
-
-    private long minutesRemaining(long untilEpochMillis) {
-        return (untilEpochMillis - System.currentTimeMillis()) / 60_000 + 1;
-    }
-
-    private long secondsRemaining(long sinceEpochMillis) {
-        return RESEND_COOLDOWN_SECONDS - (System.currentTimeMillis() - sinceEpochMillis) / 1000;
     }
 }
