@@ -1,6 +1,7 @@
 const chatForm = document.getElementById('chatForm');
 const chatInput = document.getElementById('chatInput');
 const chatMessages = document.getElementById('chatMessages');
+const chatPanel = document.getElementById('aiChatPanel');
 
 const HELP_TEXT = `이렇게 물어볼 수 있어요:
 
@@ -33,6 +34,80 @@ function appendChatBubble(text, who) {
     bubble.textContent = text;
     chatMessages.appendChild(bubble);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    return bubble;
+}
+
+/** "data:" 뒤 공백 한 칸만 떼고 나머지는 그대로 둔다 - trim()을 쓰면 토큰 자체가 줄바꿈/공백일 때 사라진다. */
+function stripDataPrefix(line) {
+    const value = line.slice(5);
+    return value.startsWith(' ') ? value.slice(1) : value;
+}
+
+/** SSE 이벤트 블록("data: ...\n\n" 단위)에서 data: 뒤 텍스트만 뽑는다(여러 줄이면 이어붙임). */
+function parseSseEvent(block) {
+    return block.split('\n')
+        .filter((line) => line.startsWith('data:'))
+        .map(stripDataPrefix)
+        .join('\n');
+}
+
+/** 마크다운(굵게/제목/목록 등)을 렌더링하고 XSS 방지를 위해 살균한다. 라이브러리 로드 실패 시 텍스트로만 표시. */
+function renderMarkdown(bubble, rawText) {
+    if (window.marked && window.DOMPurify) {
+        bubble.innerHTML = DOMPurify.sanitize(marked.parse(rawText, {breaks: true}));
+    } else {
+        bubble.textContent = rawText;
+    }
+}
+
+async function streamChatReply(message) {
+    const locationId = chatPanel ? chatPanel.dataset.locationId : '';
+    const bubble = appendChatBubble('', 'bot');
+    let rawText = '';
+
+    let response;
+    try {
+        response = await fetch('/my-group/chat' + (locationId ? `?locationId=${locationId}` : ''), {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message}),
+        });
+    } catch (e) {
+        bubble.textContent = '응답을 받아오지 못했어요. 잠시 후 다시 시도해주세요.';
+        return;
+    }
+
+    if (!response.ok || !response.body) {
+        bubble.textContent = '응답을 받아오지 못했어요. 잠시 후 다시 시도해주세요.';
+        return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let received = false;
+
+    while (true) {
+        const {value, done} = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream: true});
+
+        let boundary;
+        while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+            const token = parseSseEvent(buffer.slice(0, boundary));
+            buffer = buffer.slice(boundary + 2);
+            if (token) {
+                rawText += token;
+                received = true;
+                renderMarkdown(bubble, rawText);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+    }
+
+    if (!received) {
+        bubble.textContent = '응답이 없어요. 잠시 후 다시 시도해주세요.';
+    }
 }
 
 if (chatForm) {
@@ -48,6 +123,6 @@ if (chatForm) {
             return;
         }
 
-        setTimeout(() => appendChatBubble('아직 목업 단계라 실제 응답은 준비 중이에요.', 'bot'), 400);
+        streamChatReply(text);
     });
 }

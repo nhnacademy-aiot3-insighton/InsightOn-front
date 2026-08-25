@@ -192,11 +192,14 @@
 </div>
 
 <div th:fragment="chatWidget">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <button type="button" class="chat-fab" data-bs-toggle="offcanvas" data-bs-target="#aiChatPanel" aria-controls="aiChatPanel">
         <i class="ti ti-message-chatbot"></i>
     </button>
 
-    <div class="offcanvas offcanvas-end chat-offcanvas" tabindex="-1" id="aiChatPanel" aria-labelledby="aiChatPanelLabel">
+    <div class="offcanvas offcanvas-end chat-offcanvas" tabindex="-1" id="aiChatPanel" aria-labelledby="aiChatPanelLabel"
+         th:attr="data-location-id=${locationId != null ? locationId : ''}">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title" id="aiChatPanelLabel"><i class="ti ti-message-chatbot"></i>AI 어시스턴트</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
