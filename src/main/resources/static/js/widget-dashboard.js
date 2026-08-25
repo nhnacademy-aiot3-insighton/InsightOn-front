@@ -19,10 +19,13 @@
     const LOCATION_ID = DASHBOARD_INIT.locationId;
     const BASE_URL = `/my-group/location/${LOCATION_ID}/dashboard`;
 
-    // sensorEui -> display name, built once from the server-rendered <select>
+    // sensorEui -> display name & sensorId mapping
     const sensorNameByEui = {};
+    const sensorIdByEui = {};
     sensorSelect.querySelectorAll('option[data-eui]').forEach((opt) => {
-        sensorNameByEui[opt.dataset.eui] = opt.textContent.trim();
+        const eui = opt.dataset.eui;
+        sensorNameByEui[eui] = opt.textContent.trim();
+        sensorIdByEui[eui] = opt.value; // sensorId
     });
 
     let uidCounter = 0;
@@ -33,22 +36,114 @@
         yPos: w.yPos,
         width: w.width,
         height: w.height,
-        widgetConfig: w.widgetConfig || {type: 'SINGLE_STAT', sensorEui: null, range: '-1h', aggregateWindow: '1m', fields: []},
-        dirty: false // true whenever widgetConfig no longer matches what's persisted server-side
+        widgetConfig: w.widgetConfig || {
+            type: 'GRAPH',
+            sensorEui: null,
+            range: '-1h',
+            aggregateWindow: '1m',
+            fields: []
+        },
+        dirty: false
     }));
 
     const chartInstances = {};
+    const sseConnections = {};
     let editingUid = null;
 
-    // GridStack owns collision/push behavior: resizing or dragging a widget into a
-    // neighbor moves that neighbor out of the way, cascading through however many
-    // widgets are affected — its 'change' event below is where we hear about all of that.
+    // SSE 구독 처리
+    function subscribeWidgetSse(w, sensorId) {
+        if (!sensorId) return;
+
+        if (sseConnections[w.uid]) {
+            sseConnections[w.uid].close();
+        }
+
+        console.log(`[SSE Subscribed] 센서 ${sensorId}번 실시간 SSE 연결 개설 완료`);
+        const eventSource = new EventSource(`/sse/sensors/${sensorId}`);
+        sseConnections[w.uid] = eventSource;
+
+        eventSource.addEventListener('telemetry', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log(`[SSE Telemetry Received] 센서 ${sensorId}번 데이터 수신:`, data);
+                updateWidgetRealtime(w, data);
+            } catch (e) {
+                console.warn('[SSE Parse Error]', e);
+            }
+        });
+
+        eventSource.onerror = (err) => {
+            console.warn(`[SSE Error] 센서 ${sensorId} SSE 연결 알림`, err);
+        };
+    }
+
+    // SSE 실시간 데이터 갱신
+    function updateWidgetRealtime(w, telemetryData) {
+        const chart = chartInstances[w.uid];
+        const metrics = telemetryData.metrics || {};
+        const type = w.widgetConfig.type || 'GRAPH';
+
+        const timeStr = new Date(telemetryData.timestamp).toLocaleTimeString([], {
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        if ((type === 'GRAPH' || type === 'BAR') && chart) {
+            chart.data.labels.push(timeStr);
+
+            chart.data.datasets.forEach((ds) => {
+                const val = metrics[ds.label] ?? null;
+                ds.data.push(val);
+            });
+
+            // 데이터 개수가 많아지면 좌우 스크롤 폭 확장
+            adjustChartScroll(w, chart.data.labels.length);
+
+            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 동적 갱신 (redis-cli / SSE 실시간 수치 반영)
+            const allDataPoints = chart.data.datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
+            const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
+            const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
+            syncYAxis(w, minVal, maxVal);
+
+            chart.update('quiet');
+        } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
+            const el = contentEl(w.uid);
+            const firstField = (w.widgetConfig.fields || [])[0];
+            if (!firstField) return;
+            const val = metrics[firstField] ?? 0;
+            const numericVal = Number(val);
+
+            const valueEl = el ? el.querySelector('.grid-widget-value') : null;
+            if (valueEl) {
+                valueEl.textContent = numericVal.toLocaleString(undefined, { maximumFractionDigits: 1 });
+            }
+
+            if (chart) {
+                const maxVal = 100;
+                const fillVal = Math.min(Math.max(numericVal, 0), maxVal);
+                chart.data.datasets[0].data = [fillVal, maxVal - fillVal];
+                chart.update('quiet');
+            }
+        } else {
+            const el = contentEl(w.uid);
+            if (!el) return;
+            const firstField = (w.widgetConfig.fields || [])[0];
+            const val = metrics[firstField];
+            const valueEl = el.querySelector('.grid-widget-value');
+            if (valueEl && val !== undefined) {
+                valueEl.textContent = Number(val).toLocaleString(undefined, {
+                    maximumFractionDigits: 1
+                });
+            }
+        }
+    }
+
+    // GridStack 초기화 (위젯 카드 이동은 헤더 바를 잡았을 때만 가능하도록 한정)
     const grid = GridStack.init({
         column: 12,
         cellHeight: 80,
         margin: 8,
         float: true,
-        handle: '.drag-handle',
+        handle: '.grid-widget-header',
         resizable: {handles: 'e, se, s, sw, w'}
     }, gridEl);
 
@@ -66,8 +161,8 @@
     }
 
     function widgetTitle(w) {
-        const sensorName = sensorNameByEui[w.widgetConfig.sensorEui] || '센서 미지정';
-        const fields = (w.widgetConfig.fields || []).join(', ') || '메트릭 미지정';
+        const sensorName = sensorNameByEui[w.widgetConfig.sensorEui] || '미설정 센서';
+        const fields = (w.widgetConfig.fields || []).join(', ') || '메트릭 미선택';
         return {sensorName, fields};
     }
 
@@ -87,19 +182,18 @@
         const {sensorName, fields} = widgetTitle(w);
 
         item.innerHTML = `
-            <div class="grid-stack-item-content grid-widget">
-                <div class="grid-widget-head">
-                    <div class="grid-widget-label">
-                        <i class="ti ti-cpu"></i>
-                        <span title="${sensorName} · ${fields}">${sensorName} · ${fields}</span>
+            <div class="card grid-widget h-100 border shadow-sm rounded-3">
+                <div class="card-header grid-widget-header px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="cursor: move;">
+                    <div class="grid-widget-label d-flex align-items-center gap-2 text-truncate" style="max-width: calc(100% - 95px);">
+                        <i class="ti ti-drag-drop text-muted fs-3" title="드래그하여 위젯 이동"></i>
+                        <span class="fw-bold text-truncate" title="${sensorName} · ${fields}">${sensorName} · ${fields}</span>
                     </div>
-                    <div class="grid-widget-controls">
-                        <button type="button" class="drag-handle" title="이동" aria-label="위젯 이동"><i class="ti ti-grip-vertical"></i></button>
-                        <button type="button" class="settings" title="설정" aria-label="위젯 설정"><i class="ti ti-settings"></i></button>
-                        <button type="button" class="remove" title="삭제" aria-label="위젯 삭제"><i class="ti ti-trash"></i></button>
+                    <div class="grid-widget-controls d-flex align-items-center gap-1">
+                        <button type="button" class="settings btn btn-icon btn-ghost-secondary btn-sm" title="위젯 설정" aria-label="위젯 설정"><i class="ti ti-settings"></i></button>
+                        <button type="button" class="remove btn btn-icon btn-ghost-danger btn-sm" title="위젯 삭제" aria-label="위젯 삭제"><i class="ti ti-trash"></i></button>
                     </div>
                 </div>
-                <div class="grid-widget-body"></div>
+                <div class="card-body grid-widget-body p-2 d-flex flex-column" style="position: relative; flex: 1; min-height: 0;"></div>
                 <div class="grid-widget-dim">${w.width}×${w.height}</div>
             </div>
         `;
@@ -123,127 +217,379 @@
         if (!el) return;
         const {sensorName, fields} = widgetTitle(w);
         const span = el.querySelector('.grid-widget-label span');
-        span.textContent = `${sensorName} · ${fields}`;
-        span.title = `${sensorName} · ${fields}`;
+        if (span) {
+            span.textContent = `${sensorName} · ${fields}`;
+            span.title = `${sensorName} · ${fields}`;
+        }
     }
 
     function updateDim(w) {
         const el = contentEl(w.uid);
-        if (el) el.querySelector('.grid-widget-dim').textContent = `${w.width}×${w.height}`;
+        if (el) {
+            const dimEl = el.querySelector('.grid-widget-dim');
+            if (dimEl) dimEl.textContent = `${w.width}×${w.height}`;
+        }
     }
 
     function renderWidgetBody(w, el) {
         const body = el.querySelector('.grid-widget-body');
-        const type = w.widgetConfig.type;
+        if (!body) return;
 
-        if (!w.widgetConfig.sensorEui || !(w.widgetConfig.fields || []).length) {
-            body.className = 'grid-widget-body d-flex';
-            body.innerHTML = `<p class="grid-widget-empty">설정 필요 — <i class="ti ti-settings"></i> 아이콘을 눌러 구성하세요</p>`;
+        // 센서가 설정된 경우 (기존 위젯이든 신규로 설정한 위젯이든) 차트/수치 캔버스 렌더링
+        if (w.widgetConfig && w.widgetConfig.sensorEui) {
+            initEmptyChart(w, el);
+            if (w.widgetId && !w.dirty) {
+                fetchAndRenderData(w, el);
+            }
             return;
         }
 
-        // chart-data is looked up by widgetId and reflects the last SAVED config —
-        // a brand-new or just-edited widget's data would otherwise show stale/wrong values
-        // until it's actually saved, so show that state honestly instead of pretending it's live.
-        if (!w.widgetId || w.dirty) {
-            body.className = 'grid-widget-body d-flex';
-            const msg = !w.widgetId ? '저장하면 데이터가 표시돼요' : '설정이 변경됐어요 — 저장하면 반영돼요';
-            body.innerHTML = `<p class="grid-widget-empty"><i class="ti ti-device-floppy"></i> ${msg}</p>`;
-            return;
+        // 미설정 위젯일 때만 안내 문구 출력
+        body.className = 'card-body grid-widget-body p-3 d-flex flex-column align-items-center justify-content-center text-center';
+        body.innerHTML = `
+            <div class="text-secondary">
+                <i class="ti ti-settings fs-2 mb-1 text-muted"></i>
+                <div class="fw-bold">위젯 설정을 완료해주세요</div>
+                <small class="text-muted">⚙️ 버튼을 눌러 센서를 선택하세요</small>
+            </div>
+        `;
+    }
+
+    function adjustChartScroll(w, labelCount, forceScroll = false) {
+        const el = contentEl(w.uid);
+        if (!el) return;
+        const inner = el.querySelector('.chart-inner-canvas');
+        const wrapper = el.querySelector('.chart-scroll-wrapper');
+        if (inner && wrapper && labelCount > 0) {
+            const minWidth = Math.max(wrapper.clientWidth, labelCount * 50);
+            inner.style.width = minWidth + 'px';
+
+            const isNearRight = (wrapper.scrollWidth - wrapper.clientWidth - wrapper.scrollLeft) < 80;
+            if (forceScroll || isNearRight) {
+                wrapper.scrollLeft = wrapper.scrollWidth;
+            }
+
+            if (!wrapper.dataset.dragBound) {
+                wrapper.dataset.dragBound = 'true';
+                let isDown = false;
+                let startX, scrollLeftPos;
+
+                wrapper.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    wrapper.style.cursor = 'grabbing';
+                    startX = e.pageX - wrapper.offsetLeft;
+                    scrollLeftPos = wrapper.scrollLeft;
+                });
+                wrapper.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    wrapper.style.cursor = 'grab';
+                });
+                wrapper.addEventListener('mouseup', () => {
+                    isDown = false;
+                    wrapper.style.cursor = 'grab';
+                });
+                wrapper.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - wrapper.offsetLeft;
+                    const walk = (x - startX) * 1.5;
+                    wrapper.scrollLeft = scrollLeftPos - walk;
+                });
+            }
+        }
+    }
+
+    function getFieldColor(field, index) {
+        const name = String(field || '').toLowerCase();
+        if (name.includes('temp') || name.includes('온도')) {
+            return '#ff6b6b'; // 모던 코랄 소프트 레드 (온도)
+        }
+        if (name.includes('humid') || name.includes('습도')) {
+            return '#4ecdc4'; // 세련된 틸 민트 블루 (습도)
+        }
+        if (name.includes('co2') || name.includes('co')) {
+            return '#00b894'; // 에메랄드 그린 (CO2)
+        }
+        if (name.includes('press') || name.includes('기압')) {
+            return '#fdcb6e'; // 앰버 옐로우 (기압)
+        }
+        if (name.includes('light') || name.includes('illumi') || name.includes('조도')) {
+            return '#e17055'; // 테라코타 오렌지 (조도)
+        }
+        if (name.includes('battery') || name.includes('배터리')) {
+            return '#a29bfe'; // 소프트 라벤더 바이올렛 (배터리)
         }
 
-        if (type === 'GRAPH') {
-            body.className = 'grid-widget-chart grid-widget-body';
-            body.innerHTML = `<canvas></canvas>`;
-        } else if (type === 'GAUGE') {
-            body.className = 'grid-widget-body';
-            body.innerHTML = `<span class="grid-widget-value">—</span><span class="grid-widget-unit"></span><div class="grid-widget-sparkline"><canvas></canvas></div>`;
+        const fallbackColors = ['#ff6b6b', '#4ecdc4', '#00b894', '#fdcb6e', '#a29bfe', '#e17055', '#0984e3'];
+        return fallbackColors[index % fallbackColors.length];
+    }
+
+    function syncYAxis(w, minVal, maxVal) {
+        const el = contentEl(w.uid);
+        if (!el) return;
+        const yCanvas = el.querySelector('.y-axis-canvas');
+        if (!yCanvas) return;
+
+        destroyChart(w.uid + '_y');
+        chartInstances[w.uid + '_y'] = new Chart(yCanvas, {
+            type: 'line',
+            data: { labels: [''], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        min: (minVal !== undefined && minVal !== null) ? Math.floor(minVal) : 0,
+                        max: (maxVal !== undefined && maxVal !== null) ? Math.ceil(maxVal) : 100,
+                        ticks: {
+                            font: { size: 10, weight: '600' },
+                            color: '#475569',
+                            precision: 0,
+                            callback: function(val) {
+                                if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                                if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
+                                return Number(val).toLocaleString();
+                            }
+                        },
+                        grid: { color: 'transparent' }
+                    }
+                }
+            }
+        });
+    }
+
+    function initEmptyChart(w, el) {
+        const type = w.widgetConfig.type || 'GRAPH';
+        const body = el.querySelector('.grid-widget-body');
+        if (!body) return;
+
+        if (type === 'GRAPH' || type === 'BAR') {
+            const fields = (w.widgetConfig.fields && w.widgetConfig.fields.length)
+                ? w.widgetConfig.fields
+                : [];
+
+            const legendHtml = fields.map((field, idx) => {
+                const color = getFieldColor(field, idx);
+                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: #334155;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
+                    <span>${field}</span>
+                </div>`;
+            }).join('');
+
+            body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
+            body.innerHTML = `
+                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: #ffffff;">
+                    ${legendHtml}
+                </div>
+                <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
+                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
+                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
+                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                </div>
+            `;
+            const canvas = body.querySelector('.main-canvas');
+            destroyChart(w.uid);
+
+            const chartType = (type === 'BAR') ? 'bar' : 'line';
+
+            chartInstances[w.uid] = new Chart(canvas, {
+                type: chartType,
+                data: {
+                    labels: [],
+                    datasets: fields.map((field, idx) => {
+                        const color = getFieldColor(field, idx);
+                        return {
+                            label: field,
+                            data: [],
+                            borderColor: color,
+                            backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
+                            borderWidth: (type === 'BAR') ? 1 : 1.5,
+                            fill: idx === 0,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        };
+                    })
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                        y: {
+                            ticks: { display: false },
+                            grid: { color: '#e2e8f0' }
+                        }
+                    }
+                }
+            });
+
+            syncYAxis(w, 0, 100);
+        } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
+            body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center position-relative';
+            body.innerHTML = `
+                <div style="width: 100%; height: 75%; position: relative;">
+                    <canvas style="width: 100%; height: 100%;"></canvas>
+                </div>
+                <div style="position: absolute; bottom: 15px; text-align: center;">
+                    <span class="grid-widget-value fs-2 fw-bold text-primary">0</span>
+                </div>
+            `;
+            const canvas = body.querySelector('canvas');
+            destroyChart(w.uid);
+
+            chartInstances[w.uid] = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['현재값', '잔여'],
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#206bc4', '#eef1f6'],
+                        borderWidth: 0,
+                        cutout: '75%'
+                    }]
+                },
+                options: {
+                    rotation: 270,
+                    circumference: 180,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                }
+            });
         } else {
-            body.className = 'grid-widget-body';
-            body.innerHTML = `<span class="grid-widget-value">—</span><span class="grid-widget-unit"></span>`;
+            body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center';
+            body.innerHTML = `<span class="grid-widget-value fs-1 fw-bold">—</span><span class="grid-widget-unit text-muted"></span>`;
         }
-
-        fetchAndRenderData(w, el);
     }
 
     function fetchAndRenderData(w, el) {
-        fetch(`${BASE_URL}/widgets/${w.widgetId}/chart-data`)
+        fetch(`/groups/location/${LOCATION_ID}/dashboard/widgets/${w.widgetId}/chart-data`)
             .then((r) => {
                 if (!r.ok) throw new Error('chart-data fetch failed');
                 return r.json();
             })
-            .then((data) => paintWidgetData(w, el, data))
+            .then((data) => {
+                // influxDB에서 가져온 과거 데이터를 차트에 쭉 그려넣음
+                paintWidgetData(w, el, data);
+                // InfluxDB 시계열 수신 후 SSE 구독 시작
+                const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
+                if (sensorId) {
+                    subscribeWidgetSse(w, sensorId);
+                }
+            })
             .catch(() => {
-                const body = el.querySelector('.grid-widget-body');
-                const valueEl = body.querySelector('.grid-widget-value');
-                if (valueEl) valueEl.textContent = '데이터 없음';
+                console.warn('[InfluxDB Data Fetch Failed] 실시간 SSE만 연결 시도:');
+                const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
+                if (sensorId) {
+                    subscribeWidgetSse(w, sensorId);
+                }
             });
     }
 
     function paintWidgetData(w, el, data) {
-        const type = w.widgetConfig.type;
+        const type = w.widgetConfig.type || 'GRAPH';
         const labels = data.labels || [];
         const datasets = data.datasets || [];
         const body = el.querySelector('.grid-widget-body');
 
-        if (type === 'GRAPH') {
-            const canvas = body.querySelector('canvas');
+        if (type === 'GRAPH' || type === 'BAR') {
+            const legendHtml = datasets.map((ds, i) => {
+                const color = getFieldColor(ds.label, i);
+                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: #334155;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
+                    <span>${ds.label}</span>
+                </div>`;
+            }).join('');
+
+            body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
+            body.innerHTML = `
+                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: #ffffff;">
+                    ${legendHtml}
+                </div>
+                <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
+                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
+                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
+                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                </div>
+            `;
+            const canvas = body.querySelector('.main-canvas');
+            if (!canvas) return;
             destroyChart(w.uid);
+            const chartType = (type === 'BAR') ? 'bar' : 'line';
+
             chartInstances[w.uid] = new Chart(canvas, {
-                type: 'line',
+                type: chartType,
                 data: {
                     labels,
-                    datasets: datasets.map((ds, i) => ({
-                        label: ds.label,
-                        data: ds.data,
-                        borderColor: i === 0 ? '#1c4e80' : '#b8752a',
-                        backgroundColor: i === 0 ? 'rgba(28, 78, 128, 0.08)' : 'rgba(184, 117, 42, 0.08)',
-                        borderWidth: 1.5,
-                        tension: 0.2,
-                        fill: i === 0,
-                        pointRadius: 0,
-                        pointHoverRadius: 3
-                    }))
+                    datasets: datasets.map((ds, i) => {
+                        const color = getFieldColor(ds.label, i);
+                        return {
+                            label: ds.label,
+                            data: ds.data,
+                            borderColor: color,
+                            backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
+                            borderWidth: 1.5,
+                            tension: 0.3,
+                            fill: i === 0,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        };
+                    })
                 },
                 options: {
+                    responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {legend: {display: datasets.length > 1, labels: {font: {size: 11}}}},
+                    plugins: {
+                        legend: { display: false }
+                    },
                     scales: {
-                        x: {ticks: {color: '#56697d', font: {family: 'IBM Plex Mono', size: 10}}, grid: {display: false}},
-                        y: {ticks: {color: '#56697d', font: {family: 'IBM Plex Mono', size: 10}}, grid: {color: '#ccd5e0'}}
+                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                        y: {
+                            ticks: { display: false },
+                            grid: { color: '#e2e8f0' }
+                        }
                     }
                 }
             });
+
+            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 렌더링
+            const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
+            const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
+            const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
+            syncYAxis(w, minVal, maxVal);
+
+            adjustChartScroll(w, labels.length, true);
             return;
         }
 
         const firstSeries = datasets[0]?.data || [];
         const latest = firstSeries.length ? firstSeries[firstSeries.length - 1] : null;
         const valueEl = body.querySelector('.grid-widget-value');
-        valueEl.textContent = latest === null || latest === undefined ? '데이터 없음' : Number(latest).toLocaleString(undefined, {maximumFractionDigits: 1});
+        if (valueEl) {
+            valueEl.textContent = latest === null || latest === undefined ? '0' : Number(latest).toLocaleString(undefined, {maximumFractionDigits: 1});
+        }
 
-        if (type === 'GAUGE') {
-            const canvas = body.querySelector('.grid-widget-sparkline canvas');
-            destroyChart(w.uid);
-            chartInstances[w.uid] = new Chart(canvas, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        data: firstSeries,
-                        borderColor: '#1c4e80',
-                        borderWidth: 1.5,
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {legend: {display: false}},
-                    scales: {x: {display: false}, y: {display: false}}
-                }
-            });
+        if ((type === 'GAUGE' || type === 'SINGLE_STAT') && chartInstances[w.uid] && latest !== null && latest !== undefined) {
+            const numericVal = Number(latest);
+            const maxVal = 100;
+            const fillVal = Math.min(Math.max(numericVal, 0), maxVal);
+            chartInstances[w.uid].data.datasets[0].data = [fillVal, maxVal - fillVal];
+            chartInstances[w.uid].update('quiet');
         }
     }
 
@@ -254,7 +600,7 @@
         }
     }
 
-    // ---------- GridStack layout events: this is where cross-widget interaction happens ----------
+    // ---------- GridStack layout events ----------
 
     grid.on('change', (event, items) => {
         (items || []).forEach((item) => {
@@ -264,18 +610,20 @@
             w.yPos = item.y;
             w.width = item.w;
             w.height = item.h;
+            w.dirty = true;
+            console.log(`[Widget Layout Changed] 위젯 (${w.uid}) 위치/크기 변경: x=${w.xPos}, y=${w.yPos}, w=${w.width}, h=${w.height}`);
             updateDim(w);
+            if (chartInstances[w.uid]) {
+                chartInstances[w.uid].resize();
+            }
         });
     });
 
-    grid.on('resize', (event, el) => {
+    grid.on('resizestop', (event, el) => {
         const uid = el.getAttribute('gs-id');
-        const w = state.find((x) => x.uid === uid);
-        const node = el.gridstackNode;
-        if (w && node) {
-            w.width = node.w;
-            w.height = node.h;
-            updateDim(w);
+        console.log(`[Widget Resize Stopped] 위젯 (${uid}) 리사이즈 완료`);
+        if (uid && chartInstances[uid]) {
+            chartInstances[uid].resize();
         }
     });
 
@@ -283,26 +631,27 @@
 
     function loadMetrics(sensorId, selectedFields) {
         metricListEl.innerHTML = `<p class="metric-check-empty">불러오는 중...</p>`;
-        fetch(`${BASE_URL}/sensors/${sensorId}/attributes`)
+        fetch(`/my-group/sensors/${sensorId}/attributes`)
             .then((r) => {
                 if (!r.ok) throw new Error('attributes fetch failed');
                 return r.json();
             })
             .then((attrs) => {
-                if (!attrs.length) {
-                    metricListEl.innerHTML = `<p class="metric-check-empty">이 센서는 등록된 메트릭이 없어요.</p>`;
+                if (!attrs || !attrs.length) {
+                    metricListEl.innerHTML = `<p class="metric-check-empty">이 센서에 등록된 메트릭이 없습니다.</p>`;
                     return;
                 }
                 metricListEl.innerHTML = attrs.map((a) => `
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" value="${a.metricKey}" id="metric-${a.metricKey}"
                                ${selectedFields.includes(a.metricKey) ? 'checked' : ''}>
-                        <label class="form-check-label" for="metric-${a.metricKey}">${a.displayName} <span class="text-muted">(${a.unit})</span></label>
+                        <label class="form-check-label" for="metric-${a.metricKey}">${a.displayName || a.metricKey} ${a.unit ? `<span class="text-muted">(${a.unit})</span>` : ''}</label>
                     </div>
                 `).join('');
             })
-            .catch(() => {
-                metricListEl.innerHTML = `<p class="metric-check-empty">메트릭을 불러오지 못했어요.</p>`;
+            .catch((err) => {
+                console.warn('[loadMetrics] 센서 메트릭 조회 실패:', err);
+                metricListEl.innerHTML = `<p class="metric-check-empty text-danger">메트릭 정보를 불러올 수 없습니다.</p>`;
             });
     }
 
@@ -338,13 +687,10 @@
         const w = state.find((x) => x.uid === editingUid);
         if (!w) return;
 
-        const type = modalEl.querySelector('input[name="widgetType"]:checked')?.value || 'SINGLE_STAT';
+        const type = modalEl.querySelector('input[name="widgetType"]:checked')?.value || 'GRAPH';
         const sensorOpt = sensorSelect.options[sensorSelect.selectedIndex];
         const sensorEui = sensorOpt ? sensorOpt.dataset.eui : null;
 
-        // if the metric checklist never loaded (fetch failed, or still "불러오는 중"), there are no
-        // checkboxes to read — treat that as "unknown", not "user unchecked everything", and keep
-        // whatever fields were already configured rather than silently wiping them out.
         const checkboxEls = metricListEl.querySelectorAll('input[type="checkbox"]');
         const fields = checkboxEls.length
             ? Array.from(checkboxEls).filter((c) => c.checked).map((c) => c.value)
@@ -363,6 +709,12 @@
         updateLabel(w);
         const el = contentEl(w.uid);
         if (el) renderWidgetBody(w, el);
+
+        // 설정 적용 시 해당 센서 SSE 새로 구독
+        const sensorId = (sensorOpt && sensorOpt.value) ? sensorOpt.value : (sensorIdByEui[sensorEui] || '1');
+        if (sensorId) {
+            subscribeWidgetSse(w, sensorId);
+        }
     });
 
     // ---------- add / remove ----------
@@ -374,18 +726,23 @@
             xPos: 0,
             yPos: nextFreeRow(),
             width: 4,
-            height: 2,
-            widgetConfig: {type: 'SINGLE_STAT', sensorEui: null, range: '-1h', aggregateWindow: '1m', fields: []}
+            height: 4,
+            widgetConfig: {type: 'GRAPH', sensorEui: null, range: '-1h', aggregateWindow: '1m', fields: []}
         };
         state.push(w);
         addItemToGrid(w);
         renderAll();
-        openConfigModal(w);
     });
 
     function removeWidget(uid) {
         if (!confirm('이 위젯을 삭제할까요?')) return;
         destroyChart(uid);
+
+        if (sseConnections[uid]) {
+            sseConnections[uid].close();
+            delete sseConnections[uid];
+        }
+
         const el = itemEl(uid);
         if (el) grid.removeWidget(el);
         const idx = state.findIndex((w) => w.uid === uid);
@@ -415,10 +772,11 @@
             body: JSON.stringify(payload)
         })
             .then((r) => {
-                if (!r.ok) throw new Error('save failed');
+                if (!r.ok) throw new Error(`save failed with status ${r.status}`);
                 location.reload();
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('[Dashboard Save] 저장 실패 원인:', err);
                 saveStatusEl.textContent = '저장에 실패했어요. 잠시 후 다시 시도해주세요.';
                 btnSaveLayout.disabled = false;
             });
@@ -428,13 +786,4 @@
 
     state.forEach((w) => addItemToGrid(w));
     renderAll();
-
-    // GRAPH/GAUGE/SINGLE_STAT widgets refresh on a timer, same cadence chart.js polls at
-    setInterval(() => {
-        state.forEach((w) => {
-            if (!w.widgetId || w.dirty) return;
-            const el = contentEl(w.uid);
-            if (el) fetchAndRenderData(w, el);
-        });
-    }, 30000);
 })();

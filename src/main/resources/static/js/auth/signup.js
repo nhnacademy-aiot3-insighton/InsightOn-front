@@ -10,6 +10,8 @@
 
 const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 게이트웨이로 라우팅해준다
 
+// InsightOn 회원가입 - signup.js
+
 (function () {
     const form = document.getElementById('signupForm');
     if (!form) return;
@@ -28,7 +30,7 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
     const btnSubmit     = document.getElementById('btnSubmitSignup');
 
     let emailChecked = false;
-    let verificationToken = null;   // 코드확인 성공 시 auth 가 주는 토큰. 가입 때 실어보낸다.
+    let verificationToken = null;
 
     function setHint(el, text, kind) {
         if (!el) return;
@@ -39,19 +41,17 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
     }
 
     function postJson(path, body) {
-        return fetch(`${GATEWAY}${path}`, {
+        return fetch(path, {   // ★ 프론트 서버 경로 (게이트웨이 아님)
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
     }
 
-    // 이메일 인증(토큰)까지 끝나야 가입 버튼 활성화
     function refreshSubmitState() {
         btnSubmit.disabled = !(emailChecked && verificationToken);
     }
 
-    // 이메일을 바꾸면 이전 확인/인증 무효화 (auth 는 verify 한 email 로 토큰을 발급하므로)
     function resetVerification() {
         emailChecked = false;
         verificationToken = null;
@@ -69,7 +69,7 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
         const email = emailInput.value.trim();
         if (!email) { setHint(emailHint, '이메일을 입력하세요.', 'error'); return; }
         try {
-            const res = await postJson('/api/v1/auth/check-email', { email });
+            const res = await postJson('/signup/check-email', { email });
             if (!res.ok) { setHint(emailHint, '이메일 형식을 확인해주세요.', 'error'); return; }
             const data = await res.json();
             if (data.available) {
@@ -84,13 +84,13 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
         }
     });
 
-    // 2. 인증코드 발송 (-> 204)
+    // 2. 인증코드 발송
     btnSendCode.addEventListener('click', async () => {
         const email = emailInput.value.trim();
         if (!emailChecked) { setHint(codeStatus, '이메일 중복 확인을 먼저 하세요.', 'error'); return; }
         try {
-            const res = await postJson('/api/v1/auth/email/verify-request', { email });
-            if (res.ok) {   // 204 No Content
+            const res = await postJson('/signup/send-code', { email });
+            if (res.ok) {
                 codeSection.style.display = 'block';
                 setHint(codeStatus, '인증코드를 발송했습니다. 메일함을 확인하세요.', 'success');
             } else {
@@ -101,13 +101,13 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
         }
     });
 
-    // 3. 인증코드 확인 (-> {verificationToken})
+    // 3. 인증코드 확인
     btnVerifyCode.addEventListener('click', async () => {
         const email = emailInput.value.trim();
         const code = verifyCode.value.trim();
         if (!code) { setHint(codeStatus, '인증코드를 입력하세요.', 'error'); return; }
         try {
-            const res = await postJson('/api/v1/auth/email/verify-confirm', { email, code });
+            const res = await postJson('/signup/verify-code', { email, code });
             if (!res.ok) {
                 setHint(codeStatus, '인증코드가 올바르지 않습니다.', 'error');
                 verificationToken = null;
@@ -115,7 +115,7 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
                 return;
             }
             const data = await res.json();
-            verificationToken = data.verificationToken;   // ★ 가입 때 쓸 토큰
+            verificationToken = data.verificationToken;
             setHint(codeStatus, '이메일 인증이 완료됐어요.', 'success');
             refreshSubmitState();
         } catch (e) {
@@ -123,9 +123,9 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
         }
     });
 
-    // 4. 회원가입 (-> 201). auth 는 리다이렉트를 안 주므로 JS 가 로그인 페이지로 이동.
+    // 4. 회원가입
     form.addEventListener('submit', async (e) => {
-        e.preventDefault();   // 프론트 /signup 으로 가지 않고 auth 로 직접 보낸다
+        e.preventDefault();
         const email = emailInput.value.trim();
         const password = passwordInput.value;
         const userName = nameInput.value.trim();
@@ -137,13 +137,12 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
 
         btnSubmit.disabled = true;
         try {
-            const res = await postJson('/api/v1/auth/signup', {
+            const res = await postJson('/signup/submit', {   // ★ 프론트 서버 경로
                 email, password, userName, phoneNumber, token: verificationToken
             });
-            if (res.status === 201) {
-                window.location.href = '/login?registered=1';   // 로그인 페이지 + "가입 완료" 배너
+            if (res.status === 200 || res.status === 201) {
+                window.location.href = '/login?registered=1';
             } else if (res.status === 400) {
-                // auth 검증 실패 (비밀번호는 영문+숫자+특수문자 8~64자)
                 setHint(codeStatus, '입력값을 확인해주세요. 비밀번호는 영문·숫자·특수문자를 포함해 8자 이상이어야 합니다.', 'error');
                 btnSubmit.disabled = false;
             } else {
@@ -156,7 +155,6 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
         }
     });
 
-    // 비밀번호 표시/숨김 토글
     const toggle = document.querySelector('.password-toggle');
     if (toggle && passwordInput) {
         toggle.addEventListener('click', () => {
