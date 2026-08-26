@@ -58,8 +58,9 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
                     log.warn("[Auth] refresh 중 예외 → 세션 만료", e);
                     return new SessionExpiredException("재로그인이 필요합니다.");
                 }
-            } else {
-                // MISSING_TOKEN, TOKEN_REVOKED, MISSING_JTI → refresh 불가
+            } else if (hasGatewayAuthErrorHeader(response)) {
+                // MISSING_TOKEN, TOKEN_REVOKED, MISSING_JTI 등 게이트웨이가 감지한 토큰 문제 → 복구 불가
+                log.warn("[Auth] 복구 불가 토큰 문제 (method={}) → 재로그인 필요", methodKey);
                 return new SessionExpiredException("재로그인이 필요합니다.");
             }
         }
@@ -71,6 +72,12 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
                 .filter(e -> e.getKey().equalsIgnoreCase("X-Auth-Error"))
                 .flatMap(e -> e.getValue().stream())
                 .anyMatch("INVALID_TOKEN"::equals);
+    }
+
+    /** 게이트웨이가 붙이는 X-Auth-Error 헤더가 있는지 확인 (게이트웨이발 401인지 판별) */
+    private boolean hasGatewayAuthErrorHeader(Response response) {
+        return response.headers().keySet().stream()
+                .anyMatch(k -> k.equalsIgnoreCase("X-Auth-Error"));
     }
 
     private String extractCookie(String name) {

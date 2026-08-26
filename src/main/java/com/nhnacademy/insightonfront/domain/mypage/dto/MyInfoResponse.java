@@ -6,6 +6,7 @@ public record MyInfoResponse(
         String email,
         String userName,
         String phoneNumber,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        String groupName
 ) {
 }
