@@ -70,7 +70,7 @@ public class GroupMemberController {
 
         log.info("멤버가 추방 되었습니다. Group ID : {}, 추방된 멤버 ID : {}", groupId, groupMemberId);
 
-        return "redirect:/my-group/member-list";
+        return "redirect:/my-group/member";
     }
 
     @DeleteMapping("/leave")
