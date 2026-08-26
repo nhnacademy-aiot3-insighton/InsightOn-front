@@ -29,8 +29,8 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
     @Override
     public Exception decode(String methodKey, Response response) {
         if (response.status() == 401) {
-            if (isInvalidToken(response)) {
-                log.info("[Auth] accessToken 만료 감지 (method={}) → refresh 시도", methodKey);
+            // MISSING_TOKEN, INVALID_TOKEN → refresh
+            if (isRefreshable(response)) {
                 try {
                     String userIdStr = extractCookie("userId");
                     String refreshToken = extractCookie("refreshToken");
@@ -49,7 +49,6 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
                     AccessTokenContext.set(newAccessToken);
                     AccessTokenCookieWriter.write(newAccessToken);
 
-                    log.info("[Auth] refresh 완료 → 원요청 재시도");
                     return new RetryableException(
                             response.status(), "토큰 갱신 후 재시도",
                             response.request().httpMethod(), (Long) null, response.request());
@@ -59,7 +58,7 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
                     return new SessionExpiredException("재로그인이 필요합니다.");
                 }
             } else if (hasGatewayAuthErrorHeader(response)) {
-                // MISSING_TOKEN, TOKEN_REVOKED, MISSING_JTI 등 게이트웨이가 감지한 토큰 문제 → 복구 불가
+                // MISSING_JTI, TOKEN_REVOKED → 복구 불가
                 String authError = response.headers().entrySet().stream()
                         .filter(e -> e.getKey().equalsIgnoreCase("X-Auth-Error"))
                         .flatMap(e -> e.getValue().stream())
@@ -71,11 +70,12 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
         return defaultDecoder.decode(methodKey, response);
     }
 
-    private boolean isInvalidToken(Response response) {
+    /** MISSING_TOKEN(없음) 또는 INVALID_TOKEN(만료/무효)이면 refresh로 복구 시도 */
+    private boolean isRefreshable(Response response) {
         return response.headers().entrySet().stream()
                 .filter(e -> e.getKey().equalsIgnoreCase("X-Auth-Error"))
                 .flatMap(e -> e.getValue().stream())
-                .anyMatch("INVALID_TOKEN"::equals);
+                .anyMatch(v -> "INVALID_TOKEN".equals(v) || "MISSING_TOKEN".equals(v));
     }
 
     /** 게이트웨이가 붙이는 X-Auth-Error 헤더가 있는지 확인 (게이트웨이발 401인지 판별) */
