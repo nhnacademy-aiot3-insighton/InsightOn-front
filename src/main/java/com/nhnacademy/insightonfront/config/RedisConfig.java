@@ -11,7 +11,6 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 @Configuration
 @RequiredArgsConstructor
-@Profile("!dev")
 public class RedisConfig {
 
     @Bean
