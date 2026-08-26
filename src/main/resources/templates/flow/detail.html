@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${flow.name()} + ' - InsightOn'">Flow - InsightOn</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="flow-page">
+
+<header th:replace="~{fragments/layout :: groupHeader}"></header>
+
+<div class="d-flex">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="app-main flow-detail-main">
+        <div class="section-header flow-page-section-header">
+            <p class="section-label">Flow Automation</p>
+            <a th:href="@{/my-group/flows}" class="btn btn-outline-secondary"><i class="ti ti-list"></i> 목록으로</a>
+        </div>
+
+        <div id="detailContent" class="flow-detail-card">
+            <div class="flow-detail-topbar">
+                <div class="flow-detail-status-group">
+                <span class="status-badge success" style="margin-top:0;" th:if="${flow.status().name() == 'ACTIVE'}">활성</span>
+                <span class="status-badge neutral" style="margin-top:0;" th:if="${flow.status().name() == 'INACTIVE'}">비활성</span>
+                <span class="status-badge danger" style="margin-top:0;" th:if="${flow.status().name() == 'ERROR'}">오류</span>
+                <span class="status-badge neutral" style="margin-top:0;" th:if="${flow.status().name() == 'ARCHIVED'}">휴지통</span>
+                <span class="field-hint" style="margin-top:0;" th:text="${flow.locationName()}"></span>
+                <span class="field-hint" style="margin-top:0;" th:text="${#temporals.format(flow.createdAt(), 'yyyy-MM-dd HH:mm')}"></span>
+                </div>
+                <div class="flow-detail-actions" th:if="${canManage}">
+                <a class="btn btn-outline-secondary" th:if="${flow.status().name() != 'ARCHIVED'}"
+                   th:href="@{/my-group/flows/{flowId}/edit(flowId=${flow.flowId()})}">수정</a>
+                <button type="button" class="btn btn-outline-secondary btn-flow-status-toggle"
+                        th:if="${flow.status().name() == 'ACTIVE'}"
+                        th:attr="data-flow-id=${flow.flowId()}" data-target-status="INACTIVE">비활성화</button>
+                <button type="button" class="btn btn-primary btn-flow-status-toggle"
+                        th:if="${flow.status().name() == 'INACTIVE'}"
+                        th:attr="data-flow-id=${flow.flowId()}" data-target-status="ACTIVE">활성화</button>
+                <button type="button" class="btn btn-outline-secondary text-danger btn-flow-archive"
+                        th:if="${flow.status().name() != 'ARCHIVED'}"
+                        th:attr="data-flow-id=${flow.flowId()}">휴지통으로 이동</button>
+                <button type="button" class="btn btn-primary btn-flow-restore"
+                        th:if="${flow.status().name() == 'ARCHIVED'}"
+                        th:attr="data-flow-id=${flow.flowId()}">휴지통에서 복구</button>
+                <button type="button" class="btn btn-outline-secondary text-danger btn-flow-delete"
+                        th:if="${flow.status().name() == 'ARCHIVED'}"
+                        th:attr="data-flow-id=${flow.flowId()},data-flow-name=${flow.name()}">영구 삭제</button>
+                </div>
+            </div>
+            <p id="flowStatusError" class="field-hint danger" style="display:none;"></p>
+            <div class="flow-detail-title">
+                <p class="flow-editor-eyebrow" th:switch="${flow.status().name()}">
+                    <span th:case="ACTIVE">현재 작동 중</span>
+                    <span th:case="INACTIVE">현재 비활성</span>
+                    <span th:case="ERROR">확인이 필요한 자동화</span>
+                    <span th:case="ARCHIVED">휴지통의 자동화</span>
+                </p>
+                <h2 th:text="${flow.name()}"></h2>
+                <p class="report-content" th:if="${flow.description() != null}" th:text="${flow.description()}"></p>
+            </div>
+
+            <div class="flow-detail-guide">
+                <i class="ti ti-sparkles"></i>
+                <div th:if="${flow.status().name() == 'ACTIVE'}">
+                    <strong>이 자동화는 이렇게 작동해요</strong>
+                    <span>새 측정값이 들어오면 모든 조건을 차례로 확인한 뒤 동작합니다.</span>
+                </div>
+                <div th:if="${flow.status().name() == 'INACTIVE'}">
+                    <strong>현재 비활성 상태예요</strong>
+                    <span>활성화하면 아래 순서로 측정값과 조건을 확인합니다.</span>
+                </div>
+                <div th:if="${flow.status().name() == 'ERROR'}">
+                    <strong>확인이 필요한 문제가 있어요</strong>
+                    <span>문제를 해결하면 아래 순서로 다시 작동합니다.</span>
+                </div>
+                <div th:if="${flow.status().name() == 'ARCHIVED'}">
+                    <strong>휴지통에 있어 지금은 작동하지 않아요</strong>
+                    <span>복구한 뒤 작동을 시작하면 아래 순서로 실행됩니다.</span>
+                </div>
+            </div>
+            <div class="flow-detail-node-path"
+                 th:with="hasCondition=${flow.hasCondition()}">
+                <div class="flow-detail-node-column flow-detail-node-column-start">
+                    <div class="flow-detail-lane-title">
+                        <span>1</span>
+                        <div><strong>시작</strong><small>언제 확인할까요?</small></div>
+                    </div>
+                    <th:block th:each="step : ${flow.steps()}">
+                        <th:block th:if="${step.roleLabel() == '시작'}">
+                            <th:block th:replace="~{fragments/flow-step :: card(${step})}"></th:block>
+                        </th:block>
+                    </th:block>
+                </div>
+                <div class="flow-detail-node-column flow-detail-node-column-condition">
+                    <div class="flow-detail-lane-title">
+                        <span>2</span>
+                        <div><strong>모든 조건</strong><small>아래 조건을 모두 만족해야 해요.</small></div>
+                    </div>
+                    <th:block th:each="step : ${flow.steps()}">
+                        <th:block th:if="${step.roleLabel() == '조건'}">
+                            <th:block th:replace="~{fragments/flow-step :: card(${step})}"></th:block>
+                        </th:block>
+                    </th:block>
+                </div>
+                <div class="flow-detail-node-column flow-detail-node-column-action">
+                    <div class="flow-detail-lane-title">
+                        <span th:text="${hasCondition} ? '3' : '2'">3</span>
+                        <div><strong>실행</strong>
+                            <small th:text="${hasCondition} ? '조건이 맞으면 무엇을 할까요?' : '시작되면 무엇을 할까요?'">조건이 맞으면 무엇을 할까요?</small>
+                        </div>
+                    </div>
+                    <th:block th:each="step : ${flow.steps()}">
+                        <th:block th:if="${step.roleLabel() == '동작'}">
+                            <th:block th:replace="~{fragments/flow-step :: card(${step})}"></th:block>
+                        </th:block>
+                    </th:block>
+                </div>
+            </div>
+
+            <details class="flow-technical-details" hidden aria-hidden="true">
+                <summary><i class="ti ti-code"></i> 기술 정보 보기</summary>
+                <p>문제 해결이나 개발 확인이 필요할 때 사용하는 내부 Node·Link 정보입니다.</p>
+                <div class="flow-technical-node-list">
+                    <div class="flow-technical-node" th:each="node : ${flow.nodes()}">
+                        <strong th:text="${node.nodeType()}"></strong>
+                        <span th:text="'Node #' + ${node.nodeId()}"></span>
+                        <code th:text="${node.configuration()}"></code>
+                    </div>
+                </div>
+            <p class="section-label flow-detail-section-label">
+                Link (<span th:text="${#lists.size(flow.links())}"></span>)
+            </p>
+            <div class="condition-list flow-detail-link-list">
+                <div class="condition-row flow-detail-link" th:each="link : ${flow.links()}">
+                    <span th:text="'Node #' + ${link.sourceNodeId()} + ' (' + ${link.sourcePort()} + ')'"></span>
+                    <i class="ti ti-arrow-right"></i>
+                    <span th:text="'Node #' + ${link.targetNodeId()} + ' (' + ${link.targetPort()} + ')'"></span>
+                </div>
+            </div>
+            </details>
+        </div>
+    </main>
+</div>
+
+<div th:replace="~{fragments/layout :: chatWidget}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/chat-widget.js}"></script>
+<script th:src="@{/js/flow-panel.js}"></script>
+</body>
+</html>
