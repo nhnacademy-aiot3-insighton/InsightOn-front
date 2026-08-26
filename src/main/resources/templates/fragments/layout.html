@@ -18,7 +18,7 @@
     <p class="sidebar-label">그룹 관리</p>
     <div class="location-links">
         <a th:href="@{/my-group/manage}" class="location-link" th:classappend="${activeSection == 'info'} ? 'active'">그룹 정보</a>
-        <a th:href="@{/my-group/manage/members}" class="location-link" th:classappend="${activeSection == 'members'} ? 'active'">멤버 관리</a>
+        <a th:href="@{/my-group/members}" class="location-link" th:classappend="${activeSection == 'members'} ? 'active'">멤버 관리</a>
         <a th:href="@{/manage/gateway}" class="location-link" th:classappend="${activeSection == 'gateway'} ? 'active'">게이트웨이 관리</a>
     </div>
 </div>
@@ -42,7 +42,7 @@
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
             <li><a class="dropdown-item" th:href="@{/my-group/manage}">그룹 설정</a></li>
-            <li><a class="dropdown-item" th:href="@{/my-group/manage/members}">멤버 관리</a></li>
+            <li><a class="dropdown-item" th:href="@{/my-group/members}">멤버 관리</a></li>
             <li><a class="dropdown-item" th:href="@{/manage/gateway}">게이트웨이 관리</a></li>
         </ul>
     </div>
