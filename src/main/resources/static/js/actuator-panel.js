@@ -169,6 +169,48 @@
         nextBtn.addEventListener('click', () => loadLogs(logsPage + 1));
     }
 
+    // ---------- 수정(이름 변경) ----------
+    const editModalEl = document.getElementById('editActuatorModal');
+    if (editModalEl) {
+        const editModal = new bootstrap.Modal(editModalEl);
+        const editNameInput = document.getElementById('editActuatorName');
+        const editStatusEl = document.getElementById('editActuatorStatus');
+        let editActuatorId = null;
+
+        grid.querySelectorAll('.btn-edit-actuator').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const card = btn.closest('.actuator-card');
+                editActuatorId = actuatorIdOf(btn);
+                editNameInput.value = card.querySelector('.actuator-name').textContent;
+                editStatusEl.style.display = 'none';
+                editModal.show();
+            });
+        });
+
+        document.getElementById('btnSaveActuatorName').addEventListener('click', function () {
+            const name = editNameInput.value.trim();
+            if (!name) {
+                editStatusEl.textContent = '이름을 입력하세요.';
+                editStatusEl.style.display = 'block';
+                return;
+            }
+            this.disabled = true;
+            fetch(`${BASE_URL}/${editActuatorId}/name`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({sensorName: name})
+            }).then((r) => {
+                if (!r.ok) throw new Error('rename failed');
+                location.reload();
+            }).catch(() => {
+                editStatusEl.textContent = '수정하지 못했어요. 잠시 후 다시 시도해주세요.';
+                editStatusEl.style.display = 'block';
+                this.disabled = false;
+            });
+        });
+    }
+
     // ---------- 삭제 ----------
     grid.querySelectorAll('.btn-delete-actuator').forEach((btn) => {
         btn.addEventListener('click', (e) => {
