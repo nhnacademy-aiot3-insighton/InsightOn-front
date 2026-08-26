@@ -1382,6 +1382,11 @@ button:focus-visible,
   gap: var(--sp-3);
 }
 
+.landing-greeting {
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .btn-landing-primary,
 .btn-landing-secondary {
   display: inline-flex;
@@ -3783,6 +3788,9 @@ button:focus-visible,
 
 .chip-select {
   display: flex;
+  /* 모드 칩(COOL/DRY/FAN/AUTO 등)이 카드 폭보다 많아지면 wrap 없이는 카드 밖으로 삐져나갔음 */
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--sp-1);
 }
 
