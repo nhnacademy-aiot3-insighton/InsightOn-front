@@ -28,8 +28,8 @@
 
         <!-- 로그인 상태: 이름 + 로그아웃 -->
         <th:block th:if="${state != 'GUEST'}">
-        <span class="landing-greeting" th:if="${userName != null}"
-              th:text="|${userName}님|"></span>
+            <a th:href="@{/mypage}" class="landing-greeting" th:if="${userName != null}"
+               th:text="|${userName}님|"></a>
 
             <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/registration}" class="btn-landing-primary">
                 <i class="ti ti-building-plus"></i>그룹 생성 신청하기
