@@ -60,7 +60,11 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
                 }
             } else if (hasGatewayAuthErrorHeader(response)) {
                 // MISSING_TOKEN, TOKEN_REVOKED, MISSING_JTI 등 게이트웨이가 감지한 토큰 문제 → 복구 불가
-                log.warn("[Auth] 복구 불가 토큰 문제 (method={}) → 재로그인 필요", methodKey);
+                String authError = response.headers().entrySet().stream()
+                        .filter(e -> e.getKey().equalsIgnoreCase("X-Auth-Error"))
+                        .flatMap(e -> e.getValue().stream())
+                        .findFirst().orElse("UNKNOWN");
+                log.warn("[Auth] 복구 불가 토큰 문제 (method={}, code={}) → 재로그인 필요", methodKey, authError);
                 return new SessionExpiredException("재로그인이 필요합니다.");
             }
         }
