@@ -16,6 +16,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -81,21 +82,23 @@ public class DashboardController {
     }
 
     @PostMapping("/my-group/location/{location-id}/dashboard/save")
-    public String saveDashboard(
+    @ResponseBody
+    public ResponseEntity<List<Long>> saveDashboard(
             @CookieValue("groupId") Long groupId,
             @PathVariable("location-id") Long locationId,
-            @RequestBody List<WidgetSaveRequest> requests,
-            Model model) {
+            @RequestBody List<WidgetSaveRequest> requests) {
 
         try {
+            // core 응답(Map<widgetId, ChartData>)에서 widgetId 목록만 추출해 반환
+            // JS에서 신규 위젯 ID 확정에 사용
             Map<Long, ChartDataResponse> responseMap = dashboardClient.saveDashboard(groupId, locationId, requests);
-            model.addAttribute("chartData", responseMap);
-            log.info("[DashboardController] 대시보드 위젯 저장 성공. groupId: {}, locationId: {}", groupId, locationId);
+            List<Long> widgetIds = new ArrayList<>(responseMap.keySet());
+            log.info("[DashboardController] 대시보드 위젯 저장 성공. groupId: {}, locationId: {}, widgetIds: {}", groupId, locationId, widgetIds);
+            return ResponseEntity.ok(widgetIds);
         } catch (Exception e) {
             log.error("[DashboardController] 대시보드 위젯 저장 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        return "redirect:/my-group/location/" + locationId + "/dashboard";
     }
 
     @GetMapping("/groups/location/{location-id}/dashboard/widgets/{widget-id}/chart-data")

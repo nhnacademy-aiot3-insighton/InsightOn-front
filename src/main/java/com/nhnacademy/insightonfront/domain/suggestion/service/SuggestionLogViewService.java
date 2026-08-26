@@ -8,6 +8,7 @@ import com.nhnacademy.insightonfront.adapter.core.groupmember.dto.GroupRole;
 import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import com.nhnacademy.insightonfront.common.resolver.LocationNameResolver;
 import com.nhnacademy.insightonfront.domain.suggestion.dto.SuggestionLogViewModel;
+import feign.FeignException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
@@ -84,10 +85,16 @@ public class SuggestionLogViewService {
      * 화면에서 수락/거절 버튼을 보여줄지 판단할 때 쓴다. 권한이 없으면 예외 대신 false만 반환한다.
      */
     public boolean isManagerOrAbove(Long groupId, Long userId) {
-        return groupMemberClient.getGroupMemberList(groupId).stream()
-                .filter(member -> member.userId().equals(userId))
-                .map(GroupMemberListResponse::groupRole)
-                .anyMatch(role -> role.ordinal() >= GroupRole.MANAGER.ordinal());
+        try {
+            return groupMemberClient.getGroupMemberList(groupId).stream()
+                    .filter(member -> member.userId().equals(userId))
+                    .map(GroupMemberListResponse::groupRole)
+                    .anyMatch(role -> role.ordinal() >= GroupRole.MANAGER.ordinal());
+        } catch (FeignException.Forbidden e) {
+            // 멤버 목록 조회 자체가 admin/manager 전용이라, 일반 멤버는 "내가 매니저인지" 확인하는
+            // 이 호출에서부터 403을 받는다 - 매니저가 아니라는 뜻이므로 false로 처리한다.
+            return false;
+        }
     }
 
     private void requireManagerOrAbove(Long groupId, Long userId) {
