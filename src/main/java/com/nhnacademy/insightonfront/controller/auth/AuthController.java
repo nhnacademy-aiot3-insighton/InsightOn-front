@@ -1,10 +1,10 @@
 package com.nhnacademy.insightonfront.controller.auth;
 
+import com.nhnacademy.insightonfront.adapter.auth.auth.dto.LoginResult;
 import com.nhnacademy.insightonfront.adapter.auth.signup.dto.UserSignupResponse;
-import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
-import com.nhnacademy.insightonfront.auth.AccessTokenContext;
-import com.nhnacademy.insightonfront.adapter.auth.auth.AuthClient;
-import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
+import com.nhnacademy.insightonfront.domain.auth.AuthService;
+import com.nhnacademy.insightonfront.domain.mypage.MypageService;
+import com.nhnacademy.insightonfront.domain.mypage.dto.MyInfoResponse;
 import com.nhnacademy.insightonfront.domain.signup.SignupService;
 import com.nhnacademy.insightonfront.domain.signup.dto.*;
 import feign.FeignException;
@@ -16,7 +16,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -30,8 +29,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * 로그인/회원가입/이메일 인증/아이디 찾기/비밀번호 재설정/내 정보 — 인증·계정 관련 목업 페이지를
@@ -52,19 +49,9 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthClient authClient;
+    private final AuthService authService;
     private final SignupService signupService;
-    private final GroupClient groupClient;
-    private final ObjectMapper objectMapper;
-
-    private static final String DEMO_VERIFY_CODE = "123456";
-    private static final String DEMO_TAKEN_EMAIL = "used@insighton.io";
-    private static final int MAX_VERIFY_ATTEMPTS = 5;
-    private static final int VERIFY_LOCK_MINUTES = 5;
-    private static final int RESEND_COOLDOWN_SECONDS = 60;
-    private static final int MAX_LOGIN_ATTEMPTS = 5;
-    private static final int LOGIN_LOCK_MINUTES = 5;
-    private static final int MAX_RESET_SENDS = 5;
+    private final MypageService mypageService;
 
     // ================================================================
     // 로그인
@@ -80,43 +67,35 @@ public class AuthController {
                         @RequestParam String password,
                         HttpServletRequest servletRequest,
                         HttpServletResponse servletResponse,
-                        HttpSession session,
                         Model model) {
         try {
-            log.info("[Auth] 로그인 시도: email={}", maskEmail(email));
-            ResponseEntity<String> response =
-                    authClient.login(new UserLoginRequest(email, password));
-
-            String accessToken = response.getBody();
-            String refreshToken = extractCookie(response.getHeaders(), "refreshToken");
-            String userName = extractUserName(accessToken);
-            Long userId = extractUserId(accessToken);
+            LoginResult result = authService.login(email, password);
             boolean secure = servletRequest.isSecure();
 
             servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                    ResponseCookie.from("accessToken", accessToken)
+                    ResponseCookie.from("accessToken", result.accessToken())
                             .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                             .maxAge(Duration.ofMinutes(15))
                             .build().toString());
 
             servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                    ResponseCookie.from("refreshToken", refreshToken)
+                    ResponseCookie.from("refreshToken", result.refreshToken())
                             .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                             .maxAge(Duration.ofDays(15))
                             .build().toString());
 
-            if (userId != null) {
+            if (result.userId() != null) {
                 servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                        ResponseCookie.from("userId", userId.toString())
+                        ResponseCookie.from("userId", result.userId().toString())
                                 .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                                 .maxAge(Duration.ofDays(15))
                                 .build().toString());
             }
 
-            if (userName != null) {
+            if (result.userName() != null) {
                 servletResponse.addHeader(HttpHeaders.SET_COOKIE,
                         ResponseCookie.from("userName",
-                                        URLEncoder.encode(userName, StandardCharsets.UTF_8))
+                                        URLEncoder.encode(result.userName(), StandardCharsets.UTF_8))
                                 .httpOnly(true)
                                 .secure(secure)
                                 .path("/")
@@ -125,83 +104,27 @@ public class AuthController {
                                 .build().toString());
             }
 
-            Long groupId = resolveGroupId(accessToken);
-            if (groupId != null) {
+            if (result.groupId() != null) {
                 servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                        ResponseCookie.from("groupId", groupId.toString())
+                        ResponseCookie.from("groupId", result.groupId().toString())
                                 .httpOnly(true).secure(secure).path("/").sameSite("Lax")
                                 .maxAge(Duration.ofDays(15))
                                 .build().toString());
             }
-
-            log.info("[Auth] 로그인 시도 성공: email={}", maskEmail(email));
 
             return "redirect:/";
 
         } catch (FeignException e) {
             log.warn("[Auth] 로그인 처리 중 FeignException: status={}", e.status(), e);
             int status = e.status();
-            if (status <= 0) {
-                model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
-            } else {
-                model.addAttribute("loginError", loginErrorMessage(status));
-            }
+            model.addAttribute("loginError",
+                    status <= 0 ? "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요." : loginErrorMessage(status));
             return "login";
         } catch (RuntimeException e) {
             log.warn("[Auth] 로그인 처리 중 예외 발생", e);
             model.addAttribute("loginError", "로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
             return "login";
         }
-    }
-
-    public Long extractUserId(String accessToken) {
-        try {
-            String payload = accessToken.split("\\.")[1];
-            String json = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
-            JsonNode claims = objectMapper.readTree(json);
-            return claims.has("sub") ? claims.get("sub").asLong() : null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String extractUserName(String accessToken) {
-        try {
-            String payload = accessToken.split("\\.")[1];
-            String json = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
-            JsonNode claims = objectMapper.readTree(json);
-            return claims.has("name") ? claims.get("name").asText() : null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private Long resolveGroupId(String accessToken) {
-        try {
-            AccessTokenContext.set(accessToken);
-            return groupClient.getMyGroupId().groupId();
-        } catch (FeignException.NotFound e) {
-            return null;
-        } finally {
-            AccessTokenContext.clear();
-        }
-    }
-
-    private String extractCookie(HttpHeaders headers, String name) {
-        List<String> setCookies = headers.get(HttpHeaders.SET_COOKIE);
-        if (setCookies == null) {
-            return null;
-        }
-        String prefix = name + "=";
-        for (String cookie : setCookies) {
-            for (String part : cookie.split(";")) {
-                String trimmed = part.trim();
-                if (trimmed.startsWith(prefix)) {
-                    return trimmed.substring(prefix.length());
-                }
-            }
-        }
-        return null;
     }
 
     private String loginErrorMessage(int status) {
@@ -217,13 +140,8 @@ public class AuthController {
                          @CookieValue(value = "userId", required = false) Long userId,
                          HttpServletRequest servletRequest,
                          HttpServletResponse servletResponse) {
-        log.info("로그아웃: {}", userId);
         if (accessToken != null && userId != null) {
-            try {
-                authClient.logout();
-            } catch (Exception e) {
-                log.warn("[Auth] 로그아웃 실패: {}", e.getMessage());
-            }
+            authService.logout();
         }
 
         boolean secure = servletRequest.isSecure();
@@ -274,29 +192,32 @@ public class AuthController {
         return "signup";
     }
 
-    /** 이메일 중복 확인 */
+    /**
+     * 이메일 중복 확인
+     */
     @PostMapping("/signup/check-email")
     @ResponseBody
     public Map<String, Object> checkEmailDuplicate(@RequestBody EmailAvailableRequest request) {
-        log.info("[Signup] 이메일 중복 확인: email={}", maskEmail(request.email()));
         boolean available = signupService.checkEmailAvailable(request.email());
         return Map.of("available", available);
     }
 
-    /** 이메일 인증 코드 요청 */
+    /**
+     * 이메일 인증 코드 요청
+     */
     @PostMapping("/signup/send-code")
     @ResponseBody
     public ResponseEntity<Void> sendVerificationCode(@RequestBody EmailVerifyRequest request) {
-        log.info("[Signup] 이메일 인증 코드 요청: email={}", maskEmail(request.email()));
         signupService.sendEmailVerify(request.email());
         return ResponseEntity.noContent().build();
     }
 
-    /** 이메일 인증 코드 확인 → 검증된 토큰 반환 */
+    /**
+     * 이메일 인증 코드 확인 → 검증된 토큰 반환
+     */
     @PostMapping("/signup/verify-code")
     @ResponseBody
     public Map<String, Object> verifyCode(@RequestBody EmailVerifyConfirmRequest request) {
-        log.info("[Signup] 이메일 인증 코드 확인: email={}", maskEmail(request.email()));
         String verificationToken = signupService.confirmEmailVerify(request.email(), request.code());
         if (verificationToken == null) {
             return Map.of("ok", false, "message", "인증코드가 올바르지 않습니다.");
@@ -304,15 +225,15 @@ public class AuthController {
         return Map.of("ok", true, "verificationToken", verificationToken);
     }
 
-    /** 회원가입 */
+    /**
+     * 회원가입
+     */
     @PostMapping("/signup/submit")
     @ResponseBody
     public ResponseEntity<UserSignupResponse> signup(@RequestBody UserSignupRequest request) {
-        log.info("[Signup] 회원가입 요청: email={}", maskEmail(request.email()));
         UserSignupResponse response = signupService.signup(
                 request.email(), request.password(), request.userName(),
                 request.phoneNumber(), request.token());
-        log.info("[Signup] 회원가입 성공: email={}", maskEmail(request.email()));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -320,11 +241,12 @@ public class AuthController {
     // 아이디(이메일) 찾기 — SignupService를 통해 auth로 위임
     // ================================================================
 
-    /** 이메일 찾기 */
+    /**
+     * 이메일 찾기
+     */
     @PostMapping("/find-email")
     @ResponseBody
     public Map<String, Object> findId(@RequestBody FindEmailRequest request) {
-        log.info("[FindId] 이메일 찾기 요청: userName={}", request.userName());
         String maskedEmail = signupService.findEmail(request.userName(), request.phoneNumber());
         return Map.of("maskedEmail", maskedEmail);
     }
@@ -333,7 +255,9 @@ public class AuthController {
     // 비밀번호 재설정 — SignupService를 통해 auth로 위임
     // ================================================================
 
-    /** 비밀번호 재설정 요청 */
+    /**
+     * 비밀번호 재설정 요청
+     */
     @PostMapping("/reset-password/request")
     @ResponseBody
     public ResponseEntity<Void> requestReset(@RequestBody PasswordResetRequest request) {
@@ -348,102 +272,119 @@ public class AuthController {
         return "reset-password-confirm";
     }
 
-    /** 비밀번호 재설정 확인 */
+    /**
+     * 비밀번호 재설정 확인
+     */
     @PostMapping("/reset-password/confirm/submit")
     @ResponseBody
     public ResponseEntity<Void> resetPasswordConfirm(@RequestBody PasswordResetConfirmRequest request) {
-        log.info("[ResetPassword] 재설정 확인 요청");
         signupService.confirmPasswordReset(request.token(), request.password());
         return ResponseEntity.ok().build();
     }
 
     // ================================================================
-    // 내 정보 (아직 세션 기반 목업)
+    // 내 정보 조회
     // ================================================================
 
     @GetMapping("/mypage")
-    public String myPage(@SessionAttribute(value = "userId", required = false) Long userId,
-                         @SessionAttribute(value = "userEmail", required = false) String userEmail,
-                         HttpSession session,
-                         Model model) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        model.addAttribute("email", userEmail != null ? userEmail : "user@insighton.io");
-        model.addAttribute("name", attrOrDefault(session, "userName", "사용자"));
-        model.addAttribute("phone", attrOrDefault(session, "userPhone", ""));
-        model.addAttribute("linkedProviders", linkedProviders(session));
-        model.addAttribute("hasPassword", hasPassword(session));
+    public String myPage(Model model) {
+        MyInfoResponse info = mypageService.findMyInfo();
+        model.addAttribute("email", info.email());
+        model.addAttribute("name", info.userName());
+        model.addAttribute("phone", info.phoneNumber());
+        model.addAttribute("groupName", info.groupName());
+        model.addAttribute("oauths", mypageService.findMyOauths());
         return "mypage";
     }
 
-    @PostMapping("/mypage/update")
-    public String updateProfile(@SessionAttribute(value = "userId", required = false) Long userId,
-                                @RequestParam String name,
-                                @RequestParam String phone,
-                                HttpSession session) {
-        if (userId == null) {
-            return "redirect:/login";
+    // ================================================================
+    // 내 정보 수정
+    // ================================================================
+
+    @GetMapping("/mypage/edit")
+    public String myPageEditForm(Model model) {
+        MyInfoResponse info = mypageService.findMyInfo();
+        model.addAttribute("email", info.email());
+        model.addAttribute("name", info.userName());
+        model.addAttribute("phone", info.phoneNumber());
+        return "mypage/edit";
+    }
+
+    @PostMapping("/mypage/edit")
+    public String updateProfile(@RequestParam String name, @RequestParam String phone,
+                                RedirectAttributes ra) {
+        try {
+            mypageService.updateMyInfo(name, phone);
+            ra.addFlashAttribute("profileSuccess", "정보를 수정했어요.");
+        } catch (FeignException.BadRequest e) {
+            // 400 - 전화번호 형식 오류
+            log.warn("[MyPage] 비밀번호 변경 실패(400) - 전화번호 형식에 맞지 않음");
+            ra.addFlashAttribute("profileError", "전화번호 형식이 맞지 않습니다.");
+            return "redirect:/mypage/edit";
         }
-        session.setAttribute("userName", name);
-        session.setAttribute("userPhone", phone);
         return "redirect:/mypage";
+    }
+
+    // ================================================================
+    // 비밀번호 재설정
+    // ================================================================
+
+    @GetMapping("/mypage/password")
+    public String passwordResetForm() {
+        return "mypage/password";
     }
 
     @PostMapping("/mypage/password")
-    public String changePassword(@SessionAttribute(value = "userId", required = false) Long userId,
-                                 @RequestParam String currentPassword,
-                                 @RequestParam String newPassword,
-                                 HttpSession session,
-                                 RedirectAttributes redirectAttributes) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        if (!hasPassword(session)) {
-            redirectAttributes.addFlashAttribute("passwordError", "소셜 로그인 전용 계정은 비밀번호를 바꿀 수 없어요.");
+    public String changePassword(@RequestParam String currentPassword, @RequestParam String newPassword,
+                                 RedirectAttributes ra) {
+        try {
+            mypageService.changePassword(currentPassword, newPassword);
+            ra.addFlashAttribute("passwordSuccess", "비밀번호가 변경되었습니다.");
             return "redirect:/mypage";
+        } catch (FeignException.Unauthorized e) {
+            // 401 - 현재 비밀번호 불일치
+            log.warn("[MyPage] 비밀번호 변경 실패(401) - 현재 비밀번호 불일치");
+            ra.addFlashAttribute("passwordError", "현재 비밀번호가 올바르지 않습니다.");
+            return "redirect:/mypage/password";
+
+        } catch (FeignException.BadRequest e) {
+            // 400 - 새 비밀번호가 기존과 동일
+            log.warn("[MyPage] 비밀번호 변경 실패(400) - 새 비밀번호 동일");
+            ra.addFlashAttribute("passwordError", "새 비밀번호는 현재 비밀번호와 동일하지 않아야 합니다.");
+            return "redirect:/mypage/password";
+        } catch (FeignException e) {
+            log.warn("[MyPage] 비밀번호 변경 실패: status={}", e.status());
+            ra.addFlashAttribute("passwordError", "비밀번호 변경에 실패했습니다. 잠시 후 다시 시도해주세요.");
+            return "redirect:/mypage/password";
         }
-        if ("wrong".equals(currentPassword)) {
-            redirectAttributes.addFlashAttribute("passwordError", "현재 비밀번호가 올바르지 않아요.");
-            return "redirect:/mypage";
-        }
-        log.info("[목업] 비밀번호 변경 처리");
-        redirectAttributes.addFlashAttribute("passwordSuccess", "비밀번호를 바꿨어요.");
-        return "redirect:/mypage";
     }
 
-    @PostMapping("/mypage/social/link")
-    public String linkSocial(@SessionAttribute(value = "userId", required = false) Long userId,
-                             @RequestParam String provider,
-                             HttpSession session) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        List<String> linked = linkedProviders(session);
-        if (!linked.contains(provider)) {
-            linked.add(provider);
-            session.setAttribute("linkedProviders", linked);
-        }
-        return "redirect:/mypage";
-    }
+    // ================================================================
+    // 소셜 계정 연동 해제
+    // ================================================================
 
     @PostMapping("/mypage/social/unlink")
-    public String unlinkSocial(@SessionAttribute(value = "userId", required = false) Long userId,
-                               @RequestParam String provider,
-                               HttpSession session,
-                               RedirectAttributes redirectAttributes) {
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        List<String> linked = linkedProviders(session);
-        boolean isLastMethod = linked.size() <= 1 && !hasPassword(session);
-        if (isLastMethod) {
-            redirectAttributes.addFlashAttribute("socialError", "마지막 남은 로그인 수단은 해제할 수 없어요.");
-            return "redirect:/mypage";
-        }
-        linked.remove(provider);
-        session.setAttribute("linkedProviders", linked);
-        return "redirect:/mypage";
+    @ResponseBody
+    public ResponseEntity<Void> unlinkSocial(@RequestParam Long oauthId) {
+        mypageService.unlinkOauth(oauthId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ================================================================
+    // 회원 탈퇴
+    // ================================================================
+
+    @PostMapping("/mypage/withdraw")
+    @ResponseBody
+    public ResponseEntity<Void> withdraw(HttpServletRequest req, HttpServletResponse res) {
+        mypageService.withdraw();
+        boolean secure = req.isSecure();
+        expireCookie(res, "accessToken", secure);
+        expireCookie(res, "refreshToken", secure);
+        expireCookie(res, "userId", secure);
+        expireCookie(res, "userName", secure);
+        expireCookie(res, "groupId", secure);
+        return ResponseEntity.noContent().build();
     }
 
     // ================================================================

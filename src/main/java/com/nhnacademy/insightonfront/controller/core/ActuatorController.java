@@ -5,9 +5,13 @@ import com.nhnacademy.insightonfront.adapter.core.actuator.ActuatorCommandPreset
 import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorNameUpdateRequest;
 import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorRequest;
 import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorResponse;
+import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorRunLogResponse;
 import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorType;
+import com.nhnacademy.insightonfront.adapter.core.actuator.dto.CommandType;
 import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
 import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
+import com.nhnacademy.insightonfront.common.dto.PageResponse;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.CookieValue;
 
@@ -47,7 +52,10 @@ public class ActuatorController {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        List<ActuatorResponse> actuators = actuatorClient.getActuatorsByLocationId(groupId, locationId);
+        // actuatorId(생성 순서 = auto-increment PK) 기준으로 프론트에서 고정 정렬한다
+        List<ActuatorResponse> actuators = actuatorClient.getActuatorsByLocationId(groupId, locationId).stream()
+                .sorted(Comparator.comparing(ActuatorResponse::actuatorId))
+                .toList();
         LocationDetailResponse location = locationClient.getLocation(groupId, locationId);
 
         Map<String, Object> commandRules = new LinkedHashMap<>();
@@ -69,7 +77,22 @@ public class ActuatorController {
                         @PathVariable("location-id") Long locationId,
                         @RequestBody ActuatorCreateForm form) {
         return actuatorClient.createActuator(groupId,
-                new ActuatorRequest(locationId, form.name(), form.actuatorType(), Map.of()));
+                new ActuatorRequest(locationId, form.name(), form.actuatorType(), defaultState(form.actuatorType())));
+    }
+
+    // 타입별 기본 상태 — 생성 직후 카드에 바로 의미 있는 값이 보이도록 채워줌
+    private static Map<String, Object> defaultState(ActuatorType actuatorType) {
+        Map<String, Object> state = new LinkedHashMap<>();
+        state.put(CommandType.POWER_STATUS.getStateKey(), "OFF");
+        switch (actuatorType) {
+            case AIRCON -> {
+                state.put(CommandType.OPERATION_MODE.getStateKey(), "COOL");
+                state.put(CommandType.SET_TEMPERATURE.getStateKey(), 18);
+            }
+            case AIR_PURIFIER -> state.put(CommandType.OPERATION_MODE.getStateKey(), "AUTO");
+            case VENTILATION_FAN -> state.put(CommandType.OPERATION_MODE.getStateKey(), "LOW");
+        }
+        return state;
     }
 
     @PutMapping("/{actuator-id}/state")
@@ -78,6 +101,16 @@ public class ActuatorController {
                              @PathVariable("actuator-id") Long actuatorId,
                              @RequestBody Map<String, Object> newState) {
         actuatorClient.updateActuatorState(groupId, actuatorId, newState);
+    }
+
+    // 액추에이터 카드 "실행 이력" 모델이 페이지 단위로 호출
+    @GetMapping("/{actuator-id}/logs")
+    @ResponseBody
+    public PageResponse<ActuatorRunLogResponse> getLogs(@CookieValue(value = "groupId", required = false) Long groupId,
+                                                          @PathVariable("actuator-id") Long actuatorId,
+                                                          @RequestParam(defaultValue = "0") int page,
+                                                          @RequestParam(defaultValue = "20") int size) {
+        return actuatorClient.getActuatorRunLogs(groupId, actuatorId, page, size);
     }
 
     @PutMapping("/{actuator-id}/name")
