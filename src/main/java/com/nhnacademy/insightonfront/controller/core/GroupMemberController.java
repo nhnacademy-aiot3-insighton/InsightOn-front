@@ -28,7 +28,7 @@ public class GroupMemberController {
 
         model.addAttribute("groupMemberList", groupMemberList);
 
-        return "";
+        return "groupmember/list";
     }
 
     @GetMapping("/{group-member-id}")
@@ -38,7 +38,7 @@ public class GroupMemberController {
 
         model.addAttribute("groupMember", groupMember);
 
-        return "";
+        return "groupmember/detail";
     }
 
     @PutMapping("/{group-member-id}/toggle-manager")

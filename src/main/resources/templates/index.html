@@ -2,17 +2,17 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
     <title>InsightOn — 빌딩 IoT 통합 관제</title>
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link th:href="@{/css/app.css}" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body th:with="state=${authState != null ? authState : 'GUEST'}">
 
 <header class="landing-header">
-    <a th:href="@{/}" class="brand">
+    <a class="brand" th:href="@{/}">
         <i class="ti ti-chart-line"></i>InsightOn
     </a>
     <nav class="landing-nav">
@@ -22,8 +22,8 @@
     <div class="landing-header-actions">
         <!-- 미로그인: 로그인 / 회원가입 -->
         <th:block th:if="${state == 'GUEST'}">
-            <a th:href="@{/login}" class="btn-landing-secondary">로그인</a>
-            <a th:href="@{/signup}" class="btn-landing-primary">회원가입</a>
+            <a class="btn-landing-secondary" th:href="@{/login}">로그인</a>
+            <a class="btn-landing-primary" th:href="@{/signup}">회원가입</a>
         </th:block>
 
         <!-- 로그인 상태: 이름 + 로그아웃 -->
@@ -31,16 +31,16 @@
             <a th:href="@{/mypage}" class="landing-greeting" th:if="${userName != null}"
                th:text="|${userName}님|"></a>
 
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/registration}" class="btn-landing-primary">
+            <a class="btn-landing-primary" th:href="@{/group-registration}" th:if="${state == 'NO_GROUP'}">
                 <i class="ti ti-building-plus"></i>그룹 생성 신청하기
             </a>
-            <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">
+            <a class="btn-landing-primary" th:href="@{/my-group}" th:if="${state == 'HAS_GROUP'}">
                 <i class="ti ti-layout-dashboard"></i>대시보드로 이동
             </a>
 
             <!-- 로그아웃 -->
-            <form th:action="@{/logout}" method="post" style="display:inline;">
-                <button type="submit" class="btn-landing-secondary">로그아웃</button>
+            <form method="post" style="display:inline;" th:action="@{/logout}">
+                <button class="btn-landing-secondary" type="submit">로그아웃</button>
             </form>
         </th:block>
     </div>
@@ -52,10 +52,13 @@
         <h1>건물의 모든 신호를<br><em>한 화면</em>에서 통제하세요</h1>
         <p>센서·액추에이터·게이트웨이를 한 곳에 모으고, 조건만 정하면 알아서 반응하는 Flow 자동화로 빌딩을 관제합니다. 코드 없이, 누구나.</p>
         <div class="landing-hero-actions">
-            <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="btn-landing-primary">무료로 시작하기<i class="ti ti-arrow-right"></i></a>
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/registration}" class="btn-landing-primary">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
-            <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">대시보드로 이동<i class="ti ti-arrow-right"></i></a>
-            <a href="#how-it-works" class="btn-landing-secondary">작동 방식 보기</a>
+            <a class="btn-landing-primary" th:href="@{/signup}" th:if="${state == 'GUEST'}">무료로 시작하기<i
+                    class="ti ti-arrow-right"></i></a>
+            <a class="btn-landing-primary" th:href="@{/group-registration}" th:if="${state == 'NO_GROUP'}">그룹 생성 신청하기<i
+                    class="ti ti-arrow-right"></i></a>
+            <a class="btn-landing-primary" th:href="@{/my-group}" th:if="${state == 'HAS_GROUP'}">대시보드로 이동<i
+                    class="ti ti-arrow-right"></i></a>
+            <a class="btn-landing-secondary" href="#how-it-works">작동 방식 보기</a>
         </div>
     </div>
 
@@ -70,8 +73,9 @@
         <div style="display:grid; grid-template-columns: 2fr 1fr; gap: var(--sp-3); margin-bottom: var(--sp-3);">
             <div style="border:1px solid var(--line); border-radius:var(--radius); padding:var(--sp-3);">
                 <div style="font-family:var(--font-mono); font-size:var(--fs-meta); color:var(--ink-faint); margin-bottom:var(--sp-2);">온습도 센서 · TEMPERATURE</div>
-                <svg viewBox="0 0 220 60" width="100%" height="60" preserveAspectRatio="none">
-                    <polyline points="0,45 30,38 60,42 90,25 120,30 150,15 180,20 220,10" fill="none" stroke="#1c4e80" stroke-width="2"></polyline>
+                <svg height="60" preserveAspectRatio="none" viewBox="0 0 220 60" width="100%">
+                    <polyline fill="none" points="0,45 30,38 60,42 90,25 120,30 150,15 180,20 220,10" stroke="#1c4e80"
+                              stroke-width="2"></polyline>
                 </svg>
             </div>
             <div style="border:1px solid var(--line); border-radius:var(--radius); padding:var(--sp-3); display:flex; flex-direction:column; justify-content:center; align-items:center;">
@@ -151,21 +155,25 @@
     <div class="landing-cta">
         <h2>지금 바로 시작하세요</h2>
         <p>가입은 무료이며, 그룹 생성은 관리자 승인 후 바로 이용할 수 있어요.</p>
-        <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="btn-landing-primary">무료로 시작하기<i class="ti ti-arrow-right"></i></a>
-        <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">대시보드로 이동<i class="ti ti-arrow-right"></i></a>
+        <a class="btn-landing-primary" th:href="@{/signup}" th:if="${state == 'GUEST'}">무료로 시작하기<i
+                class="ti ti-arrow-right"></i></a>
+        <a class="btn-landing-primary" th:href="@{/my-group}" th:if="${state == 'HAS_GROUP'}">대시보드로 이동<i
+                class="ti ti-arrow-right"></i></a>
 
         <th:block th:if="${state == 'NO_GROUP'}">
-            <a th:href="@{/my-group/registration}" class="btn-landing-primary">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
+            <a class="btn-landing-primary" th:href="@{/group-registration}">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
 
             <div style="margin-top: var(--sp-6);">
                 <p style="color: var(--ink-faint); font-size: var(--fs-meta); margin-bottom: var(--sp-2);">
                     이미 있는 그룹에 참가하시나요?
                 </p>
-                <p th:if="${joinError}" th:text="${joinError}" class="form-text" style="color: var(--danger); margin-bottom: var(--sp-2);"></p>
-                <form th:action="@{/my-group/join}" method="post"
-                      style="display:flex; gap: var(--sp-2); justify-content:center; max-width:360px; margin:0 auto;">
-                    <input type="text" name="inviteToken" class="form-control" placeholder="초대 코드 입력" required>
-                    <button type="submit" class="btn-landing-secondary">참가하기</button>
+                <p class="form-text" style="color: var(--danger); margin-bottom: var(--sp-2);" th:if="${joinError}"
+                   th:text="${joinError}"></p>
+                <form method="post"
+                      style="display:flex; gap: var(--sp-2); justify-content:center; max-width:360px; margin:0 auto;"
+                      th:action="@{/my-group/join}">
+                    <input class="form-control" name="inviteToken" placeholder="초대 코드 입력" required type="text">
+                    <button class="btn-landing-secondary" type="submit">참가하기</button>
                 </form>
             </div>
         </th:block>

@@ -235,6 +235,14 @@
             addStatusEl.style.display = 'block';
             return;
         }
+        // core에는 이름 중복 체크가 없어서, 지금 이 위치에 이미 있는 이름과 겹치는지 화면에서 먼저 걸러냄
+        const isDuplicate = Array.from(grid.querySelectorAll('.actuator-name'))
+            .some((el) => el.textContent.trim().toLowerCase() === name.toLowerCase());
+        if (isDuplicate) {
+            addStatusEl.textContent = '이미 같은 이름의 액추에이터가 있어요.';
+            addStatusEl.style.display = 'block';
+            return;
+        }
         addStatusEl.style.display = 'none';
         const actuatorType = document.querySelector('input[name="newActuatorType"]:checked').value;
         this.disabled = true;
