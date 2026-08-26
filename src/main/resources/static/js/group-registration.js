@@ -10,7 +10,7 @@
             return;
         }
         citySelect.innerHTML = '<option value="">불러오는 중...</option>';
-        fetch(`/my-group/registration/cities?state=${encodeURIComponent(state)}`)
+        fetch(`/group-registration/cities?state=${encodeURIComponent(state)}`)
             .then((r) => {
                 if (!r.ok) throw new Error('cities fetch failed');
                 return r.json();
