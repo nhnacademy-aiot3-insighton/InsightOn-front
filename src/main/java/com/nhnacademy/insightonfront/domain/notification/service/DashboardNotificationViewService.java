@@ -2,6 +2,8 @@ package com.nhnacademy.insightonfront.domain.notification.service;
 
 import com.nhnacademy.insightonfront.adapter.ai.notification.DashboardNotificationClient;
 import com.nhnacademy.insightonfront.adapter.ai.notification.dto.DashboardNotificationResponse;
+import com.nhnacademy.insightonfront.adapter.ai.notification.dto.NotificationType;
+import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import com.nhnacademy.insightonfront.common.resolver.LocationNameResolver;
 import com.nhnacademy.insightonfront.domain.notification.dto.DashboardNotificationViewModel;
 import java.util.List;
@@ -30,6 +32,15 @@ public class DashboardNotificationViewService {
                 .toList();
     }
 
+    public PageResponse<DashboardNotificationViewModel> searchNotifications(Long groupId, Boolean isRead,
+                                                                             NotificationType notificationType,
+                                                                             int page, int size) {
+        PageResponse<DashboardNotificationResponse> notifications =
+                dashboardNotificationClient.search(groupId, isRead, notificationType, page, size);
+        Map<Long, String> locationNames = locationNameResolver.resolve(groupId);
+        return notifications.map(n -> toViewModel(n, locationNames));
+    }
+
     public DashboardNotificationViewModel markAsRead(Long dashboardNotificationId, Long groupId) {
         DashboardNotificationResponse notification =
                 dashboardNotificationClient.markAsRead(dashboardNotificationId);
@@ -41,7 +52,7 @@ public class DashboardNotificationViewService {
                                                          Map<Long, String> locationNames) {
         return new DashboardNotificationViewModel(
                 notification.dashboardNotificationId(),
-                locationNames.getOrDefault(notification.locationId(), UNKNOWN_LOCATION),
+                notification.locationId() == null ? "" : locationNames.getOrDefault(notification.locationId(), UNKNOWN_LOCATION),
                 notification.notificationType(),
                 notification.sourceId(),
                 notification.title(),

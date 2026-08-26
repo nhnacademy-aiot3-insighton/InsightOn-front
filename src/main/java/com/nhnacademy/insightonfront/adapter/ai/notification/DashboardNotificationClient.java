@@ -1,6 +1,8 @@
 package com.nhnacademy.insightonfront.adapter.ai.notification;
 
 import com.nhnacademy.insightonfront.adapter.ai.notification.dto.DashboardNotificationResponse;
+import com.nhnacademy.insightonfront.adapter.ai.notification.dto.NotificationType;
+import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,4 +26,11 @@ public interface DashboardNotificationClient {
 
     @PostMapping("/api/v1/dashboard-notifications/{dashboardNotificationId}/read")
     DashboardNotificationResponse markAsRead(@PathVariable("dashboardNotificationId") Long dashboardNotificationId);
+
+    @GetMapping("/api/v1/dashboard-notifications/search")
+    PageResponse<DashboardNotificationResponse> search(@RequestParam("groupId") Long groupId,
+                                                        @RequestParam(value = "isRead", required = false) Boolean isRead,
+                                                        @RequestParam(value = "notificationType", required = false) NotificationType notificationType,
+                                                        @RequestParam("page") int page,
+                                                        @RequestParam("size") int size);
 }
