@@ -29,6 +29,7 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
     @Override
     public Exception decode(String methodKey, Response response) {
         if (response.status() == 401) {
+            // MISSING_TOKEN, INVALID_TOKEN → refresh
             if (isRefreshable(response)) {
                 try {
                     String userIdStr = extractCookie("userId");
@@ -57,7 +58,7 @@ public class TokenRefreshErrorDecoder implements ErrorDecoder {
                     return new SessionExpiredException("재로그인이 필요합니다.");
                 }
             } else if (hasGatewayAuthErrorHeader(response)) {
-                // MISSING_TOKEN, TOKEN_REVOKED, MISSING_JTI 등 게이트웨이가 감지한 토큰 문제 → 복구 불가
+                // MISSING_JTI, TOKEN_REVOKED → 복구 불가
                 String authError = response.headers().entrySet().stream()
                         .filter(e -> e.getKey().equalsIgnoreCase("X-Auth-Error"))
                         .flatMap(e -> e.getValue().stream())
