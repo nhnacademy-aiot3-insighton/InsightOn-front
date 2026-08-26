@@ -21,7 +21,8 @@
     <main class="app-main">
         <div class="section-header">
             <p class="section-label mb-0" th:text="'액추에이터 (' + ${#lists.size(actuators)} + '대)'">액추에이터</p>
-            <button type="button" id="btnAddActuator" class="btn-add-widget" data-bs-toggle="modal" data-bs-target="#addActuatorModal">
+            <!-- MEMBER는 추가할 수 없다 — 서버(ActuatorController)도 create에서 다시 막는다 -->
+            <button type="button" id="btnAddActuator" class="btn-add-widget" data-bs-toggle="modal" data-bs-target="#addActuatorModal" th:if="${canManage}">
                 <i class="ti ti-plus"></i>액추에이터 추가
             </button>
         </div>
@@ -46,7 +47,8 @@
                         withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'MM-dd HH:mm')
                         + ' 갱신' : '갱신 기록 없음'}">방금 전</div>
                     </div>
-                    <div class="dropdown">
+                    <!-- 실행 이력/수정/삭제 모두 MANAGER 이상만 — 서버(ActuatorController)도 각 엔드포인트에서 다시 막는다 -->
+                    <div class="dropdown" th:if="${canManage}">
                         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <!-- 클릭 시 #actuatorLogsModal을 열고 actuator-panel.js가 액추에이터 실행 로그를 채움 -->
@@ -65,25 +67,28 @@
                     <div class="actuator-command-row">
                         <span class="actuator-command-label" th:text="${cmd.key}">POWER_STATUS</span>
 
+                        <!-- MEMBER는 값만 보고 조작은 못 함 — disabled라 클릭/change 이벤트 자체가 안 붙고,
+                             서버(ActuatorController.updateState)도 다시 막는다 -->
                         <label th:if="${cmd.key == 'POWER_STATUS'}" class="toggle-switch">
                             <input type="checkbox" class="cmd-toggle"
                                    th:attr="data-command=${cmd.value.get('stateKey')}"
-                                   th:checked="${actuator.currentState().get(cmd.value.get('stateKey'))} == 'ON'">
+                                   th:checked="${actuator.currentState().get(cmd.value.get('stateKey'))} == 'ON'"
+                                   th:disabled="${not canManage}">
                             <span class="toggle-track"></span>
                         </label>
 
                         <div th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}"
                              class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}">
                             <button type="button" class="chip-option cmd-chip" th:each="v : ${cmd.value.get('values')}"
-                                    th:text="${v}" th:attr="data-value=${v}"
+                                    th:text="${v}" th:attr="data-value=${v}" th:disabled="${not canManage}"
                                     th:classappend="${actuator.currentState().get(cmd.value.get('stateKey'))} == ${v} ? ' active' : ''"></button>
                         </div>
 
                         <div th:if="${cmd.value.get('kind') == 'RANGE'}"
                              class="temp-stepper" th:attr="data-command=${cmd.value.get('stateKey')},data-min=${cmd.value.get('min')},data-max=${cmd.value.get('max')}">
-                            <button type="button" class="cmd-step-down" aria-label="내리기">&minus;</button>
+                            <button type="button" class="cmd-step-down" aria-label="내리기" th:disabled="${not canManage}">&minus;</button>
                             <span class="temp-value cmd-range-value" th:text="${actuator.currentState().get(cmd.value.get('stateKey'))}">24</span>
-                            <button type="button" class="cmd-step-up" aria-label="올리기">+</button>
+                            <button type="button" class="cmd-step-up" aria-label="올리기" th:disabled="${not canManage}">+</button>
                         </div>
                     </div>
                 </div>
