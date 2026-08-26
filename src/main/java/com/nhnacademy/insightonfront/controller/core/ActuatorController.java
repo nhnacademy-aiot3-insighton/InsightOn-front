@@ -11,6 +11,7 @@ import com.nhnacademy.insightonfront.adapter.core.actuator.dto.CommandType;
 import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
 import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
 import com.nhnacademy.insightonfront.common.dto.PageResponse;
+import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +44,7 @@ public class ActuatorController {
 
     private final ActuatorClient actuatorClient;
     private final LocationClient locationClient;
+    private final GroupPermissionService groupPermissionService;
 
     @GetMapping
     public String panel(@CookieValue(value = "userId", required = false) Long userId,
@@ -68,14 +70,19 @@ public class ActuatorController {
         model.addAttribute("locationId", locationId);
         model.addAttribute("commandRules", commandRules);
         model.addAttribute("actuatorTypes", ActuatorType.values());
+        // MEMBER는 조작/추가/수정/삭제/실행이력을 못 보게 화면에서 숨긴다 — 서버에서도 각 엔드포인트에서 다시 막음
+        model.addAttribute("canManage", groupPermissionService.isManagerOrAbove(groupId, userId));
         return "actuator/panel";
     }
 
     @PostMapping
     @ResponseBody
-    public Long create(@CookieValue(value = "groupId", required = false) Long groupId,
+    public Long create(@CookieValue(value = "userId", required = false) Long userId,
+                        @CookieValue(value = "groupId", required = false) Long groupId,
                         @PathVariable("location-id") Long locationId,
                         @RequestBody ActuatorCreateForm form) {
+        // 추가는 MANAGER 이상만 — MEMBER가 호출하면 core에 요청 보내기 전에 여기서 403
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "액추에이터를 추가할");
         return actuatorClient.createActuator(groupId,
                 new ActuatorRequest(locationId, form.name(), form.actuatorType(), defaultState(form.actuatorType())));
     }
@@ -97,34 +104,46 @@ public class ActuatorController {
 
     @PutMapping("/{actuator-id}/state")
     @ResponseBody
-    public void updateState(@CookieValue(value = "groupId", required = false) Long groupId,
+    public void updateState(@CookieValue(value = "userId", required = false) Long userId,
+                             @CookieValue(value = "groupId", required = false) Long groupId,
                              @PathVariable("actuator-id") Long actuatorId,
                              @RequestBody Map<String, Object> newState) {
+        // 조작(전원/모드/온도)도 MANAGER 이상만 — MEMBER가 호출하면 여기서 403
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "액추에이터를 조작할");
         actuatorClient.updateActuatorState(groupId, actuatorId, newState);
     }
 
     // 액추에이터 카드 "실행 이력" 모델이 페이지 단위로 호출
     @GetMapping("/{actuator-id}/logs")
     @ResponseBody
-    public PageResponse<ActuatorRunLogResponse> getLogs(@CookieValue(value = "groupId", required = false) Long groupId,
+    public PageResponse<ActuatorRunLogResponse> getLogs(@CookieValue(value = "userId", required = false) Long userId,
+                                                          @CookieValue(value = "groupId", required = false) Long groupId,
                                                           @PathVariable("actuator-id") Long actuatorId,
                                                           @RequestParam(defaultValue = "0") int page,
                                                           @RequestParam(defaultValue = "20") int size) {
+        // 실행 이력 조회도 MANAGER 이상만 — MEMBER가 호출하면 여기서 403
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "실행 이력을 조회할");
         return actuatorClient.getActuatorRunLogs(groupId, actuatorId, page, size);
     }
 
     @PutMapping("/{actuator-id}/name")
     @ResponseBody
-    public void updateName(@CookieValue(value = "groupId", required = false) Long groupId,
+    public void updateName(@CookieValue(value = "userId", required = false) Long userId,
+                            @CookieValue(value = "groupId", required = false) Long groupId,
                             @PathVariable("actuator-id") Long actuatorId,
                             @RequestBody ActuatorNameUpdateRequest request) {
+        // 이름 수정도 MANAGER 이상만 — MEMBER가 호출하면 여기서 403
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "액추에이터 이름을 수정할");
         actuatorClient.updateActuatorName(groupId, actuatorId, request);
     }
 
     @DeleteMapping("/{actuator-id}")
     @ResponseBody
-    public void delete(@CookieValue(value = "groupId", required = false) Long groupId,
+    public void delete(@CookieValue(value = "userId", required = false) Long userId,
+                        @CookieValue(value = "groupId", required = false) Long groupId,
                         @PathVariable("actuator-id") Long actuatorId) {
+        // 삭제도 MANAGER 이상만 — MEMBER가 호출하면 여기서 403
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "액추에이터를 삭제할");
         actuatorClient.deleteActuatorById(groupId, actuatorId);
     }
 

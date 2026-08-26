@@ -34,13 +34,16 @@
 
             <div class="sensor-detail-grid">
                 <div>
+                    <!-- MEMBER는 조회만 가능 — 저장/삭제 요청을 보내도 서버(SensorController)가 403으로 막는다 -->
+                    <p class="field-hint" th:unless="${canManage}">보기 전용이에요. 이름/위치 수정과 삭제는 매니저 이상만 할 수 있어요.</p>
                     <div class="settings-field">
                         <label for="sensorName">이름</label>
-                        <input type="text" id="sensorName" class="form-control" th:value="${sensor.sensorName()}">
+                        <input type="text" id="sensorName" class="form-control" th:value="${sensor.sensorName()}"
+                               th:disabled="${not canManage}">
                     </div>
                     <div class="settings-field">
                         <label for="sensorLocation">위치</label>
-                        <select id="sensorLocation" class="form-select">
+                        <select id="sensorLocation" class="form-select" th:disabled="${not canManage}">
                             <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"
                                     th:selected="${loc.locationId() == sensor.locationId()}"></option>
                         </select>
@@ -80,7 +83,7 @@
                 <p class="field-hint" th:if="${#lists.isEmpty(attributes)}">등록된 필드가 없어요.</p>
             </div>
 
-            <div class="settings-actions">
+            <div class="settings-actions" th:if="${canManage}">
                 <button type="button" id="btnDeleteSensor" class="btn btn-outline-secondary text-danger">센서 삭제</button>
                 <div style="flex:1;"></div>
                 <button type="button" id="btnSaveSensor" class="btn btn-primary">저장</button>
