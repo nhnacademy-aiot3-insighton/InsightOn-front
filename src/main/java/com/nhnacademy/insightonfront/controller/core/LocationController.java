@@ -1,11 +1,7 @@
 package com.nhnacademy.insightonfront.controller.core;
 
 import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.AutoControlMode;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationCreateRequest;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationListResponse;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationUpdateRequest;
+import com.nhnacademy.insightonfront.adapter.core.location.dto.*;
 import com.nhnacademy.insightonfront.common.resolver.LocationNameResolver;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -72,7 +68,7 @@ public class LocationController {
 
         model.addAttribute("location", location);
 
-        return "";
+        return "location/detail";
     }
 
     @PostMapping("/{location-id}/toggle-mode")
