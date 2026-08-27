@@ -23,9 +23,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.CookieValue;
 
 /**
- * 게이트웨이로 자동 등록된 센서를 조회·이름변경·위치재배치·삭제한다. 센서는 물리 장치가 통신을
- * 시작하면 core가 알아서 만들기 때문에(FR 상 발견/등록 API 없음) "센서 추가" 같은 생성 액션은 없다.
- * groupId는 쿠키에서 읽는다(한 유저 = 한 그룹). userId는 게이트웨이가 Authorization에서 뽑아 쓴다.
+ * 게이트웨이로 자동 등록된 센서를 조회·이름변경·위치재배치·삭제함. 센서는 물리 장치가 통신을
+ * 시작하면 core가 알아서 만들기 때문에(FR 상 발견/등록 API 없음) "센서 추가" 같은 생성 액션은 없음.
+ * groupId는 쿠키에서 읽음(한 유저 = 한 그룹). userId는 게이트웨이가 Authorization에서 뽑아 씀.
  */
 @Controller
 @RequiredArgsConstructor
@@ -62,7 +62,7 @@ public class SensorController {
         model.addAttribute("locations", locations);
         model.addAttribute("selectedLocationId", locationId);
         model.addAttribute("searchQuery", sensorName);
-        // MEMBER는 이름/위치 수정·삭제를 못 보게 화면에서 숨긴다 — 서버에서도 update/delete에서 다시 막음
+        // MEMBER는 이름/위치 수정·삭제를 못 보게 화면에서 숨김 — 서버에서도 update/delete에서 다시 막음
         model.addAttribute("canManage", groupPermissionService.isManagerOrAbove(groupId, userId));
         return "sensor/list";
     }
@@ -107,6 +107,18 @@ public class SensorController {
         sensorClient.deleteSensor(sensorId);
     }
 
+    // 목록 화면에서 체크박스로 여러 센서를 고른 뒤 위치만 한 번에 바꿈
+    // 화면이 이미 들고 있는 각 센서 이름을 그대로 실어 보내 core의 "이름+위치 통째 교체" update를 재사용함
+    @PutMapping("/selected-location")
+    @ResponseBody
+    public void bulkUpdateLocation(@CookieValue(value = "userId", required = false) Long userId,
+                                    @CookieValue(value = "groupId", required = false) Long groupId,
+                                    @RequestBody SelectedLocationRequest request) {
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "센서 위치를 일괄 변경할");
+        request.sensors().forEach(sensor ->
+                sensorClient.updateSensor(sensor.sensorId(), new SensorUpdateRequest(request.locationId(), sensor.sensorName())));
+    }
+
     @GetMapping("/{sensor-id}/attributes")
     @ResponseBody
     public List<SensorAttributeResponse> attributes(@PathVariable("sensor-id") Long sensorId) {
@@ -118,5 +130,9 @@ public class SensorController {
     public void deleteAttribute(@PathVariable("sensor-id") Long sensorId,
                                  @PathVariable("metric-key") String metricKey) {
         sensorAttributeClient.deleteSensorAttribute(sensorId, metricKey);
+    }
+
+    public record SelectedLocationRequest(List<SensorRef> sensors, Long locationId) {
+        public record SensorRef(Long sensorId, String sensorName) {}
     }
 }

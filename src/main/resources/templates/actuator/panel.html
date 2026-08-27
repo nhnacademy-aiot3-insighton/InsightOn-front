@@ -21,78 +21,158 @@
     <main class="app-main">
         <div class="section-header">
             <p class="section-label mb-0" th:text="'액추에이터 (' + ${#lists.size(actuators)} + '대)'">액추에이터</p>
-            <!-- MEMBER는 추가할 수 없다 — 서버(ActuatorController)도 create에서 다시 막는다 -->
-            <button type="button" id="btnAddActuator" class="btn-add-widget" data-bs-toggle="modal" data-bs-target="#addActuatorModal" th:if="${canManage}">
-                <i class="ti ti-plus"></i>액추에이터 추가
-            </button>
+            <!-- MEMBER는 추가/삭제를 못 함 — 서버(ActuatorController.create/delete)도 다시 막음 -->
+            <div th:if="${canManage}" style="display:flex; flex-direction:column; gap: var(--sp-2); align-items:flex-end;">
+                <button type="button" id="btnAddActuator" class="btn-add-widget" data-bs-toggle="modal" data-bs-target="#addActuatorModal">
+                    <i class="ti ti-plus"></i>액추에이터 추가
+                </button>
+                <!-- 체크박스 선택 개수와 상관없이 항상 떠 있게 두고 버튼만 비활성화 -->
+                <button type="button" id="btnBulkDelete" class="btn btn-outline-secondary text-danger" disabled>선택 삭제</button>
+            </div>
         </div>
 
         <p th:if="${#lists.isEmpty(actuators)}" class="field-hint">등록된 액추에이터가 없어요. 위에서 추가해보세요.</p>
 
-        <div class="actuator-grid">
-            <div class="actuator-card" th:each="actuator : ${actuators}" th:attr="data-actuator-id=${actuator.actuatorId()}">
+        <!-- 선택과 무관하게 전체 액추에이터에 적용되는 전원 버튼 — 서버(ActuatorController.updateState)도
+             다시 막음 -->
+        <div id="actuatorBulkBar" class="filter-bar" th:if="${canManage}">
+            <span id="actuatorBulkCount" class="field-hint" style="margin:0;">0개 선택됨</span>
+            <button type="button" id="btnAllPowerOn" class="btn btn-outline-secondary">전체 켜기</button>
+            <button type="button" id="btnAllPowerOff" class="btn btn-outline-secondary">전체 끄기</button>
+        </div>
+
+        <!-- 타입별 일괄 조작 — 에어컨/공기청정기/환풍기마다 쓸 수 있는 모드가 달라서 타입별로 박스를
+             나눔. 체크박스 선택과 무관하게 그 타입의 액추에이터 전부에 적용됨 -->
+        <div th:if="${canManage}" style="display:flex; gap: var(--sp-3); flex-wrap:wrap; margin-bottom: var(--sp-4);">
+            <!-- 이 타입의 액추에이터가 실제로 있을 때만 박스를 그림(빈 타입 박스 방지) — presentTypes는
+                 컨트롤러에서 미리 계산해서 넘긴 Set임(템플릿의 SpEL 셀렉션 .?[]으로 하면 th:each
+                 변수를 셀렉션 식 안에서 못 읽어서 EL1008E 에러가 남) -->
+            <div class="actuator-card" style="min-width:240px; flex:1;" th:each="type : ${actuatorTypes}"
+                 th:if="${presentTypes.contains(type)}"
+                 th:attr="data-type-bulk-box=${type.name()}">
                 <div class="actuator-card-header">
                     <span class="actuator-icon">
-                        <i th:switch="${actuator.actuatorType().name()}">
+                        <i th:switch="${type.name()}">
                             <i th:case="'AIRCON'" class="ti ti-snowflake"></i>
                             <i th:case="'AIR_PURIFIER'" class="ti ti-wind"></i>
                             <i th:case="'VENTILATION_FAN'" class="ti ti-fan"></i>
                         </i>
                     </span>
-                    <div style="flex:1;">
-                        <div class="actuator-name" th:text="${actuator.sensorName()}">천장형 에어컨</div>
-                        <!-- core JVM 기본 타임존이 UTC라 stateUpdatedAt이 UTC로 찍힘 — KST(+9)로 변환해서 표시 -->
-                        <div class="actuator-meta" th:text="${actuator.stateUpdatedAt()
-                        != null ? #temporals.format(actuator.stateUpdatedAt().
-                        withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'MM-dd HH:mm')
-                        + ' 갱신' : '갱신 기록 없음'}">방금 전</div>
-                    </div>
-                    <!-- 실행 이력/수정/삭제 모두 MANAGER 이상만 — 서버(ActuatorController)도 각 엔드포인트에서 다시 막는다 -->
-                    <div class="dropdown" th:if="${canManage}">
-                        <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <!-- 클릭 시 #actuatorLogsModal을 열고 actuator-panel.js가 액추에이터 실행 로그를 채움 -->
-                            <li><a class="dropdown-item btn-view-logs" href="#">실행 이력</a></li>
-                            <!-- 클릭 시 #editActuatorModal을 열고 현재 이름을 채워서 수정 -->
-                            <li><a class="dropdown-item btn-edit-actuator" href="#">수정</a></li>
-                            <li><a class="dropdown-item btn-delete-actuator" href="#">삭제</a></li>
-                        </ul>
+                    <div class="actuator-name" th:switch="${type.name()}">
+                        <span th:case="'AIRCON'">에어컨 일괄 조작</span>
+                        <span th:case="'AIR_PURIFIER'">공기청정기 일괄 조작</span>
+                        <span th:case="'VENTILATION_FAN'">환풍기 일괄 조작</span>
                     </div>
                 </div>
-
-                <!-- cmd.key(POWER_STATUS 등 enum 이름)는 화면 라벨용으로만 쓰고,
-                     실제로 core에 보내고 currentState에서 읽는 키는 cmd.value.get('stateKey')("power" 등)
-                     예전엔 cmd.key를 그대로 보내서 core가 "알 수 없는 명령키"로 거부함(500 에러) -->
-                <div th:each="cmd : ${commandRules.get(actuator.actuatorType().name())}">
-                    <div class="actuator-command-row">
-                        <span class="actuator-command-label" th:text="${cmd.key}">POWER_STATUS</span>
-
-                        <!-- MEMBER는 값만 보고 조작은 못 함 — disabled라 클릭/change 이벤트 자체가 안 붙고,
-                             서버(ActuatorController.updateState)도 다시 막는다 -->
-                        <label th:if="${cmd.key == 'POWER_STATUS'}" class="toggle-switch">
-                            <input type="checkbox" class="cmd-toggle"
-                                   th:attr="data-command=${cmd.value.get('stateKey')}"
-                                   th:checked="${actuator.currentState().get(cmd.value.get('stateKey'))} == 'ON'"
-                                   th:disabled="${not canManage}">
-                            <span class="toggle-track"></span>
-                        </label>
-
-                        <div th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}"
-                             class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}">
-                            <button type="button" class="chip-option cmd-chip" th:each="v : ${cmd.value.get('values')}"
-                                    th:text="${v}" th:attr="data-value=${v}" th:disabled="${not canManage}"
-                                    th:classappend="${actuator.currentState().get(cmd.value.get('stateKey'))} == ${v} ? ' active' : ''"></button>
+                <!-- 전체 켜기/끄기와 별개로, 이 타입 액추에이터만 따로 켜고 끌 수 있게 토글도 추가함 -->
+                <div class="actuator-command-row">
+                    <span class="actuator-command-label">POWER_STATUS</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="type-bulk-power">
+                        <span class="toggle-track"></span>
+                    </label>
+                </div>
+                <div th:each="cmd : ${commandRules.get(type.name())}">
+                    <div class="actuator-command-row" th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}">
+                        <span class="actuator-command-label" th:text="${cmd.key}">OPERATION_MODE</span>
+                        <div class="chip-select">
+                            <button type="button" class="chip-option type-bulk-mode" th:each="v : ${cmd.value.get('values')}"
+                                    th:text="${v}" th:attr="data-value=${v}"></button>
                         </div>
+                    </div>
+                    <div class="actuator-command-row" th:if="${cmd.value.get('kind') == 'RANGE'}">
+                        <span class="actuator-command-label" th:text="${cmd.key}">SET_TEMPERATURE</span>
+                        <div class="temp-stepper" th:attr="data-min=${cmd.value.get('min')},data-max=${cmd.value.get('max')}">
+                            <button type="button" class="cmd-step-down" aria-label="내리기">&minus;</button>
+                            <span class="temp-value type-bulk-temp-value" th:text="${cmd.value.get('min')}">18</span>
+                            <button type="button" class="cmd-step-up" aria-label="올리기">+</button>
+                        </div>
+                        <button type="button" class="btn-add-widget type-bulk-temp-apply" style="margin-left:auto;">적용</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <div th:if="${cmd.value.get('kind') == 'RANGE'}"
-                             class="temp-stepper" th:attr="data-command=${cmd.value.get('stateKey')},data-min=${cmd.value.get('min')},data-max=${cmd.value.get('max')}">
-                            <button type="button" class="cmd-step-down" aria-label="내리기" th:disabled="${not canManage}">&minus;</button>
-                            <span class="temp-value cmd-range-value" th:text="${actuator.currentState().get(cmd.value.get('stateKey'))}">24</span>
-                            <button type="button" class="cmd-step-up" aria-label="올리기" th:disabled="${not canManage}">+</button>
+        <!-- 개별 액추에이터 카드 목록은 타입별로 묶어서 순서대로 보여줌 — 전부 동시에 노출됨(토글로 하나만
+             보여주지 않음). actuatorsByType은 컨트롤러에서 미리 그룹핑해서 넘긴 Map임.
+             id는 actuator-panel.js가 타입 구분 없이 모든 카드를 한 번에 찾을 때 씀(그리드가
+             타입별로 여러 개로 나뉘어서 .actuator-grid 하나만으로는 다 못 찾음) -->
+        <div id="actuatorCardsSection">
+        <div th:each="type : ${actuatorTypes}" th:if="${presentTypes.contains(type)}" style="margin-bottom: var(--sp-4);">
+            <p class="section-label" th:switch="${type.name()}">
+                <span th:case="'AIRCON'">에어컨</span>
+                <span th:case="'AIR_PURIFIER'">공기청정기</span>
+                <span th:case="'VENTILATION_FAN'">환풍기</span>
+            </p>
+            <div class="actuator-grid">
+                <div class="actuator-card" th:each="actuator : ${actuatorsByType.get(type.name())}"
+                     th:attr="data-actuator-id=${actuator.actuatorId()},data-actuator-type=${actuator.actuatorType().name()}">
+                    <div class="actuator-card-header">
+                        <input type="checkbox" class="actuator-select" th:if="${canManage}"
+                               style="margin-right: var(--sp-2); width:18px; height:18px; cursor:pointer;">
+                        <span class="actuator-icon">
+                            <i th:switch="${actuator.actuatorType().name()}">
+                                <i th:case="'AIRCON'" class="ti ti-snowflake"></i>
+                                <i th:case="'AIR_PURIFIER'" class="ti ti-wind"></i>
+                                <i th:case="'VENTILATION_FAN'" class="ti ti-fan"></i>
+                            </i>
+                        </span>
+                        <div style="flex:1;">
+                            <div class="actuator-name" th:text="${actuator.sensorName()}">천장형 에어컨</div>
+                            <!-- core JVM 기본 타임존이 UTC라 stateUpdatedAt이 UTC로 찍힘 — KST(+9)로 변환해서 표시 -->
+                            <div class="actuator-meta" th:text="${actuator.stateUpdatedAt()
+                            != null ? #temporals.format(actuator.stateUpdatedAt().
+                            withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'MM-dd HH:mm')
+                            + ' 갱신' : '갱신 기록 없음'}">방금 전</div>
+                        </div>
+                        <!-- 실행 이력/수정/삭제 모두 MANAGER 이상만 — 서버(ActuatorController)도 각 엔드포인트에서 다시 막음 -->
+                        <div class="dropdown" th:if="${canManage}">
+                            <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <!-- 클릭 시 #actuatorLogsModal을 열고 actuator-panel.js가 액추에이터 실행 로그를 채움 -->
+                                <li><a class="dropdown-item btn-view-logs" href="#">실행 이력</a></li>
+                                <!-- 클릭 시 #editActuatorModal을 열고 현재 이름을 채워서 수정 -->
+                                <li><a class="dropdown-item btn-edit-actuator" href="#">수정</a></li>
+                                <li><a class="dropdown-item btn-delete-actuator" href="#">삭제</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- cmd.key(POWER_STATUS 등 enum 이름)는 화면 라벨용으로만 쓰고,
+                         실제로 core에 보내고 currentState에서 읽는 키는 cmd.value.get('stateKey')("power" 등)
+                         예전엔 cmd.key를 그대로 보내서 core가 "알 수 없는 명령키"로 거부함(500 에러) -->
+                    <div th:each="cmd : ${commandRules.get(actuator.actuatorType().name())}">
+                        <div class="actuator-command-row">
+                            <span class="actuator-command-label" th:text="${cmd.key}">POWER_STATUS</span>
+
+                            <!-- MEMBER는 값만 보고 조작은 못 함 — disabled라 클릭/change 이벤트 자체가 안 붙고,
+                                 서버(ActuatorController.updateState)도 다시 막음 -->
+                            <label th:if="${cmd.key == 'POWER_STATUS'}" class="toggle-switch">
+                                <input type="checkbox" class="cmd-toggle"
+                                       th:attr="data-command=${cmd.value.get('stateKey')}"
+                                       th:checked="${actuator.currentState().get(cmd.value.get('stateKey'))} == 'ON'"
+                                       th:disabled="${not canManage}">
+                                <span class="toggle-track"></span>
+                            </label>
+
+                            <div th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}"
+                                 class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}">
+                                <button type="button" class="chip-option cmd-chip" th:each="v : ${cmd.value.get('values')}"
+                                        th:text="${v}" th:attr="data-value=${v}" th:disabled="${not canManage}"
+                                        th:classappend="${actuator.currentState().get(cmd.value.get('stateKey'))} == ${v} ? ' active' : ''"></button>
+                            </div>
+
+                            <div th:if="${cmd.value.get('kind') == 'RANGE'}"
+                                 class="temp-stepper" th:attr="data-command=${cmd.value.get('stateKey')},data-min=${cmd.value.get('min')},data-max=${cmd.value.get('max')}">
+                                <button type="button" class="cmd-step-down" aria-label="내리기" th:disabled="${not canManage}">&minus;</button>
+                                <span class="temp-value cmd-range-value" th:text="${actuator.currentState().get(cmd.value.get('stateKey'))}">24</span>
+                                <button type="button" class="cmd-step-up" aria-label="올리기" th:disabled="${not canManage}">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </main>
 </div>
