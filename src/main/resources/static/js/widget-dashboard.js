@@ -17,43 +17,8 @@
 
     const GROUP_ID = DASHBOARD_INIT.groupId;
     const LOCATION_ID = DASHBOARD_INIT.locationId;
+    const CAN_MANAGE = DASHBOARD_INIT.canManage === true;
     const BASE_URL = `/my-group/location/${LOCATION_ID}/dashboard`;
-
-    let isReadOnlyMode = false;
-    function enableReadOnlyMode() {
-        if (isReadOnlyMode) return;
-        isReadOnlyMode = true;
-
-        const toolbar = document.getElementById('widgetToolbar');
-        if (toolbar) toolbar.style.display = 'none';
-
-        const hint = document.getElementById('widgetAddHint');
-        if (hint) hint.style.display = 'none';
-
-        if (grid) {
-            grid.enableMove(false);
-            grid.enableResize(false);
-        }
-
-        document.querySelectorAll('.grid-widget-controls').forEach((el) => { el.style.display = 'none'; });
-        document.querySelectorAll('.grid-widget-header').forEach((el) => { el.style.cursor = 'default'; });
-        document.querySelectorAll('.grid-widget-header .ti-drag-drop').forEach((el) => { el.style.display = 'none'; });
-
-        if (saveStatusEl) saveStatusEl.style.display = 'none';
-    }
-
-    // 센서/위젯 수정 권한 여부 자동 체크 (403/500 에러 발생 시 읽기 전용으로 자동 전환)
-    fetch(`/my-group/location/${LOCATION_ID}/dashboard/save`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([])
-    }).then((res) => {
-        if (res.status === 403 || res.status === 500) {
-            enableReadOnlyMode();
-        }
-    }).catch(() => {
-        enableReadOnlyMode();
-    });
 
     // sensorEui -> display name & sensorId mapping
     const sensorNameByEui = {};
@@ -184,8 +149,8 @@
         float: true,
         handle: '.grid-widget-header',
         resizable: {handles: 'e, se, s, sw, w'},
-        disableDrag: !IS_MANAGER,
-        disableResize: !IS_MANAGER
+        disableDrag: !CAN_MANAGE,
+        disableResize: !CAN_MANAGE
     }, gridEl);
 
     function itemEl(uid) {
@@ -222,9 +187,9 @@
 
         const {sensorName, fields} = widgetTitle(w);
 
-        const cursorStyle = IS_MANAGER ? 'cursor: move;' : '';
-        const dragIcon = IS_MANAGER ? '<i class="ti ti-drag-drop text-muted fs-3" title="드래그하여 위젯 이동"></i>' : '';
-        const controlsHtml = IS_MANAGER ? `
+        const cursorStyle = CAN_MANAGE ? 'cursor: move;' : '';
+        const dragIcon = CAN_MANAGE ? '<i class="ti ti-drag-drop text-muted fs-3" title="드래그하여 위젯 이동"></i>' : '';
+        const controlsHtml = CAN_MANAGE ? `
             <div class="grid-widget-controls d-flex align-items-center gap-1">
                 <button type="button" class="settings btn btn-icon btn-ghost-secondary btn-sm" title="위젯 설정" aria-label="위젯 설정"><i class="ti ti-settings"></i></button>
                 <button type="button" class="remove btn btn-icon btn-ghost-danger btn-sm" title="위젯 삭제" aria-label="위젯 삭제"><i class="ti ti-trash"></i></button>
@@ -234,7 +199,7 @@
         item.innerHTML = `
             <div class="card grid-widget h-100 border shadow-sm rounded-3">
                 <div class="card-header grid-widget-header px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="${cursorStyle}">
-                    <div class="grid-widget-label d-flex align-items-center gap-2 text-truncate" style="max-width: ${IS_MANAGER ? 'calc(100% - 95px)' : '100%'};">
+                    <div class="grid-widget-label d-flex align-items-center gap-2 text-truncate" style="max-width: ${CAN_MANAGE ? 'calc(100% - 95px)' : '100%'};">
                         ${dragIcon}
                         <span class="fw-bold text-truncate" title="${sensorName} · ${fields}">${sensorName} · ${fields}</span>
                     </div>
@@ -246,7 +211,7 @@
         `;
 
         const content = item.querySelector('.grid-widget');
-        if (IS_MANAGER) {
+        if (CAN_MANAGE) {
             const settingsBtn = content.querySelector('.settings');
             if (settingsBtn) settingsBtn.addEventListener('click', () => openConfigModal(w));
             const removeBtn = content.querySelector('.remove');
@@ -871,8 +836,9 @@
                 console.log('[Dashboard Save] 저장 완료, widgetIds:', savedWidgetIds);
             })
             .catch((err) => {
-                console.warn('[Dashboard Save] 권한 미달 또는 저장 실패 - 읽기 전용으로 전환:', err);
-                enableReadOnlyMode();
+                console.error('[Dashboard Save] 저장 실패 원인:', err);
+                saveStatusEl.textContent = '저장에 실패했어요. 잠시 후 다시 시도해주세요.';
+                btnSaveLayout.disabled = false;
             });
         });
     }

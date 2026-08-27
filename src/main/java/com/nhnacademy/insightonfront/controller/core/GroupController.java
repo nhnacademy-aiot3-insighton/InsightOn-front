@@ -9,12 +9,14 @@ import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupRequest;
 import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupResponse;
 import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
 import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationListResponse;
+import com.nhnacademy.insightonfront.adapter.core.region.RegionClient;
 import com.nhnacademy.insightonfront.adapter.core.sensor.SensorClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.WeatherClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.dto.WeatherDataDto;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +42,7 @@ public class GroupController {
     private final EngineAlertClient engineAlertClient;
     private final WeatherClient weatherClient;
     private final GatewayClient gatewayClient;
+    private final RegionClient regionClient;
 
     @PostMapping("/create")
     public String createGroup(@RequestBody GroupRequest request) {
@@ -75,14 +78,33 @@ public class GroupController {
         return "group/detail";
     }
 
-    /** 그룹 관리 &gt; 그룹 정보 탭 — 실제 그룹 데이터로 이름/소재지/설명/초대 코드를 보여준다. */
+    /**
+     * 그룹 관리 &gt; 그룹 정보 탭 — 실제 그룹 데이터로 이름/소재지/설명/초대 코드를 보여준다.
+     * 소재지의 시/군/구 목록을 여기서 미리 채워서 내려줘야, 화면 진입 시 JS가 비동기로 다시 불러올
+     * 때까지 "먼저 시/도를 선택하세요"가 잠깐 보이는 깜빡임 없이 바로 현재 값이 선택된 채로 뜬다.
+     */
     @GetMapping("/manage")
     public String manageInfo(@CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
 
-        model.addAttribute("myGroup", groupClient.getMyGroup(groupId));
+        GroupResponse myGroup = groupClient.getMyGroup(groupId);
+        model.addAttribute("myGroup", myGroup);
+        model.addAttribute("states", regionClient.getStates());
+        model.addAttribute("cities", safeCitiesForCurrentRegion(myGroup.groupRegion()));
         model.addAttribute("section", "info");
         return "group/manage";
+    }
+
+    private List<String> safeCitiesForCurrentRegion(String groupRegion) {
+        if (groupRegion == null || !groupRegion.contains(" ")) {
+            return Collections.emptyList();
+        }
+        try {
+            return regionClient.getCities(groupRegion.split(" ", 2)[0]);
+        } catch (Exception e) {
+            log.warn("소재지 시/군/구 목록 조회 실패 - groupRegion:{}", groupRegion, e);
+            return Collections.emptyList();
+        }
     }
 
     /** 초대 토큰으로 기존 그룹에 참가한다 — 그룹 생성 신청과 별개로, 이미 있는 그룹에 들어가는 경로. */
@@ -128,12 +150,13 @@ public class GroupController {
     }
 
     @PutMapping("/update")
-    public String updateGroup(@CookieValue("groupId") Long groupId,
-                              @RequestBody GroupRequest request) {
+    @ResponseBody
+    public ResponseEntity<Void> updateGroup(@CookieValue("groupId") Long groupId,
+                                            @RequestBody GroupRequest request) {
 
         groupClient.updateGroup(groupId, request);
 
-        return "redirect:/groups/" + groupId + "/my-group";
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/delete")
