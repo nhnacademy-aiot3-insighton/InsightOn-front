@@ -34,7 +34,7 @@
             <section class="widget-section" id="widgetSection">
                 <div class="section-header">
                     <p class="section-label mb-0">위젯 (InfluxDB 센서 데이터)</p>
-                    <div class="widget-toolbar" id="widgetToolbar">
+                    <div class="widget-toolbar" th:if="${canManage}">
                         <button class="btn-add-widget" id="btnAddWidget" type="button">
                             <i class="ti ti-plus"></i>위젯 추가
                         </button>
@@ -48,7 +48,7 @@
 
                 <div class="grid-stack" id="widgetGrid"></div>
                 <p class="grid-widget-empty py-5" id="widgetEmptyState" style="display:none;">
-                    등록된 위젯이 없어요. <strong id="widgetAddHint">위젯 추가</strong>를 눌러 만들어보세요.
+                    등록된 위젯이 없어요. <strong th:if="${canManage}">위젯 추가</strong>를 눌러 만들어보세요.
                 </p>
             </section>
         </div>
@@ -174,7 +174,8 @@
     const DASHBOARD_INIT = {
         groupId: /*[[${groupId}]]*/ 1,
         locationId: /*[[${locationId}]]*/ 1,
-        widgets: /*[[${dashboard?.widgetsList}]]*/ []
+        widgets: /*[[${dashboard?.widgetsList}]]*/ [],
+        canManage: /*[[${canManage != null ? canManage : false}]]*/ false
     };
 </script>
 

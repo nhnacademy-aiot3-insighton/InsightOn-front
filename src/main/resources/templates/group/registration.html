@@ -23,7 +23,7 @@
 
     <!-- 아직 그룹 신청 이력이 없거나, 이전 신청이 반려/취소돼서 다시 신청할 수 있는 상태 -->
     <div class="auth-card auth-card-wide" th:if="${state == 'FORM'}"
-         th:with="prevRegion=${previous != null ? #strings.arraySplit(previous.groupRegion(), ',') : null}">
+         th:with="prevRegion=${previous != null ? #strings.arraySplit(previous.groupRegion(), ' ') : null}">
         <h1>그룹 신청</h1>
         <p class="auth-subtitle">아직 속한 그룹이 없어요. 그룹을 신청하면 관리자 승인 후 대시보드를 쓸 수 있어요.</p>
 
@@ -97,7 +97,7 @@
             </div>
             <div class="registration-detail-row">
                 <dt>소재지</dt>
-                <dd th:text="${#strings.replace(registration.groupRegion(), ',', ' ')}"></dd>
+                <dd th:text="${registration.groupRegion()}"></dd>
             </div>
             <div class="registration-detail-row">
                 <dt>신청일</dt>
