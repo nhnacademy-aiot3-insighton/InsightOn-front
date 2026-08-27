@@ -5,10 +5,14 @@ import java.time.OffsetDateTime;
 
 public record ReportDetailViewModel(
         Long reportId,
+        Long locationId,
         String locationName,
         String title,
         ReportType reportType,
         String content,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        OffsetDateTime periodStart,
+        OffsetDateTime periodEnd,
+        ReportTelemetryHighlightViewModel highlight
 ) {
 }

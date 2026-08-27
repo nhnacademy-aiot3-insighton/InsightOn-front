@@ -4,6 +4,7 @@ import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import com.nhnacademy.insightonfront.adapter.ai.telemetrystats.dto.HourlyTelemetryStatResponse;
 import java.time.OffsetDateTime;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -16,8 +17,10 @@ public interface HourlyTelemetryStatClient {
     @GetMapping("/api/v1/hourly-telemetry-stats")
     PageResponse<HourlyTelemetryStatResponse> getHourlyTelemetryStats(@RequestParam("groupId") Long groupId,
                                                                        @RequestParam("locationId") Long locationId,
-                                                                       @RequestParam(value = "from", required = false) OffsetDateTime from,
-                                                                       @RequestParam(value = "to", required = false) OffsetDateTime to,
+                                                                       @RequestParam(value = "from", required = false)
+                                                                       @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
+                                                                       @RequestParam(value = "to", required = false)
+                                                                       @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime to,
                                                                        @RequestParam("page") int page,
                                                                        @RequestParam("size") int size);
 }
