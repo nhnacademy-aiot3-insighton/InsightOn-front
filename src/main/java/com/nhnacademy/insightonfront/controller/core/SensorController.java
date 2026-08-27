@@ -23,9 +23,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.CookieValue;
 
 /**
- * 게이트웨이로 자동 등록된 센서를 조회·이름변경·위치재배치·삭제함. 센서는 물리 장치가 통신을
- * 시작하면 core가 알아서 만들기 때문에(FR 상 발견/등록 API 없음) "센서 추가" 같은 생성 액션은 없음.
- * groupId는 쿠키에서 읽음(한 유저 = 한 그룹). userId는 게이트웨이가 Authorization에서 뽑아 씀.
+ * 게이트웨이로 자동 등록된 센서를 조회·이름변경·위치재배치·삭제한다. 센서는 물리 장치가 통신을
+ * 시작하면 core가 알아서 만들기 때문에(FR 상 발견/등록 API 없음) "센서 추가" 같은 생성 액션은 없다.
+ * groupId는 쿠키에서 읽는다(한 유저 = 한 그룹). userId는 게이트웨이가 Authorization에서 뽑아 쓴다.
  */
 @Controller
 @RequiredArgsConstructor
@@ -62,7 +62,7 @@ public class SensorController {
         model.addAttribute("locations", locations);
         model.addAttribute("selectedLocationId", locationId);
         model.addAttribute("searchQuery", sensorName);
-        // MEMBER는 이름/위치 수정·삭제를 못 보게 화면에서 숨김 — 서버에서도 update/delete에서 다시 막음
+        // MEMBER는 이름/위치 수정·삭제를 못 보게 화면에서 숨긴다 — 서버에서도 update/delete에서 다시 막음
         model.addAttribute("canManage", groupPermissionService.isManagerOrAbove(groupId, userId));
         return "sensor/list";
     }

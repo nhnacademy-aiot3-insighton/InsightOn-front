@@ -33,11 +33,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.CookieValue;
 
 /**
- * 위치 안의 액추에이터(에어컨/공기청정기/환풍기)를 조작함. 타입별로 켤 수 있는 명령·값이
- * {@link ActuatorCommandPreset}에 고정되어 있어, 화면은 그 규칙대로 토글/선택/범위 위젯만 그림 —
- * 사용자가 임의의 명령 문자열을 입력하는 자유 입력은 없음.
- * <p>groupId는 쿠키에서 읽음(한 유저 = 한 그룹). locationId는 한 그룹 안에서도 여러 위치를
- * 오갈 수 있어 계속 경로 변수로 둠.
+ * 위치 안의 액추에이터(에어컨/공기청정기/환풍기)를 조작한다. 타입별로 켤 수 있는 명령·값이
+ * {@link ActuatorCommandPreset}에 고정되어 있어, 화면은 그 규칙대로 토글/선택/범위 위젯만 그린다 —
+ * 사용자가 임의의 명령 문자열을 입력하는 자유 입력은 없다.
+ * <p>groupId는 쿠키에서 읽는다(한 유저 = 한 그룹). locationId는 한 그룹 안에서도 여러 위치를
+ * 오갈 수 있어 계속 경로 변수로 둔다.
  */
 @Controller
 @RequiredArgsConstructor
@@ -56,7 +56,7 @@ public class ActuatorController {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        // actuatorId(생성 순서 = auto-increment PK) 기준으로 프론트에서 고정 정렬함
+        // actuatorId(생성 순서 = auto-increment PK) 기준으로 프론트에서 고정 정렬한다
         List<ActuatorResponse> actuators = actuatorClient.getActuatorsByLocationId(groupId, locationId).stream()
                 .sorted(Comparator.comparing(ActuatorResponse::actuatorId))
                 .toList();
@@ -85,7 +85,7 @@ public class ActuatorController {
         model.addAttribute("commandRules", commandRules);
         model.addAttribute("actuatorTypes", ActuatorType.values());
         model.addAttribute("presentTypes", presentTypes);
-        // MEMBER는 조작/추가/수정/삭제/실행이력을 못 보게 화면에서 숨김 — 서버에서도 각 엔드포인트에서 다시 막음
+        // MEMBER는 조작/추가/수정/삭제/실행이력을 못 보게 화면에서 숨긴다 — 서버에서도 각 엔드포인트에서 다시 막음
         model.addAttribute("canManage", groupPermissionService.isManagerOrAbove(groupId, userId));
         return "actuator/panel";
     }
@@ -162,6 +162,6 @@ public class ActuatorController {
         actuatorClient.deleteActuatorById(groupId, actuatorId);
     }
 
-    // 액추에이터 추가 폼 — locationId는 URL에서 이미 정해지므로 이름·타입만 받음
+    /** 액추에이터 추가 폼 — locationId는 URL에서 이미 정해지므로 이름·타입만 받는다. */
     public record ActuatorCreateForm(String name, ActuatorType actuatorType) {}
 }

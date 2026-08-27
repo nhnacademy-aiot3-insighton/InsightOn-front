@@ -125,7 +125,7 @@
                             withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'MM-dd HH:mm')
                             + ' 갱신' : '갱신 기록 없음'}">방금 전</div>
                         </div>
-                        <!-- 실행 이력/수정/삭제 모두 MANAGER 이상만 — 서버(ActuatorController)도 각 엔드포인트에서 다시 막음 -->
+                        <!-- 실행 이력/수정/삭제 모두 MANAGER 이상만 — 서버(ActuatorController)도 각 엔드포인트에서 다시 막는다 -->
                         <div class="dropdown" th:if="${canManage}">
                             <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
                             <ul class="dropdown-menu dropdown-menu-end">
@@ -146,7 +146,7 @@
                             <span class="actuator-command-label" th:text="${cmd.key}">POWER_STATUS</span>
 
                             <!-- MEMBER는 값만 보고 조작은 못 함 — disabled라 클릭/change 이벤트 자체가 안 붙고,
-                                 서버(ActuatorController.updateState)도 다시 막음 -->
+                                 서버(ActuatorController.updateState)도 다시 막는다 -->
                             <label th:if="${cmd.key == 'POWER_STATUS'}" class="toggle-switch">
                                 <input type="checkbox" class="cmd-toggle"
                                        th:attr="data-command=${cmd.value.get('stateKey')}"
