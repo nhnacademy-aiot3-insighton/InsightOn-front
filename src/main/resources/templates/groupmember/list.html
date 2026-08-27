@@ -32,7 +32,7 @@
              th:if="${groupMemberList != null and not #lists.isEmpty(groupMemberList)}">
 
             <a th:each="member : ${groupMemberList}"
-               th:href="@{/my-group/members/{id}(id=${member.groupMemberId() != null ? member.groupMemberId() : member.userId()})}"
+               th:href="@{/my-group/members/{id}(id=${member.groupMemberId()})}"
                class="location-summary-row">
 
                 <!-- 아바타 + userId -->
