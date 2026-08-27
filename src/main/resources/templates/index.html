@@ -35,9 +35,6 @@
             <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="btn-landing-primary">
                 <i class="ti ti-building-plus"></i>그룹 생성 신청하기
             </a>
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/join}" class="btn-landing-secondary">
-                <i class="ti ti-ticket"></i>초대 코드로 가입
-            </a>
             <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">
                 <i class="ti ti-layout-dashboard"></i>대시보드로 이동
             </a>
@@ -58,7 +55,6 @@
         <div class="landing-hero-actions">
             <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="btn-landing-primary">무료로 시작하기<i class="ti ti-arrow-right"></i></a>
             <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="btn-landing-primary">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/join}" class="btn-landing-secondary">초대 코드로 가입하기</a>
             <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">대시보드로 이동<i class="ti ti-arrow-right"></i></a>
             <a href="#how-it-works" class="btn-landing-secondary">작동 방식 보기</a>
         </div>
@@ -244,16 +240,6 @@
         <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="btn-landing-primary">무료로 시작하기<i class="ti ti-arrow-right"></i></a>
         <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">대시보드로 이동<i class="ti ti-arrow-right"></i></a>
         <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="btn-landing-primary">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
-
-        <div th:if="${state == 'NO_GROUP'}" class="cta-join-row">
-            <p>이미 있는 그룹에 참가하시나요?</p>
-            <p th:if="${joinError}" th:text="${joinError}" class="form-text" style="color: var(--danger); margin-bottom: var(--sp-2);"></p>
-            <form th:action="@{/my-group/join}" method="post"
-                  class="cta-join-form">
-                <input type="text" name="inviteToken" class="form-control" placeholder="초대 코드 입력" required>
-                <button type="submit" class="btn-landing-secondary">참가하기</button>
-            </form>
-        </div>
     </div>
 </section>
 
