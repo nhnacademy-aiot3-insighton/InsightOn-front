@@ -3,8 +3,6 @@
     if (!card) return;
 
     const BASE_URL = '/manage/gateway';
-    const configListEl = document.getElementById('connectionConfigList');
-    const rowTemplate = document.getElementById('configRowTemplate');
     const saveStatusEl = document.getElementById('saveStatus');
     const btnSave = document.getElementById('btnSaveGateway');
     const btnDelete = document.getElementById('btnDeleteGateway');
@@ -28,34 +26,26 @@
         document.getElementById('gatewayCreatedAt').textContent = new Date(gateway.createdAt).toLocaleDateString('ko-KR');
         document.getElementById('gatewayName').value = gateway.name || '';
         document.getElementById('gatewayProtocol').value = gateway.protocolType || 'MQTT';
-    }
 
-    function addConfigRow(key, value) {
-        const clone = rowTemplate.content.cloneNode(true);
-        const row = clone.querySelector('.condition-row');
-        row.querySelector('.config-key').value = key || '';
-        row.querySelector('.config-value').value = value != null ? value : '';
-        row.querySelector('.btn-remove-condition').addEventListener('click', () => row.remove());
-        configListEl.appendChild(row);
+        const config = gateway.connectionConfig || {};
+        document.getElementById('gatewayBrokerUrl').value = (config.brokerUrls && config.brokerUrls[0]) || '';
+        document.getElementById('gatewayTopic').value = (config.topics && config.topics[0]) || '';
+        document.getElementById('gatewayUsername').value = config.username || '';
+        document.getElementById('gatewayPassword').value = config.password || '';
     }
-
-    const initialConfig = (gateway && gateway.connectionConfig) || {};
-    const configKeys = Object.keys(initialConfig);
-    if (configKeys.length) {
-        configKeys.forEach((key) => addConfigRow(key, initialConfig[key]));
-    } else {
-        addConfigRow('', '');
-    }
-
-    document.getElementById('btnAddConfigRow').addEventListener('click', () => addConfigRow('', ''));
 
     function collectConnectionConfig() {
-        const config = {};
-        configListEl.querySelectorAll('.condition-row').forEach((row) => {
-            const key = row.querySelector('.config-key').value.trim();
-            const value = row.querySelector('.config-value').value.trim();
-            if (key) config[key] = value;
-        });
+        const brokerUrl = document.getElementById('gatewayBrokerUrl').value.trim();
+        const topic = document.getElementById('gatewayTopic').value.trim();
+        const username = document.getElementById('gatewayUsername').value.trim();
+        const password = document.getElementById('gatewayPassword').value.trim();
+
+        const config = {brokerUrls: brokerUrl ? [brokerUrl] : []};
+        // topics를 비우면 키 자체를 안 보내야 Core가 ChirpStack 기본 규격으로 처리한다
+        // (빈 배열을 보내면 "토픽 없음"으로 해석돼 기본값이 안 먹는다)
+        if (topic) config.topics = [topic];
+        if (username) config.username = username;
+        if (password) config.password = password;
         return config;
     }
 
@@ -68,6 +58,10 @@
         const name = document.getElementById('gatewayName').value.trim();
         if (!name) {
             showError('게이트웨이 이름을 입력하세요.');
+            return;
+        }
+        if (!document.getElementById('gatewayBrokerUrl').value.trim()) {
+            showError('브로커 주소를 입력하세요.');
             return;
         }
         saveStatusEl.style.display = 'none';
