@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>관리자 콘솔 — InsightOn</title>
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="landing-page">
+
+<header class="landing-header">
+    <a class="brand" th:href="@{/admin/main}">
+        <i class="ti ti-shield-lock"></i>InsightOn
+    </a>
+    <nav class="landing-nav">
+        <a th:href="@{/admin/users}">회원 조회</a>
+    </nav>
+    <div class="landing-header-actions">
+        <a th:href="@{/mypage}" class="landing-greeting" th:if="${userName != null}"
+           th:text="|${userName}님|"></a>
+        <form th:action="@{/admin/logout}" method="post" style="display:inline;">
+            <button type="submit" class="btn-landing-secondary">로그아웃</button>
+        </form>
+    </div>
+</header>
+
+<section class="landing-section">
+    <div class="landing-section-head">
+        <div class="landing-section-eyebrow">ADMIN CONSOLE</div>
+        <h2>관리자 콘솔</h2>
+        <p>회원 계정을 조회하고 상태를 관리하세요.</p>
+    </div>
+
+    <div class="feature-grid">
+        <a class="feature-card blueprint-frame" th:href="@{/admin/users}" style="text-decoration:none; color:inherit;">
+            <span class="tick-bl"></span><span class="tick-br"></span>
+            <span class="feature-icon"><i class="ti ti-users"></i></span>
+            <div class="feature-num">01</div>
+            <h3>회원 조회</h3>
+            <p>가입한 회원 목록을 검색하고, 상세 정보와 계정 상태를 확인하세요.</p>
+            <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
+        </a>
+    </div>
+</section>
+
+<footer class="landing-footer">
+    © InsightOn — AIOT 빌딩 통합 관제
+</footer>
+
+</body>
+</html>
