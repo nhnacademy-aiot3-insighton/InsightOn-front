@@ -12,6 +12,8 @@ import feign.FeignException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -115,29 +117,43 @@ public class SuggestionLogViewService {
         );
     }
 
-    /** actionPayload JSON({"actuatorType","command","commandValue",...})을 "환풍기 전원 켜기" 같은 문장으로 바꾼다. */
+    /**
+     * actionPayload JSON({"locationId":..,"actions":[{"actuatorType","command","commandValue"}, ...]})을
+     * "환풍기 전원 켜기, 에어컨 전원 끄기" 같은 문장으로 바꾼다. 액션이 여러 개면 쉼표로 이어붙인다.
+     */
     private String buildActionSummary(String actionPayloadJson) {
         if (actionPayloadJson == null || actionPayloadJson.isBlank()) {
             return null;
         }
         try {
-            JsonNode node = objectMapper.readTree(actionPayloadJson);
-            String actuatorType = node.path("actuatorType").asText(null);
-            String command = node.path("command").asText(null);
-            String commandValue = node.path("commandValue").asText(null);
-            if (actuatorType == null || command == null || commandValue == null) {
+            JsonNode actions = objectMapper.readTree(actionPayloadJson).path("actions");
+            if (!actions.isArray() || actions.isEmpty()) {
                 return null;
             }
 
-            String actuatorLabel = ACTUATOR_TYPE_LABELS.getOrDefault(actuatorType, actuatorType);
-            if ("SET_TEMPERATURE".equals(command)) {
-                return actuatorLabel + " 설정 온도 " + commandValue + "°C로 변경";
+            List<String> summaries = new ArrayList<>();
+            for (JsonNode action : actions) {
+                String actuatorType = action.path("actuatorType").asText(null);
+                String command = action.path("command").asText(null);
+                String commandValue = action.path("commandValue").asText(null);
+                if (actuatorType == null || command == null || commandValue == null) {
+                    continue;
+                }
+                summaries.add(buildSingleActionSummary(actuatorType, command, commandValue));
             }
-            String valueLabel = COMMAND_VALUE_LABELS.getOrDefault(commandValue, commandValue);
-            return actuatorLabel + " " + valueLabel;
+            return summaries.isEmpty() ? null : String.join(", ", summaries);
         } catch (Exception e) {
             log.warn("actionPayload 파싱 실패: {}", actionPayloadJson, e);
             return null;
         }
+    }
+
+    private String buildSingleActionSummary(String actuatorType, String command, String commandValue) {
+        String actuatorLabel = ACTUATOR_TYPE_LABELS.getOrDefault(actuatorType, actuatorType);
+        if ("SET_TEMPERATURE".equals(command)) {
+            return actuatorLabel + " 설정 온도 " + commandValue + "°C로 변경";
+        }
+        String valueLabel = COMMAND_VALUE_LABELS.getOrDefault(commandValue, commandValue);
+        return actuatorLabel + " " + valueLabel;
     }
 }
