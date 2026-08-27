@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -21,26 +22,38 @@
             <i class="ti ti-chart-line"></i>
             InsightOn
         </a>
-        <div class="auth-visual-copy">
-            <p>건물 곳곳의 센서가<br>여기 하나로 모여요.</p>
-            <span>온도, 습도, CO2, 게이트웨이 — 실시간으로.</span>
+        <div class="auth-visual-art">
+            <div class="callout c1">온도 <span class="val">23.4°C</span></div>
+            <div class="callout c2">습도 <span class="val">48%</span></div>
+            <div class="callout c3">CO2 <span class="val">612ppm</span></div>
+            <div class="callout c4">플로우 <span class="val">가동 중</span></div>
+
+            <svg width="260" height="260" viewBox="0 0 220 220" fill="none">
+                <polygon points="110,190 190,150 110,110 30,150" fill="none" stroke="rgba(108,75,240,.3)" stroke-width="1" stroke-dasharray="2 3"/>
+                <g stroke="rgba(108,75,240,.65)" stroke-width="1.3" fill="rgba(108,75,240,.06)">
+                    <polygon points="70,150 110,170 150,150 110,130"/>
+                    <polygon points="70,150 70,160 110,180 110,170"/>
+                    <polygon points="150,150 150,160 110,180 110,170"/>
+                    <polygon points="70,112 110,132 150,112 110,92"/>
+                    <polygon points="70,112 70,122 110,142 110,132"/>
+                    <polygon points="150,112 150,122 110,142 110,132"/>
+                </g>
+                <circle cx="110" cy="150" r="3" fill="#3ecf8e"/>
+                <circle cx="110" cy="112" r="3.5" fill="var(--amber, #e08a2f)"/>
+                <circle cx="110" cy="112" r="8" fill="#e08a2f" opacity=".2"/>
+                <text x="8" y="16" font-family="IBM Plex Mono, monospace" font-size="9" fill="rgba(108,75,240,.5)">FIG. 01 — LIVE STRUCTURE</text>
+            </svg>
+
+            <span class="sensor-dot" style="top:20%;left:12%;"></span>
+            <span class="sensor-dot success" style="top:34%;left:78%;"></span>
+            <span class="sensor-dot warning" style="bottom:22%;left:20%;"></span>
+            <span class="sensor-dot" style="bottom:16%;left:70%;"></span>
         </div>
 
-        <svg class="auth-visual-skyline" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
-            <rect x="10" y="120" width="50" height="180" fill="currentColor"/>
-            <rect x="70" y="60" width="60" height="240" fill="currentColor"/>
-            <rect x="140" y="20" width="55" height="280" fill="currentColor"/>
-            <rect x="205" y="90" width="70" height="210" fill="currentColor"/>
-            <rect x="285" y="150" width="45" height="150" fill="currentColor"/>
-            <rect x="340" y="180" width="50" height="120" fill="currentColor"/>
-        </svg>
-
-        <span class="sensor-dot" style="top:56%; left:14%;"></span>
-        <span class="sensor-dot success" style="top:44%; left:32%;"></span>
-        <span class="sensor-dot" style="top:36%; left:49%;"></span>
-        <span class="sensor-dot success" style="top:50%; left:66%;"></span>
-        <span class="sensor-dot warning" style="top:61%; left:81%;"></span>
-        <span class="sensor-dot" style="top:57%; left:93%;"></span>
+        <div class="auth-visual-copy">
+            <p>건물 곳곳의 신호가<br>여기 하나로 모여요.</p>
+            <span>온도, 습도, CO2, 게이트웨이 — 실시간으로.</span>
+        </div>
     </div>
 
     <!-- right: familiar and fast on purpose — nobody wants novelty when entering a password -->
@@ -61,6 +74,28 @@
                 <i class="ti ti-check"></i>
                 <span>가입이 완료됐어요. 로그인해주세요.</span>
             </div>
+
+            <form th:action="@{/login}" method="post">
+                <div class="settings-field">
+                    <label for="email">이메일</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="you@company.com" required autofocus>
+                </div>
+                <div class="settings-field">
+                    <label for="password">비밀번호</label>
+                    <div class="password-field">
+                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+                        <button type="button" class="password-toggle" aria-label="비밀번호 표시"><i class="ti ti-eye"></i></button>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mb-3">
+                    <button type="button" class="btn-link-quiet" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">비밀번호를 잊으셨나요?</button>
+                </div>
+                <button type="submit" class="btn-landing-primary w-100 justify-content-center">
+                    로그인<i class="ti ti-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="auth-divider">또는</div>
 
             <div class="oauth-list">
                 <form th:action="@{/login/google}" method="post">
@@ -83,28 +118,6 @@
                     </button>
                 </form>
             </div>
-
-            <div class="auth-divider">또는</div>
-
-            <form th:action="@{/login}" method="post">
-                <div class="settings-field">
-                    <label for="email">이메일</label>
-                    <input type="email" id="email" name="email" class="form-control" placeholder="you@company.com" required autofocus>
-                </div>
-                <div class="settings-field">
-                    <label for="password">비밀번호</label>
-                    <div class="password-field">
-                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
-                        <button type="button" class="password-toggle" aria-label="비밀번호 표시"><i class="ti ti-eye"></i></button>
-                    </div>
-                </div>
-                <div class="d-flex justify-content-end mb-3">
-                    <button type="button" class="btn-link-quiet" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">비밀번호를 잊으셨나요?</button>
-                </div>
-                <button type="submit" class="btn-landing-primary w-100 justify-content-center">
-                    로그인<i class="ti ti-arrow-right"></i>
-                </button>
-            </form>
 
             <p class="auth-footer-note">
                 계정이 없으신가요? <a th:href="@{/signup}">회원가입</a>
