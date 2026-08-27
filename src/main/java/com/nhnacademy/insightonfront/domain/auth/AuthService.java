@@ -5,6 +5,9 @@ import com.nhnacademy.insightonfront.adapter.auth.auth.dto.LoginResult;
 import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
 import com.nhnacademy.insightonfront.auth.AccessTokenContext;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.FindEmailRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetConfirmRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetRequest;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -97,5 +100,17 @@ public class AuthService {
             }
         }
         return null;
+    }
+
+    public String findEmail(String userName, String phoneNumber) {
+        return authClient.findEmail(new FindEmailRequest(userName, phoneNumber)).getBody();
+    }
+
+    public void requestPasswordReset(String email) {
+        authClient.passwordReset(new PasswordResetRequest(email));
+    }
+
+    public void confirmPasswordReset(String token, String password) {
+        authClient.passwordResetConfirm(new PasswordResetConfirmRequest(token, password));
     }
 }
