@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${location != null} ? ${location.locationName()} + ' 상세 - InsightOn' : '위치 상세 - InsightOn'">위치 상세 - InsightOn</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body>
+
+<header th:replace="~{fragments/layout :: groupHeader}"></header>
+
+<div class="d-flex">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="app-main">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div class="d-flex align-items-center gap-2">
+                <a th:href="@{/my-group/location/list}" class="btn btn-outline-secondary btn-sm" title="목록으로">
+                    <i class="ti ti-arrow-left"></i>
+                </a>
+                <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0;" th:text="${location != null} ? ${location.locationName()} : '위치 정보'">위치명</h1>
+            </div>
+
+            <div class="d-flex gap-2" th:if="${location != null}">
+                <a th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}" class="btn-landing-primary" style="font-size: var(--fs-meta); padding: var(--sp-2) var(--sp-3);">
+                    <i class="ti ti-layout-dashboard"></i>대시보드 보기
+                </a>
+            </div>
+        </div>
+
+        <div class="auth-card auth-card-wide" th:if="${location != null}" style="max-width: 680px; margin: 0;">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="location-avatar" th:text="${#strings.substring(location.locationName(), 0, 1)}">L</span>
+                    <div>
+                        <h2 style="font-size: 1.2rem; font-weight: 600; margin: 0;" th:text="${location.locationName()}">위치 정보</h2>
+                        <span class="text-muted" style="font-size: var(--fs-meta);" th:text="'ID: ' + ${location.locationId()}">ID</span>
+                    </div>
+                </div>
+                <div>
+                    <span class="status-badge"
+                          th:classappend="${location.autoControlMode().name() == 'AI_DIRECT'} ? ' success' : ' neutral'"
+                          th:text="${location.autoControlMode().name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
+                </div>
+            </div>
+
+            <dl style="margin: 0; display: grid; grid-template-columns: 140px 1fr; row-gap: var(--sp-3); font-size: 0.95rem;">
+                <dt style="color: var(--ink-faint); font-weight: 500;">위치 ID</dt>
+                <dd th:text="${location.locationId()}" style="margin: 0; font-family: var(--font-mono);"></dd>
+
+                <dt style="color: var(--ink-faint); font-weight: 500;">위치 이름</dt>
+                <dd th:text="${location.locationName()}" style="margin: 0; font-weight: 600;"></dd>
+
+                <dt style="color: var(--ink-faint); font-weight: 500;">자동 제어 모드</dt>
+                <dd style="margin: 0;" class="d-flex align-items-center gap-2">
+                    <span th:text="${location.autoControlMode().name() == 'AI_DIRECT'} ? 'AI 자동 제어 (AI_DIRECT)' : '제안만 받기 (SUGGESTION)'"></span>
+                    <form th:action="@{/my-group/location/{id}/toggle-mode(id=${location.locationId()}, redirect='/my-group/location/' + ${location.locationId()})}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;">모드 전환</button>
+                    </form>
+                </dd>
+
+                <dt style="color: var(--ink-faint); font-weight: 500;">생성일</dt>
+                <dd th:text="${location.createdAt() != null ? #temporals.format(location.createdAt(), 'yyyy-MM-dd HH:mm') : '-'}" style="margin: 0; font-family: var(--font-mono);"></dd>
+            </dl>
+
+            <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                <a th:href="@{/my-group/location/list}" class="btn btn-outline-secondary btn-sm">
+                    <i class="ti ti-list"></i> 위치 목록
+                </a>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteLocationCurrent()">
+                    <i class="ti ti-trash"></i> 위치 삭제
+                </button>
+            </div>
+        </div>
+
+        <p class="grid-widget-empty py-5" th:if="${location == null}">
+            위치 정보를 찾을 수 없습니다.
+        </p>
+    </main>
+</div>
+
+<div th:replace="~{fragments/layout :: chatWidget}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/chat-widget.js}"></script>
+<script th:inline="javascript">
+    function deleteLocationCurrent() {
+        const locationId = /*[[${location != null ? location.locationId() : null}]]*/ null;
+        if (!locationId) return;
+        if (confirm('정말로 이 위치를 삭제하시겠습니까? 관련 대시보드 및 위젯이 삭제될 수 있습니다.')) {
+            fetch('/my-group/location/' + locationId + '/delete', { method: 'DELETE' })
+                .then(res => {
+                    if (res.ok) {
+                        alert('위치가 삭제되었습니다.');
+                        window.location.href = '/my-group/location/list';
+                    } else {
+                        alert('위치 삭제에 실패했습니다.');
+                    }
+                })
+                .catch(() => alert('위치 삭제 중 오류가 발생했습니다.'));
+        }
+    }
+</script>
+</body>
+</html>

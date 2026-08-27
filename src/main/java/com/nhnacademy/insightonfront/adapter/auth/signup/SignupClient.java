@@ -48,17 +48,4 @@ public interface SignupClient {
     @PostMapping("/api/v1/auth/reactivate/email-verify-confirm")
     ResponseEntity<UserLoginResponse> userReactiveConfirm(
             @RequestBody EmailVerifyConfirmRequest emailVerifyConfirmRequest);
-
-    // 이메일 찾기
-    @PostMapping("/api/v1/auth/find-email")
-    ResponseEntity<String> findEmail(@RequestBody FindEmailRequest findEmailRequest);
-
-    // 비밀번호 재설정 요청
-    @PostMapping("/api/v1/auth/password/reset-request")
-    ResponseEntity<Void> passwordReset(@RequestBody PasswordResetRequest passwordResetRequest);
-
-    // 비밀번호 재설정 확인
-    @PostMapping("/api/v1/auth/password/reset-confirm")
-    ResponseEntity<Void> passwordResetConfirm(
-            @RequestBody PasswordResetConfirmRequest passwordResetConfirmRequest);
 }

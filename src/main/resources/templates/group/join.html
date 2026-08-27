@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>초대 코드로 그룹 가입 - InsightOn</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<header class="landing-header">
+    <a class="brand" th:href="@{/}">
+        <i class="ti ti-chart-line"></i>
+        InsightOn
+    </a>
+</header>
+
+<main class="auth-main">
+
+    <div class="auth-card auth-card-wide">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h1 style="margin: 0; font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                <i class="ti ti-ticket" style="color: var(--brand-primary);"></i>초대 코드로 그룹 가입
+            </h1>
+            <span class="badge bg-primary-subtle text-primary fw-medium" style="font-size: 0.8rem;">즉시 가입</span>
+        </div>
+        <p class="auth-subtitle mb-4">전달받은 12자리 초대 코드를 입력하면 관리자 승인 대기 없이 바로 그룹에 참가할 수 있어요.</p>
+
+        <div class="auth-error mb-3" th:if="${joinError}">
+            <i class="ti ti-x"></i>
+            <span th:text="${joinError}"></span>
+        </div>
+
+        <form id="joinForm" method="post" th:action="@{/my-group/join}">
+            <div class="settings-field mb-3">
+                <label for="joinInviteToken">초대 코드</label>
+                <div class="input-group">
+                    <input class="form-control" id="joinInviteToken" name="inviteToken" placeholder="12자리 초대 코드 입력" required type="text">
+                    <button class="btn btn-outline-secondary d-flex align-items-center gap-1" type="button" onclick="previewGroup('joinInviteToken', 'previewResult')">
+                        <i class="ti ti-eye"></i> 그룹 미리보기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 그룹 미리보기 결과 창 -->
+            <div id="previewResult" class="mb-4" style="display: none;"></div>
+
+            <div class="settings-actions" style="justify-content: stretch;">
+                <button class="btn-landing-primary w-100 justify-content-center" type="submit">
+                    가입하기<i class="ti ti-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-4 pt-3 border-top">
+            <span style="color: var(--ink-faint); font-size: var(--fs-meta);">초대 코드가 없으신가요? </span>
+            <a th:href="@{/group-registration}" style="font-size: var(--fs-meta); font-weight: 600;">새 그룹 신청하기</a>
+        </div>
+    </div>
+
+</main>
+
+<script th:src="@{/js/group-registration.js}"></script>
+</body>
+</html>
