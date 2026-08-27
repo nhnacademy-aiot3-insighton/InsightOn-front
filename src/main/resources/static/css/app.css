@@ -969,6 +969,10 @@ button:focus-visible,
   max-width: 560px;
 }
 
+.settings-card-wide {
+  max-width: 800px;
+}
+
 .settings-field {
   margin-bottom: var(--sp-4);
 }
