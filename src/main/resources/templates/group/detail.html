@@ -109,7 +109,7 @@
                     <div class="widget-icon"><i class="ti ti-building"></i></div>
                     <div class="widget-label">그룹</div>
                     <div class="widget-value" th:text="${myGroup.name()}">그룹명</div>
-                    <div class="widget-sub" th:text="${#strings.replace(myGroup.groupRegion(), ',', ' ')}">소재지</div>
+                    <div class="widget-sub" th:text="${myGroup.groupRegion()}">소재지</div>
                 </div>
             </div>
             <div class="col">
