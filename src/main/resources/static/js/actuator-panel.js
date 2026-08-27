@@ -1,5 +1,6 @@
 (function () {
-    const grid = document.querySelector('.actuator-grid');
+    // 카드 목록이 타입별로 여러 .actuator-grid로 나뉘어 있어서, 그걸 다 감싸는 wrapper를 기준으로 찾음
+    const grid = document.getElementById('actuatorCardsSection');
     if (!grid) return;
 
     const BASE_URL = `/locations/${ACTUATOR_INIT.locationId}/actuators`;
@@ -111,6 +112,136 @@
         stepper.querySelector('.cmd-step-down').addEventListener('click', () => step(-1));
         stepper.querySelector('.cmd-step-up').addEventListener('click', () => step(1));
     });
+
+    // ---------- 일괄 전원 on/off  ----------
+    function SetAllPower(cards, power) {
+        cards.forEach((card) => {
+            const toggle = card.querySelector('.cmd-toggle');
+            if (!toggle) return;
+            const actuatorId = actuatorIdOf(toggle);
+            const wasChecked = toggle.checked;
+            toggle.checked = power === 'ON';
+            const state = buildFullState(card);
+            sendState(actuatorId, state).catch(() => {
+                toggle.checked = wasChecked;
+                alert('일부 액추에이터 조작에 실패했어요. 잠시 후 다시 시도해주세요.');
+            });
+        });
+    }
+
+    const allCards = Array.from(grid.querySelectorAll('.actuator-card'));
+    const btnAllPowerOn = document.getElementById('btnAllPowerOn');
+    const btnAllPowerOff = document.getElementById('btnAllPowerOff');
+
+    // 전체 켜기/끄기는 모든 카드뿐 아니라 타입별 일괄 조작 박스의 전원 토글 표시도 같이 맞춤
+    function syncTypeBulkPowerToggles(power) {
+        document.querySelectorAll('.type-bulk-power').forEach((toggle) => {
+            toggle.checked = power === 'ON';
+        });
+    }
+
+    if (btnAllPowerOn) btnAllPowerOn.addEventListener('click', () => {
+        SetAllPower(allCards, 'ON');
+        syncTypeBulkPowerToggles('ON');
+    });
+    if (btnAllPowerOff) btnAllPowerOff.addEventListener('click', () => {
+        SetAllPower(allCards, 'OFF');
+        syncTypeBulkPowerToggles('OFF');
+    });
+
+    // ---------- 타입별 일괄 모드/온도 조작 ----------
+    document.querySelectorAll('[data-type-bulk-box]').forEach((box) => {
+        const type = box.dataset.typeBulkBox;
+        const cardsOfType = () => allCards.filter((card) => card.dataset.actuatorType === type);
+
+        const typeBulkPower = box.querySelector('.type-bulk-power');
+        if (typeBulkPower) {
+            typeBulkPower.addEventListener('change', () => {
+                SetAllPower(cardsOfType(), typeBulkPower.checked ? 'ON' : 'OFF');
+            });
+        }
+
+        box.querySelectorAll('.type-bulk-mode').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                // 모드를 고르면 전원도 자동으로 켜짐 — 박스 자체의 전원 토글 표시도 같이 맞춤
+                if (typeBulkPower) typeBulkPower.checked = true;
+                cardsOfType().forEach((card) => {
+                    const chipGroup = card.querySelector('.chip-select');
+                    const toggle = card.querySelector('.cmd-toggle');
+                    if (chipGroup) {
+                        chipGroup.querySelectorAll('.cmd-chip').forEach((c) => c.classList.remove('active'));
+                        const match = Array.from(chipGroup.querySelectorAll('.cmd-chip'))
+                            .find((c) => c.dataset.value === btn.dataset.value);
+                        if (match) match.classList.add('active');
+                    }
+                    if (toggle) toggle.checked = true;
+                    sendState(card.dataset.actuatorId, buildFullState(card))
+                        .catch(() => alert('일부 액추에이터 모드 변경에 실패했어요.'));
+                });
+            });
+        });
+
+        const tempStepper = box.querySelector('.temp-stepper');
+        if (tempStepper) {
+            const valueEl = tempStepper.querySelector('.type-bulk-temp-value');
+            const min = Number(tempStepper.dataset.min);
+            const max = Number(tempStepper.dataset.max);
+
+            tempStepper.querySelector('.cmd-step-down').addEventListener('click', () => {
+                valueEl.textContent = Math.max(min, Number(valueEl.textContent) - 1);
+            });
+            tempStepper.querySelector('.cmd-step-up').addEventListener('click', () => {
+                valueEl.textContent = Math.min(max, Number(valueEl.textContent) + 1);
+            });
+            box.querySelector('.type-bulk-temp-apply').addEventListener('click', () => {
+                const target = Number(valueEl.textContent);
+                // 온도를 적용하면 전원도 자동으로 켜짐 — 박스 자체의 전원 토글 표시도 같이 맞춤
+                if (typeBulkPower) typeBulkPower.checked = true;
+                cardsOfType().forEach((card) => {
+                    const cardStepperValue = card.querySelector('.temp-stepper .cmd-range-value');
+                    const toggle = card.querySelector('.cmd-toggle');
+                    if (!cardStepperValue) return; // 이 타입엔 온도가 없음
+                    cardStepperValue.textContent = target;
+                    if (toggle) toggle.checked = true; // 온도를 조작하면 전원 ON — 모드는 그대로 둠
+                    sendState(card.dataset.actuatorId, buildFullState(card))
+                        .catch(() => alert('일부 액추에이터 온도 변경에 실패했어요.'));
+                });
+            });
+        }
+    });
+
+    const bulkCheckboxes = Array.from(grid.querySelectorAll('.actuator-select'));
+    if (bulkCheckboxes.length > 0) {
+        const bulkCount = document.getElementById('actuatorBulkCount');
+        const btnBulkDelete = document.getElementById('btnBulkDelete');
+
+        function selectedCards() {
+            return bulkCheckboxes.filter((cb) => cb.checked).map((cb) => cb.closest('.actuator-card'));
+        }
+
+        // 바 자체는 항상 떠 있게 두고 버튼만 켜고 끔
+        function refreshBulkBar() {
+            const n = selectedCards().length;
+            bulkCount.textContent = n + '개 선택됨';
+            btnBulkDelete.disabled = n === 0;
+        }
+
+        bulkCheckboxes.forEach((cb) => cb.addEventListener('change', refreshBulkBar));
+
+        btnBulkDelete.addEventListener('click', () => {
+            const cards = selectedCards();
+            if (cards.length === 0) return;
+            if (!confirm(`선택한 액추에이터 ${cards.length}개를 삭제할까요?`)) return;
+            // 일부만 실패해도 성공한 건 이미 지워졌으니, 결과와 상관없이 새로고침해서 실제 상태를 보여줌
+            Promise.allSettled(cards.map((card) =>
+                fetch(`${BASE_URL}/${card.dataset.actuatorId}`, {method: 'DELETE'})
+            )).then((results) => {
+                const failed = results.some((r) => r.status === 'rejected' || !r.value.ok);
+                if (failed) alert('일부 삭제하지 못했어요.');
+                location.reload();
+            });
+        });
+    }
 
     // ---------- 실행 이력 ----------
     const logsModalEl = document.getElementById('actuatorLogsModal');

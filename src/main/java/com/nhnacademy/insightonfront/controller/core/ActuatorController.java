@@ -16,6 +16,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -65,11 +67,24 @@ public class ActuatorController {
             commandRules.put(type.name(), ActuatorCommandPreset.forTemplate(type));
         }
 
+        // 타입별 일괄 조작 박스를 그릴지 판단 — 템플릿에서 SpEL 셀렉션(.?[])으로 하면
+        // th:each 변수를 셀렉션 안에서 못 읽어서(EL1008E) 여기서 미리 계산해 넘김
+        Set<ActuatorType> presentTypes = actuators.stream()
+                .map(ActuatorResponse::actuatorType)
+                .collect(Collectors.toSet());
+
+        // 개별 액추에이터 카드 목록을 타입별로 묶어서 보여주기 위한 그룹핑 — 이유는 위와 동일(SpEL
+        // 셀렉션은 th:each 변수를 못 읽음)
+        Map<String, List<ActuatorResponse>> actuatorsByType = actuators.stream()
+                .collect(Collectors.groupingBy(a -> a.actuatorType().name(), LinkedHashMap::new, Collectors.toList()));
+
         model.addAttribute("actuators", actuators);
+        model.addAttribute("actuatorsByType", actuatorsByType);
         model.addAttribute("location", location);
         model.addAttribute("locationId", locationId);
         model.addAttribute("commandRules", commandRules);
         model.addAttribute("actuatorTypes", ActuatorType.values());
+        model.addAttribute("presentTypes", presentTypes);
         // MEMBER는 조작/추가/수정/삭제/실행이력을 못 보게 화면에서 숨긴다 — 서버에서도 각 엔드포인트에서 다시 막음
         model.addAttribute("canManage", groupPermissionService.isManagerOrAbove(groupId, userId));
         return "actuator/panel";
