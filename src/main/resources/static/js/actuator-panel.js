@@ -20,7 +20,7 @@
     }
 
     // core는 넘어온 상태를 병합하지 않고 통째로 교체하므로, 바뀐 값 하나만 보내면
-    // 나머지(전원/모드/온도)가 사라짐. 매번 카드에 표시된 전체 상태를 모아서 함께 보냄
+    // 나머지(전원/모드/온도)가 사라진다. 매번 카드에 표시된 전체 상태를 모아서 함께 보냄
     function buildFullState(card) {
         const state = {};
         // 전원
@@ -36,7 +36,7 @@
 
         // 온도 에어컨만 있는 위젯
         const stepper = card.querySelector('.temp-stepper');
-        // 액추에이터 생성 시 서버가 항상 온도 기본값을 채워주므로 currentState에 항상 값이 있음
+        // 액추에이터 생성 시 서버가 항상 온도 기본값을 채워주므로 currentState에 항상 값이 있다
         if (stepper) state[stepper.dataset.command] = Number(stepper.querySelector('.cmd-range-value').textContent);
         return state;
     }
@@ -99,7 +99,7 @@
             const wasChecked = toggle ? toggle.checked : null;
 
             valueEl.textContent = next;
-            if (toggle) toggle.checked = true; // 온도를 조작하면 전원 ON — 모드는 그대로 둠
+            if (toggle) toggle.checked = true; // 온도를 조작하면 전원 ON — 모드는 그대로 둔다
 
             const state = buildFullState(card);
             sendState(actuatorId, state).catch(() => {
