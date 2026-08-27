@@ -51,16 +51,4 @@ public class SignupService {
     public UserLoginResponse confirmReactivateEmailVerify(String email, String code) {
         return signupClient.userReactiveConfirm(new EmailVerifyConfirmRequest(email, code)).getBody();
     }
-
-    public String findEmail(String userName, String phoneNumber) {
-        return signupClient.findEmail(new FindEmailRequest(userName, phoneNumber)).getBody();
-    }
-
-    public void requestPasswordReset(String email) {
-        signupClient.passwordReset(new PasswordResetRequest(email));
-    }
-
-    public void confirmPasswordReset(String token, String password) {
-        signupClient.passwordResetConfirm(new PasswordResetConfirmRequest(token, password));
-    }
 }
