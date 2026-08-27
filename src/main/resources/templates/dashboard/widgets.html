@@ -57,19 +57,19 @@
             <p class="section-label">바로가기</p>
             <div class="row g-2">
                 <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/reports(locationId=${locationId})}">
+                    <a class="shortcut-card" th:href="@{/my-group/reports(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-file-text"></i></span>
                         <div class="shortcut-label">리포트</div>
                     </a>
                 </div>
                 <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/engine-alerts(locationId=${locationId})}">
+                    <a class="shortcut-card" th:href="@{/my-group/engine-alerts(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-alert-triangle"></i></span>
                         <div class="shortcut-label">엔진 알람</div>
                     </a>
                 </div>
                 <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/suggestions(locationId=${locationId})}">
+                    <a class="shortcut-card" th:href="@{/my-group/suggestions(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-bulb"></i></span>
                         <div class="shortcut-label">AI 제안</div>
                     </a>
@@ -87,7 +87,7 @@
                     </a>
                 </div>
                 <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/sensors(locationId=${locationId})}">
+                    <a class="shortcut-card" th:href="@{/my-group/sensors(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-cpu"></i></span>
                         <div class="shortcut-label">센서</div>
                     </a>
