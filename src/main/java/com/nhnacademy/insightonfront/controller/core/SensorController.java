@@ -107,6 +107,18 @@ public class SensorController {
         sensorClient.deleteSensor(sensorId);
     }
 
+    // 목록 화면에서 체크박스로 여러 센서를 고른 뒤 위치만 한 번에 바꿈
+    // 화면이 이미 들고 있는 각 센서 이름을 그대로 실어 보내 core의 "이름+위치 통째 교체" update를 재사용함
+    @PutMapping("/selected-location")
+    @ResponseBody
+    public void bulkUpdateLocation(@CookieValue(value = "userId", required = false) Long userId,
+                                    @CookieValue(value = "groupId", required = false) Long groupId,
+                                    @RequestBody SelectedLocationRequest request) {
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "센서 위치를 일괄 변경할");
+        request.sensors().forEach(sensor ->
+                sensorClient.updateSensor(sensor.sensorId(), new SensorUpdateRequest(request.locationId(), sensor.sensorName())));
+    }
+
     @GetMapping("/{sensor-id}/attributes")
     @ResponseBody
     public List<SensorAttributeResponse> attributes(@PathVariable("sensor-id") Long sensorId) {
@@ -118,5 +130,9 @@ public class SensorController {
     public void deleteAttribute(@PathVariable("sensor-id") Long sensorId,
                                  @PathVariable("metric-key") String metricKey) {
         sensorAttributeClient.deleteSensorAttribute(sensorId, metricKey);
+    }
+
+    public record SelectedLocationRequest(List<SensorRef> sensors, Long locationId) {
+        public record SensorRef(Long sensorId, String sensorName) {}
     }
 }

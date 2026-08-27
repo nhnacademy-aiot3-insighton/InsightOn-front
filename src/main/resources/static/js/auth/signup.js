@@ -129,7 +129,7 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
         const email = emailInput.value.trim();
         const password = passwordInput.value;
         const userName = nameInput.value.trim();
-        const phoneNumber = phoneInput.value.trim();
+        const phoneNumber = phoneInput.value.trim().replace(/[^0-9]/g, "");
 
         if (!emailChecked)      { setHint(emailHint, '이메일 중복 확인을 해주세요.', 'error'); return; }
         if (!verificationToken) { setHint(codeStatus, '이메일 인증을 완료해주세요.', 'error'); return; }

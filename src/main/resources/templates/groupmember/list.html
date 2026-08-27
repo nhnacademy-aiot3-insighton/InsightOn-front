@@ -32,16 +32,16 @@
              th:if="${groupMemberList != null and not #lists.isEmpty(groupMemberList)}">
 
             <a th:each="member : ${groupMemberList}"
-               th:href="@{/my-group/members/{id}(id=${member.groupMemberId() != null ? member.groupMemberId() : member.userId()})}"
+               th:href="@{/my-group/members/{id}(id=${member.groupMemberId()})}"
                class="location-summary-row">
 
-                <!-- 아바타 + userId -->
+                <!-- 아바타 + userName -->
                 <div class="location-summary-name">
                     <span class="location-avatar"
-                          th:text="${member.userId() != null ? #strings.substring(member.userId().toString(), 0, 1) : '?'}">
-                        ?
+                          th:text="${member.userName() != null and not #strings.isEmpty(member.userName()) ? #strings.substring(member.userName(), 0, 1) : 'M'}">
+                        M
                     </span>
-                    <span class="num" th:text="'#' + ${member.userId()}">사용자</span>
+                    <span th:text="${member.userName() != null and not #strings.isEmpty(member.userName()) ? member.userName() : '멤버'}">사용자</span>
                 </div>
 
                 <!-- 역할 뱃지 -->

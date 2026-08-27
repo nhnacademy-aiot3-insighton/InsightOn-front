@@ -246,9 +246,13 @@ public class AuthController {
      */
     @PostMapping("/find-email")
     @ResponseBody
-    public Map<String, Object> findId(@RequestBody FindEmailRequest request) {
-        String maskedEmail = signupService.findEmail(request.userName(), request.phoneNumber());
-        return Map.of("maskedEmail", maskedEmail);
+    public ResponseEntity<Map<String, Object>> findId(@RequestBody FindEmailRequest request) {
+        try {
+            String maskedEmail = authService.findEmail(request.userName(), request.phoneNumber());
+            return ResponseEntity.ok(Map.of("maskedEmail", maskedEmail));
+        } catch (FeignException.NotFound e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();   // 404 그대로 전달
+        }
     }
 
     // ================================================================
@@ -258,28 +262,41 @@ public class AuthController {
     /**
      * 비밀번호 재설정 요청
      */
-    @PostMapping("/reset-password/request")
+    @PostMapping("/password/reset-request")
     @ResponseBody
     public ResponseEntity<Void> requestReset(@RequestBody PasswordResetRequest request) {
-        log.info("[ResetPassword] 재설정 요청: email={}", maskEmail(request.email()));
-        signupService.requestPasswordReset(request.email());
+        authService.requestPasswordReset(request.email());
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/reset-password/confirm")
+    @GetMapping("/password/reset")
     public String resetPasswordConfirmForm(@RequestParam(required = false) String token, Model model) {
         model.addAttribute("token", token);
-        return "reset-password-confirm";
+        return "reset-password";
     }
 
     /**
      * 비밀번호 재설정 확인
      */
-    @PostMapping("/reset-password/confirm/submit")
-    @ResponseBody
-    public ResponseEntity<Void> resetPasswordConfirm(@RequestBody PasswordResetConfirmRequest request) {
-        signupService.confirmPasswordReset(request.token(), request.password());
-        return ResponseEntity.ok().build();
+    @PostMapping("/password/reset-confirm")
+    public String resetPasswordConfirm(@RequestParam String password,
+                                       @RequestParam String token,
+                                       Model model) {
+        try {
+            authService.confirmPasswordReset(token, password);
+            model.addAttribute("done", true);      // HTML의 th:if="${done}" 완료화면
+            return "reset-password";
+        } catch (FeignException.BadRequest e) {
+            // auth가 "이전과 동일한 비번" 등 400
+            model.addAttribute("token", token);
+            model.addAttribute("resetError", "새 비밀번호는 이전 비밀번호와 달라야 해요.");
+            return "reset-password";
+        } catch (FeignException e) {
+            // 토큰 만료/무효 등
+            model.addAttribute("token", token);
+            model.addAttribute("resetError", "링크가 만료됐거나 유효하지 않아요. 재설정 링크를 다시 요청해주세요.");
+            return "reset-password";
+        }
     }
 
     // ================================================================
