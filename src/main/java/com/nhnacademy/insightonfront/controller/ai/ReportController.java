@@ -7,16 +7,13 @@ import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import com.nhnacademy.insightonfront.domain.report.dto.ReportDetailViewModel;
 import com.nhnacademy.insightonfront.domain.report.dto.ReportListViewModel;
 import com.nhnacademy.insightonfront.domain.report.service.ReportViewService;
-import java.time.OffsetDateTime;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.OffsetDateTime;
+import java.util.List;
 
 /**
  * AI가 생성한 리포트(주간/월간)를 그룹 안에서 조회한다. groupId는 쿠키에서 읽는다
@@ -46,6 +43,9 @@ public class ReportController {
         PageResponse<ReportListViewModel> reports =
                 reportViewService.getReports(groupId, locationId, reportType, from, to, page, size);
         List<LocationListResponse> locations = locationClient.getLocationList(groupId);
+        if (locations.isEmpty()) {
+            locations = List.of();
+        }
 
         model.addAttribute("reports", reports);
         model.addAttribute("locations", locations);
