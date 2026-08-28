@@ -2,6 +2,13 @@
     const gridEl = document.getElementById('widgetGrid');
     if (!gridEl) return;
 
+    // 차트 색을 현재 테마(app.css 토큰)에서 읽어온다 — theme.js가 <head>에서
+    // <html data-theme>를 이미 세팅하므로 페이지 로드 시점의 라이트/다크가 반영됨.
+    function cssVar(name, fallback) {
+        const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return v || fallback;
+    }
+
     const emptyStateEl = document.getElementById('widgetEmptyState');
     const saveStatusEl = document.getElementById('saveStatus');
     const btnAddWidget = document.getElementById('btnAddWidget');
@@ -43,7 +50,7 @@
             type: 'GRAPH',
             sensorEui: null,
             range: '-1h',
-            aggregateWindow: '1m',
+            aggregateWindow: '15m',
             fields: []
         },
         layoutDirty: false,  // 위치·크기 변경 여부 (드래그, 리사이즈)
@@ -81,28 +88,61 @@
         };
     }
 
-    // SSE 실시간 데이터 갱신
+    function getAggregateWindowMs(aggStr) {
+        if (!aggStr) return 15 * 60 * 1000;
+        const unit = aggStr.slice(-1);
+        const val = parseInt(aggStr.slice(0, -1), 10) || 15;
+        if (unit === 'm') return val * 60 * 1000;
+        if (unit === 'h') return val * 60 * 60 * 1000;
+        if (unit === 's') return val * 1000;
+        return 15 * 60 * 1000;
+    }
+
+    function formatTelemetryTime(ts) {
+        const d = ts ? new Date(ts) : new Date();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${month}-${day} ${hours}:${minutes}`;
+    }
+
+    // SSE 실시간 데이터 갱신 (widgetConfig.aggregateWindow 버킷 주기에 맞춘 실시간 갱신)
     function updateWidgetRealtime(w, telemetryData) {
         const chart = chartInstances[w.uid];
         const metrics = telemetryData.metrics || {};
         const type = w.widgetConfig.type || 'GRAPH';
 
-        const timeStr = new Date(telemetryData.timestamp).toLocaleTimeString([], {
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-        });
+        const incomingMs = telemetryData.timestamp ? new Date(telemetryData.timestamp).getTime() : Date.now();
+        const windowMs = getAggregateWindowMs(w.widgetConfig.aggregateWindow);
+        const bucketMs = Math.floor(incomingMs / windowMs) * windowMs;
+        const bucketTimeStr = formatTelemetryTime(bucketMs);
 
         if ((type === 'GRAPH' || type === 'BAR') && chart) {
-            chart.data.labels.push(timeStr);
+            const labels = chart.data.labels;
+            const lastLabel = labels.length > 0 ? labels[labels.length - 1] : null;
 
-            chart.data.datasets.forEach((ds) => {
-                const val = metrics[ds.label] ?? null;
-                ds.data.push(val);
-            });
+            if (lastLabel === bucketTimeStr) {
+                // 같은 집계 주기(예: 동일한 15분 구간) 내 수신 데이터는 기존 마지막 포인트를 갱신
+                chart.data.datasets.forEach((ds) => {
+                    const val = metrics[ds.label] ?? null;
+                    if (val !== null && ds.data.length > 0) {
+                        ds.data[ds.data.length - 1] = val;
+                    }
+                });
+            } else {
+                // 새로운 집계 주기 구간이 시작되면 신규 라벨 및 데이터 포인트 추가
+                labels.push(bucketTimeStr);
+                chart.data.datasets.forEach((ds) => {
+                    const val = metrics[ds.label] ?? null;
+                    ds.data.push(val);
+                });
+            }
 
             // 데이터 개수가 많아지면 좌우 스크롤 폭 확장
             adjustChartScroll(w, chart.data.labels.length);
 
-            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 동적 갱신 (redis-cli / SSE 실시간 수치 반영)
+            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 동적 갱신
             const allDataPoints = chart.data.datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
             const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
             const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
@@ -166,9 +206,38 @@
         return state.reduce((max, w) => Math.max(max, w.yPos + w.height), 0);
     }
 
+    // 위젯에 쓰인 센서들의 메트릭 정의(표시명/단위)를 페이지 로드 시 미리 모아 캐싱한다.
+    // metric_definitions는 전역 테이블(센서 무관하게 같은 키는 같은 정의)이라 위젯마다 다시 안 물어봐도 됨
+    const metricDefsByKey = {};
+
+    function metricLabel(key) {
+        return (metricDefsByKey[key] && metricDefsByKey[key].displayName) || key;
+    }
+
+    function metricUnit(key) {
+        return (metricDefsByKey[key] && metricDefsByKey[key].unit) || '';
+    }
+
+    function metricLabelWithUnit(key) {
+        const unit = metricUnit(key);
+        return unit ? `${metricLabel(key)} (${unit})` : metricLabel(key);
+    }
+
+    function loadMetricDefs(sensorIds) {
+        const uniqueIds = [...new Set(sensorIds.filter(Boolean))];
+        return Promise.all(uniqueIds.map((id) =>
+            fetch(`/my-group/sensors/${id}/attributes`)
+                .then((r) => r.ok ? r.json() : [])
+                .then((attrs) => attrs.forEach((a) => {
+                    metricDefsByKey[a.metricKey] = {displayName: a.displayName, unit: a.unit};
+                }))
+                .catch(() => {})
+        ));
+    }
+
     function widgetTitle(w) {
         const sensorName = sensorNameByEui[w.widgetConfig.sensorEui] || '미설정 센서';
-        const fields = (w.widgetConfig.fields || []).join(', ') || '메트릭 미선택';
+        const fields = (w.widgetConfig.fields || []).map(metricLabel).join(', ') || '메트릭 미선택';
         return {sensorName, fields};
     }
 
@@ -279,8 +348,10 @@
         if (!el) return;
         const inner = el.querySelector('.chart-inner-canvas');
         const wrapper = el.querySelector('.chart-scroll-wrapper');
-        if (inner && wrapper && labelCount > 0) {
-            const minWidth = Math.max(wrapper.clientWidth, labelCount * 50);
+        if (inner && wrapper) {
+            const wrapperWidth = wrapper.getBoundingClientRect().width || wrapper.clientWidth || 300;
+            const contentWidth = labelCount > 0 ? labelCount * 50 : wrapperWidth;
+            const minWidth = Math.max(wrapperWidth, contentWidth);
             inner.style.width = minWidth + 'px';
 
             const isNearRight = (wrapper.scrollWidth - wrapper.clientWidth - wrapper.scrollLeft) < 80;
@@ -365,7 +436,7 @@
                         max: (maxVal !== undefined && maxVal !== null) ? Math.ceil(maxVal) : 100,
                         ticks: {
                             font: { size: 10, weight: '600' },
-                            color: '#475569',
+                            color: cssVar('--ink-soft', '#475569'),
                             precision: 0,
                             callback: function(val) {
                                 if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
@@ -392,15 +463,15 @@
 
             const legendHtml = fields.map((field, idx) => {
                 const color = getFieldColor(field, idx);
-                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: #334155;">
+                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
-                    <span>${field}</span>
+                    <span>${metricLabelWithUnit(field)}</span>
                 </div>`;
             }).join('');
 
             body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
             body.innerHTML = `
-                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: #ffffff;">
+                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
                     ${legendHtml}
                 </div>
                 <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
@@ -424,7 +495,7 @@
                     datasets: fields.map((field, idx) => {
                         const color = getFieldColor(field, idx);
                         return {
-                            label: field,
+                            label: metricLabelWithUnit(field),
                             data: [],
                             borderColor: color,
                             backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
@@ -447,7 +518,7 @@
                         x: { ticks: { font: { size: 10 } }, grid: { display: false } },
                         y: {
                             ticks: { display: false },
-                            grid: { color: '#e2e8f0' }
+                            grid: { color: cssVar('--line', '#e2e8f0') }
                         }
                     }
                 }
@@ -455,6 +526,7 @@
 
             syncYAxis(w, 0, 100);
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
+            const gaugeUnit = metricUnit((w.widgetConfig.fields || [])[0]);
             body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center position-relative';
             body.innerHTML = `
                 <div style="width: 100%; height: 75%; position: relative;">
@@ -462,6 +534,7 @@
                 </div>
                 <div style="position: absolute; bottom: 15px; text-align: center;">
                     <span class="grid-widget-value fs-2 fw-bold text-primary">0</span>
+                    <span class="grid-widget-unit text-muted">${gaugeUnit}</span>
                 </div>
             `;
             const canvas = body.querySelector('canvas');
@@ -473,7 +546,7 @@
                     labels: ['현재값', '잔여'],
                     datasets: [{
                         data: [0, 100],
-                        backgroundColor: ['#206bc4', '#eef1f6'],
+                        backgroundColor: [cssVar('--primary', '#206bc4'), cssVar('--surface-alt', '#eef1f6')],
                         borderWidth: 0,
                         cutout: '75%'
                     }]
@@ -488,8 +561,9 @@
                 }
             });
         } else {
+            const defaultUnit = metricUnit((w.widgetConfig.fields || [])[0]);
             body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center';
-            body.innerHTML = `<span class="grid-widget-value fs-1 fw-bold">—</span><span class="grid-widget-unit text-muted"></span>`;
+            body.innerHTML = `<span class="grid-widget-value fs-1 fw-bold">—</span><span class="grid-widget-unit text-muted">${defaultUnit}</span>`;
         }
     }
 
@@ -526,15 +600,15 @@
         if (type === 'GRAPH' || type === 'BAR') {
             const legendHtml = datasets.map((ds, i) => {
                 const color = getFieldColor(ds.label, i);
-                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: #334155;">
+                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
-                    <span>${ds.label}</span>
+                    <span>${metricLabelWithUnit(ds.label)}</span>
                 </div>`;
             }).join('');
 
             body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
             body.innerHTML = `
-                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: #ffffff;">
+                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
                     ${legendHtml}
                 </div>
                 <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
@@ -558,7 +632,7 @@
                     datasets: datasets.map((ds, i) => {
                         const color = getFieldColor(ds.label, i);
                         return {
-                            label: ds.label,
+                            label: metricLabelWithUnit(ds.label),
                             data: ds.data,
                             borderColor: color,
                             backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
@@ -580,7 +654,7 @@
                         x: { ticks: { font: { size: 10 } }, grid: { display: false } },
                         y: {
                             ticks: { display: false },
-                            grid: { color: '#e2e8f0' }
+                            grid: { color: cssVar('--line', '#e2e8f0') }
                         }
                     }
                 }
@@ -592,6 +666,7 @@
             const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
             syncYAxis(w, minVal, maxVal);
 
+            w.lastLabelCount = labels.length;
             adjustChartScroll(w, labels.length, true);
             return;
         }
@@ -632,6 +707,7 @@
             w.layoutDirty = true;  // 위치·크기 변경 — 데이터 재조회 불필요
             console.log(`[Widget Layout Changed] 위젯 (${w.uid}) 위치/크기 변경: x=${w.xPos}, y=${w.yPos}, w=${w.width}, h=${w.height}`);
             updateDim(w);
+            adjustChartScroll(w, w.lastLabelCount || 0);
             if (chartInstances[w.uid]) {
                 chartInstances[w.uid].resize();
             }
@@ -641,6 +717,10 @@
     grid.on('resizestop', (event, el) => {
         const uid = el.getAttribute('gs-id');
         console.log(`[Widget Resize Stopped] 위젯 (${uid}) 리사이즈 완료`);
+        const w = state.find((x) => x.uid === String(uid));
+        if (w) {
+            adjustChartScroll(w, w.lastLabelCount || 0);
+        }
         if (uid && chartInstances[uid]) {
             chartInstances[uid].resize();
         }
@@ -656,6 +736,11 @@
                 return r.json();
             })
             .then((attrs) => {
+                // 새로 고른 센서의 정의도 캐시에 넣어둔다 - 위젯 적용 직후 카드/차트가 raw 키로
+                // 잠깐이라도 안 보이고 바로 표시명/단위로 나오게
+                (attrs || []).forEach((a) => {
+                    metricDefsByKey[a.metricKey] = {displayName: a.displayName, unit: a.unit};
+                });
                 if (!attrs || !attrs.length) {
                     metricListEl.innerHTML = `<p class="metric-check-empty">이 센서에 등록된 메트릭이 없습니다.</p>`;
                     return;
@@ -684,7 +769,7 @@
             if (opt.dataset.eui === w.widgetConfig.sensorEui) sensorSelect.value = opt.value;
         });
         rangeSelect.value = w.widgetConfig.range || '-1h';
-        aggSelect.value = w.widgetConfig.aggregateWindow || '1m';
+        aggSelect.value = w.widgetConfig.aggregateWindow || '15m';
 
         if (sensorSelect.value) {
             loadMetrics(sensorSelect.value, w.widgetConfig.fields || []);
@@ -753,7 +838,7 @@
                 yPos: nextFreeRow(),
                 width: 4,
                 height: 4,
-                widgetConfig: {type: 'GRAPH', sensorEui: null, range: '-1h', aggregateWindow: '1m', fields: []}
+                widgetConfig: {type: 'GRAPH', sensorEui: null, range: '-1h', aggregateWindow: '15m', fields: []}
             };
             state.push(w);
             addItemToGrid(w);
@@ -845,6 +930,11 @@
 
     // ---------- init ----------
 
-    state.forEach((w) => addItemToGrid(w));
-    renderAll();
+    // 위젯 카드/차트를 그리기 전에 메트릭 표시명·단위부터 채워둬야, 첫 렌더부터 raw 키(temperature)가
+    // 아니라 "온도 (°C)"로 바로 보인다
+    const widgetSensorIds = state.map((w) => sensorIdByEui[w.widgetConfig.sensorEui]);
+    loadMetricDefs(widgetSensorIds).then(() => {
+        state.forEach((w) => addItemToGrid(w));
+        renderAll();
+    });
 })();

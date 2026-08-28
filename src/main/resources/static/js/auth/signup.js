@@ -25,9 +25,26 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
     const verifyCode    = document.getElementById('verifyCode');
     const btnVerifyCode = document.getElementById('btnVerifyCode');
     const passwordInput = document.getElementById('password');
+    const passwordHint  = document.getElementById('passwordHint');
     const nameInput     = document.getElementById('name');
+    const nameHint      = document.getElementById('nameHint');
     const phoneInput    = document.getElementById('phone');
+    const phoneHint     = document.getElementById('phoneHint');
     const btnSubmit     = document.getElementById('btnSubmitSignup');
+
+    // 제출 실패시 서버 메시지를 해당 필드 밑으로 보내기 위한 매핑 — 못 찾으면 codeStatus로 뭉뚱그림
+    const fieldHintsByKeyword = [
+        { keyword: '비밀번호', hint: passwordHint },
+        { keyword: '이름', hint: nameHint },
+        { keyword: '전화번호', hint: phoneHint }
+    ];
+
+    // 필드별 안내문구를 원래 상태(기본 안내문구, 에러 아님)로 되돌림
+    function resetFieldHint(hint) {
+        if (!hint) return;
+        hint.textContent = hint.dataset.default || '';
+        hint.classList.remove('is-error', 'is-success');
+    }
 
     let emailChecked = false;
     let verificationToken = null;
@@ -36,7 +53,11 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
         if (!el) return;
         el.textContent = text || '';
         el.classList.remove('is-error', 'is-success');
-        if (kind === 'error')   el.classList.add('is-error');
+        if (kind === 'error') {
+            // 같은 오류가 연달아 뜰 때도 흔들림이 다시 재생되도록 강제로 리플로우시킨 뒤 클래스를 붙임
+            void el.offsetWidth;
+            el.classList.add('is-error');
+        }
         if (kind === 'success') el.classList.add('is-success');
     }
 
@@ -129,7 +150,8 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
         const email = emailInput.value.trim();
         const password = passwordInput.value;
         const userName = nameInput.value.trim();
-        const phoneNumber = phoneInput.value.trim().replace(/[^0-9]/g, "");
+        // 구분자(-, 공백, 괄호)만 제거 - 숫자 아닌 글자(문자 등)까지 지워버리면 서버 검증을 우회하게 되므로 그대로 둠
+        const phoneNumber = phoneInput.value.trim().replace(/[-\s()]/g, "");
 
         if (!emailChecked)      { setHint(emailHint, '이메일 중복 확인을 해주세요.', 'error'); return; }
         if (!verificationToken) { setHint(codeStatus, '이메일 인증을 완료해주세요.', 'error'); return; }
@@ -142,18 +164,26 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
             });
             if (res.status === 200 || res.status === 201) {
                 window.location.href = '/login?registered=1';
-            } else if (res.status === 400) {
-                setHint(codeStatus, '입력값을 확인해주세요. 비밀번호는 영문·숫자·특수문자를 포함해 8자 이상이어야 합니다.', 'error');
-                btnSubmit.disabled = false;
             } else {
-                setHint(codeStatus, '회원가입에 실패했습니다.', 'error');
+                const data = await res.json().catch(() => null);
+                showSubmitError((data && data.message) || '회원가입에 실패했습니다.');
                 btnSubmit.disabled = false;
             }
         } catch (e) {
-            setHint(codeStatus, '서버에 연결할 수 없습니다.', 'error');
+            showSubmitError('서버에 연결할 수 없습니다.');
             btnSubmit.disabled = false;
         }
     });
+
+    function showSubmitError(message) {
+        [passwordHint, nameHint, phoneHint].forEach(resetFieldHint);
+        const matched = fieldHintsByKeyword.find(({ keyword }) => message.includes(keyword));
+        if (matched) {
+            setHint(matched.hint, message, 'error');
+        } else {
+            setHint(codeStatus, message, 'error');
+        }
+    }
 
     const toggle = document.querySelector('.password-toggle');
     if (toggle && passwordInput) {

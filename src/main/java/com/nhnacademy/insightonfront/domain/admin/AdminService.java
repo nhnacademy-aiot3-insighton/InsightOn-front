@@ -7,7 +7,6 @@ import com.nhnacademy.insightonfront.domain.admin.dto.RoleChangeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 /**
@@ -35,30 +34,25 @@ public class AdminService {
     /** 회원 계정 차단 */
     public void block(Long userId) {
         adminClient.block(userId);
-        log.info("[Admin] 회원 차단 처리 - userId={}", userId);
     }
 
     /** 회원 계정 휴면 전환 */
     public void sleep(Long userId) {
         adminClient.sleep(userId);
-        log.info("[Admin] 회원 휴면 전환 - userId={}", userId);
     }
 
     /** 회원 계정 활성화 (복구) */
     public void activate(Long userId) {
         adminClient.activate(userId);
-        log.info("[Admin] 회원 활성화 - userId={}", userId);
     }
 
     /** 회원 권한 변경 */
     public void changeRole(Long userId, String role) {
         adminClient.changeRole(userId, new RoleChangeRequest(role));
-        log.info("[Admin] 회원 권한 변경 - userId={}, role={}", userId, role);
     }
 
     /** 강제 로그아웃 */
     public void forceLogout(Long userId) {
         adminClient.forceLogout(userId);
-        log.info("[Admin] 강제 로그아웃 - userId={}", userId);
     }
 }

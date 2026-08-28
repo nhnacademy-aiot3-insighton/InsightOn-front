@@ -41,15 +41,30 @@
         return state;
     }
 
+    // 전원이 꺼져있는 카드/박스는 모드·온도 행을 흐리게 표시 — disabled는 안 걸어서 클릭하면
+    // 여전히 동작하고 전원도 같이 켜지는 기존 단축 동작은 그대로 유지
+    function syncPowerDim(container) {
+        const toggle = container.querySelector('.cmd-toggle, .type-bulk-power');
+        const isOn = toggle ? toggle.checked : true;
+        container.querySelectorAll('.actuator-command-row').forEach((row) => {
+            if (row.querySelector('.cmd-toggle, .type-bulk-power')) return; // 전원 행 자신은 그대로
+            row.classList.toggle('power-off-dim', !isOn);
+        });
+    }
+
     // ---------- 전원 토글 ----------
     grid.querySelectorAll('.cmd-toggle').forEach((toggle) => {
+        const card = toggle.closest('.actuator-card');
+        syncPowerDim(card); // 초기 렌더 상태 반영
+
         toggle.addEventListener('change', () => {
-            const card = toggle.closest('.actuator-card');
             const actuatorId = actuatorIdOf(toggle);
             const state = buildFullState(card); // 카드에 있는 모든값을 다보냄
             state[toggle.dataset.command] = toggle.checked ? 'ON' : 'OFF';
+            syncPowerDim(card);
             sendState(actuatorId, state).catch(() => {
                 toggle.checked = !toggle.checked;
+                syncPowerDim(card);
                 // 전원 토글 실패시
                 alert('전원 조작에 실패했어요. 잠시 후 다시 시도해주세요.');
             });
@@ -69,12 +84,14 @@
                 chipGroup.querySelectorAll('.cmd-chip').forEach((c) => c.classList.remove('active'));
                 chip.classList.add('active');
                 if (toggle) toggle.checked = true; // 모드를 선택하면 전원도 자동으로 켜짐
+                syncPowerDim(card);
 
                 const state = buildFullState(card); // 반영된 모든카드를 다보냄
                 sendState(actuatorId, state).catch(() => {
                     chip.classList.remove('active');
                     if (previousActive) previousActive.classList.add('active');
                     if (toggle) toggle.checked = wasChecked;
+                    syncPowerDim(card);
                     // 모드 조작시 자동 전원 ON 실패시
                     alert('모드 조작에 실패했어요. 잠시 후 다시 시도해주세요.');
                 });
@@ -100,11 +117,13 @@
 
             valueEl.textContent = next;
             if (toggle) toggle.checked = true; // 온도를 조작하면 전원 ON — 모드는 그대로 둔다
+            syncPowerDim(card);
 
             const state = buildFullState(card);
             sendState(actuatorId, state).catch(() => {
                 valueEl.textContent = current;
                 if (toggle) toggle.checked = wasChecked;
+                syncPowerDim(card);
                 alert('온도 조작에 실패했어요. 잠시 후 다시 시도해주세요.');
             });
         }
@@ -121,9 +140,11 @@
             const actuatorId = actuatorIdOf(toggle);
             const wasChecked = toggle.checked;
             toggle.checked = power === 'ON';
+            syncPowerDim(card);
             const state = buildFullState(card);
             sendState(actuatorId, state).catch(() => {
                 toggle.checked = wasChecked;
+                syncPowerDim(card);
                 alert('일부 액추에이터 조작에 실패했어요. 잠시 후 다시 시도해주세요.');
             });
         });
@@ -137,6 +158,7 @@
     function syncTypeBulkPowerToggles(power) {
         document.querySelectorAll('.type-bulk-power').forEach((toggle) => {
             toggle.checked = power === 'ON';
+            syncPowerDim(toggle.closest('.actuator-card'));
         });
     }
 
@@ -155,8 +177,10 @@
         const cardsOfType = () => allCards.filter((card) => card.dataset.actuatorType === type);
 
         const typeBulkPower = box.querySelector('.type-bulk-power');
+        syncPowerDim(box); // 초기 렌더 상태 반영
         if (typeBulkPower) {
             typeBulkPower.addEventListener('change', () => {
+                syncPowerDim(box);
                 SetAllPower(cardsOfType(), typeBulkPower.checked ? 'ON' : 'OFF');
             });
         }
@@ -165,6 +189,7 @@
             btn.addEventListener('click', () => {
                 // 모드를 고르면 전원도 자동으로 켜짐 — 박스 자체의 전원 토글 표시도 같이 맞춤
                 if (typeBulkPower) typeBulkPower.checked = true;
+                syncPowerDim(box);
                 cardsOfType().forEach((card) => {
                     const chipGroup = card.querySelector('.chip-select');
                     const toggle = card.querySelector('.cmd-toggle');
@@ -197,6 +222,7 @@
                 const target = Number(valueEl.textContent);
                 // 온도를 적용하면 전원도 자동으로 켜짐 — 박스 자체의 전원 토글 표시도 같이 맞춤
                 if (typeBulkPower) typeBulkPower.checked = true;
+                syncPowerDim(box);
                 cardsOfType().forEach((card) => {
                     const cardStepperValue = card.querySelector('.temp-stepper .cmd-range-value');
                     const toggle = card.querySelector('.cmd-toggle');
