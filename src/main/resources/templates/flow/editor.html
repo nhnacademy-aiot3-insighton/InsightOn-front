@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script th:src="@{/js/theme.js}"></script>
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body class="flow-page">
@@ -96,13 +97,23 @@
                             <div class="settings-field">
                                 <label>시작 방식</label>
                                 <select class="form-select path-trigger-type" aria-label="시작 방식">
-                                    <option value="SENSOR">센서 값</option>
                                     <option value="LOCATION">위치 전체</option>
+                                    <option value="SCHEDULE">예약 시간</option>
                                 </select>
+                                <button type="button" class="btn-link-quiet path-trigger-advanced-toggle"
+                                        aria-pressed="false">
+                                    고급 설정: 특정 센서로 시작하기
+                                </button>
                             </div>
                             <div class="settings-field path-trigger-sensor-field">
                                 <label>센서</label>
                                 <select class="form-select path-trigger-sensor" aria-label="시작 센서"></select>
+                            </div>
+                            <div class="settings-field path-trigger-schedule-field">
+                                <label>예약 주기 (Cron)</label>
+                                <input type="text" class="form-control path-trigger-cron" aria-label="예약 주기"
+                                       placeholder="예: 0 9 * * * (매일 오전 9시)">
+                                <p class="field-hint">분 시 일 월 요일 순서의 Cron 표현식이에요.</p>
                             </div>
                             <span class="flow-port flow-port-out" aria-hidden="true"></span>
                         </article>

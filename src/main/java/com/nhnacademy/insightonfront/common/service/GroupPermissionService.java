@@ -32,6 +32,22 @@ public class GroupPermissionService {
         }
     }
 
+    public boolean isSuperManager(Long groupId, Long userId) {
+        if (groupId == null || userId == null) {
+            return false;
+        }
+        try {
+            return groupMemberClient.getGroupMemberList(groupId).stream()
+                    .filter(member -> member.userId().equals(userId))
+                    .map(GroupMemberListResponse::groupRole)
+                    .anyMatch(role -> role == GroupRole.SUPER_MANAGER);
+        } catch (FeignException.Forbidden e) {
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public void requireManagerOrAbove(Long groupId, Long userId, String action) {
         if (!isManagerOrAbove(groupId, userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "MANAGER 이상만 " + action + " 수 있습니다.");
