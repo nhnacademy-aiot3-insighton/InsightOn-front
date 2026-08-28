@@ -128,4 +128,28 @@ public class AuthService {
     public void confirmPasswordReset(String token, String password) {
         authClient.passwordResetConfirm(new PasswordResetConfirmRequest(token, password));
     }
+
+    public boolean hasAdminRole(String accessToken) {
+        if (accessToken == null || accessToken.isBlank()) {
+            return false;
+        }
+        try {
+            String payload = accessToken.split("\\.")[1];
+            String json = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
+            JsonNode claims = objectMapper.readTree(json);
+
+            if (!claims.has("roles") || !claims.get("roles").isArray()) {
+                return false;
+            }
+            for (JsonNode role : claims.get("roles")) {
+                if ("ADMIN".equals(role.asString())) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            log.debug("[Auth] accessToken role 파싱 실패 - 관리자 아님으로 처리: {}", e.getMessage());
+            return false;
+        }
+    }
 }
