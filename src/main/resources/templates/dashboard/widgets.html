@@ -21,6 +21,7 @@
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
@@ -81,12 +82,6 @@
                     <a class="shortcut-card" th:href="@{/my-group/suggestions(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-bulb"></i></span>
                         <div class="shortcut-label">AI 제안</div>
-                    </a>
-                </div>
-                <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/my-group/hourly-telemetry-stats(locationId=${locationId})}">
-                        <span class="shortcut-icon"><i class="ti ti-chart-line"></i></span>
-                        <div class="shortcut-label">시간별 통계</div>
                     </a>
                 </div>
                 <div class="col-4 col-md-2">
@@ -162,8 +157,8 @@
                     <div class="col-6 widget-config-field">
                         <label for="widgetAggSelect">집계 주기</label>
                         <select class="form-select" id="widgetAggSelect">
+                            <option value="15m" selected>15분</option>
                             <option value="1m">1분</option>
-                            <option value="15m">15분</option>
                             <option value="1h">1시간</option>
                         </select>
                     </div>
