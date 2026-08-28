@@ -4395,6 +4395,11 @@ button:focus-visible,
   border-top: none;
 }
 
+/* 전원이 꺼져있을 때 모드/온도 행을 흐리게 — 클릭하면 여전히 동작하며 전원도 같이 켜짐(의도된 단축 동작) */
+.actuator-command-row.power-off-dim {
+  opacity: 0.45;
+}
+
 .actuator-command-label {
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
