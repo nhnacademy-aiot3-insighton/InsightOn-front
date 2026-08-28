@@ -31,7 +31,7 @@
                 <span class="status-badge success" style="margin-top:0;" th:if="${suggestion.isAccepted() == true}">수락됨</span>
                 <span class="status-badge danger" style="margin-top:0;" th:if="${suggestion.isAccepted() == false}">거절됨</span>
                 <span class="field-hint" style="margin-top:0;" th:text="${suggestion.locationName()}"></span>
-                <span class="field-hint" style="margin-top:0;" th:text="${#temporals.format(suggestion.createdAt(), 'yyyy-MM-dd HH:mm')}"></span>
+                <span class="field-hint" style="margin-top:0;" th:text="${#temporals.format(suggestion.createdAt().withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'yyyy-MM-dd HH:mm')}"></span>
             </div>
             <h2 style="font-size:1.25rem; font-weight:700; color:var(--ink); margin-bottom: var(--sp-4);" th:text="${suggestion.title()}"></h2>
             <div class="report-content" th:text="${suggestion.suggestionText()}"></div>

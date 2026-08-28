@@ -31,7 +31,7 @@
                 <span class="status-badge warning" style="margin-top:0;" th:if="${alert.severity().name() == 'WARNING'}">경고</span>
                 <span class="status-badge danger" style="margin-top:0;" th:if="${alert.severity().name() == 'CRITICAL'}">위험</span>
                 <span class="field-hint" style="margin-top:0;" th:text="${alert.locationName()}"></span>
-                <span class="field-hint" style="margin-top:0;" th:text="${#temporals.format(alert.createdAt(), 'yyyy-MM-dd HH:mm')}"></span>
+                <span class="field-hint" style="margin-top:0;" th:text="${#temporals.format(alert.createdAt().withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'yyyy-MM-dd HH:mm')}"></span>
             </div>
             <h2 style="font-size:1.25rem; font-weight:700; color:var(--ink); margin-bottom: var(--sp-3);" th:text="${alert.title()}"></h2>
             <div class="report-content" data-markdown style="margin-bottom: var(--sp-4);" th:text="${alert.message()}"></div>

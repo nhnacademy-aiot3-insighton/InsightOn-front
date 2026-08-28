@@ -82,12 +82,19 @@ public class GroupController {
     @GetMapping("/manage")
     public String manageInfo(@CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
-
-        GroupResponse myGroup = groupClient.getMyGroup(groupId);
-        model.addAttribute("myGroup", myGroup);
-        model.addAttribute("states", regionClient.getStates());
-        model.addAttribute("cities", safeCitiesForCurrentRegion(myGroup.groupRegion()));
-        model.addAttribute("section", "info");
+        if (groupId == null) {
+            return "redirect:/group-registration";
+        }
+        try {
+            GroupResponse myGroup = groupClient.getMyGroup(groupId);
+            model.addAttribute("myGroup", myGroup);
+            model.addAttribute("states", regionClient.getStates());
+            model.addAttribute("cities", safeCitiesForCurrentRegion(myGroup.groupRegion()));
+            model.addAttribute("section", "info");
+        } catch (Exception e) {
+            log.warn("그룹 관리 정보 조회 실패 - groupId:{}", groupId, e);
+            return "redirect:/group-registration";
+        }
         return "group/manage";
     }
 
@@ -145,11 +152,9 @@ public class GroupController {
     @ResponseBody
     public ResponseEntity<?> getGroupPreview(@CookieValue(value = "groupId", required = false) Long groupId,
                                               @RequestParam("inviteToken") String inviteToken) {
-        if (groupId == null) {
-            throw new IllegalArgumentException("소속된 그룹이 없습니다.");
-        }
         try {
-            GroupResponse groupPreview = groupClient.getGroupPreview(groupId, inviteToken);
+            Long targetGroupId = groupId != null ? groupId : 0L;
+            GroupResponse groupPreview = groupClient.getGroupPreview(targetGroupId, inviteToken);
             return ResponseEntity.ok(groupPreview);
         } catch (FeignException.NotFound e) {
             return ResponseEntity.status(404).body(Map.of("message", "유효하지 않거나 만료된 초대 코드입니다."));
@@ -160,11 +165,18 @@ public class GroupController {
 
 
     @PostMapping("/invite-token/new")
-    public String newInviteToken(@CookieValue(value = "groupId", required = false) Long groupId) {
-
-        groupClient.newInviteToken(groupId);
-
-        log.info("토큰이 새로 발급되었습니다. Group ID : {}", groupId);
+    public String newInviteToken(@CookieValue(value = "groupId", required = false) Long groupId,
+                                 RedirectAttributes redirectAttributes) {
+        if (groupId == null) {
+            return "redirect:/group-registration";
+        }
+        try {
+            groupClient.newInviteToken(groupId);
+            log.info("토큰이 새로 발급되었습니다. Group ID : {}", groupId);
+        } catch (Exception e) {
+            log.warn("토큰 재발급 실패 - groupId:{}", groupId, e);
+            redirectAttributes.addFlashAttribute("tokenError", "토큰 재발급 권한이 없거나 처리 중 실패했어요.");
+        }
 
         return "redirect:/my-group/manage";
     }

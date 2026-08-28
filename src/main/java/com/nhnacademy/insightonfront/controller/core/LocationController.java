@@ -29,13 +29,14 @@ public class LocationController {
     @PostMapping("/create")
     public String createLocation(@CookieValue(value = "groupId", required = false) Long groupId,
                                  @RequestParam String locationName,
-                                 @RequestParam AutoControlMode autoControlMode,
+                                 @RequestParam(required = false) AutoControlMode autoControlMode,
                                  RedirectAttributes redirectAttributes) {
         if (groupId == null) {
             throw new IllegalArgumentException("소속된 그룹이 없습니다.");
         }
         try {
-            locationClient.createLocation(groupId, new LocationCreateRequest(locationName, autoControlMode));
+            AutoControlMode mode = autoControlMode != null ? autoControlMode : AutoControlMode.SUGGESTION;
+            locationClient.createLocation(groupId, new LocationCreateRequest(locationName, mode));
             locationNameResolver.invalidate(groupId);
             log.info("location이 생성 되었습니다. group ID : {}", groupId);
         } catch (FeignException e) {

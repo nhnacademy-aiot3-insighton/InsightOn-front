@@ -74,7 +74,7 @@ public class SuggestionController {
             return "redirect:/login";
         }
         suggestionLogViewService.accept(suggestionLogId, groupId, userId);
-        return "redirect:/suggestions/" + suggestionLogId;
+        return "redirect:/my-group/suggestions/" + suggestionLogId;
     }
 
     @PostMapping("/{suggestion-log-id}/reject")
@@ -85,6 +85,6 @@ public class SuggestionController {
             return "redirect:/login";
         }
         suggestionLogViewService.reject(suggestionLogId, groupId, userId);
-        return "redirect:/suggestions/" + suggestionLogId;
+        return "redirect:/my-group/suggestions/" + suggestionLogId;
     }
 }

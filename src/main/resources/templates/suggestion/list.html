@@ -41,7 +41,7 @@
                             <span class="status-badge danger" style="margin-top:0;" th:if="${suggestion.isAccepted() == false}">거절됨</span>
                             <span th:text="${suggestion.title()}"></span>
                         </div>
-                        <div class="split-row-meta" th:text="${suggestion.locationName()} + ' · ' + ${#temporals.format(suggestion.createdAt(), 'yyyy-MM-dd HH:mm')}"></div>
+                        <div class="split-row-meta" th:text="${suggestion.locationName()} + ' · ' + ${#temporals.format(suggestion.createdAt().withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'yyyy-MM-dd HH:mm')}"></div>
                     </a>
                 </div>
 
