@@ -70,6 +70,15 @@
         });
     }
 
+    function updateLocationTriggerLabel() {
+        const selectedOption = locationSelect.options[locationSelect.selectedIndex];
+        const locationName = selectedOption ? selectedOption.textContent.trim() : '';
+        const label = locationName ? `${locationName} 전체` : '위치 전체';
+        pathList.querySelectorAll('.path-trigger-type option[value="LOCATION"]').forEach((option) => {
+            option.textContent = label;
+        });
+    }
+
     function refreshConditionList(list) {
         list.querySelectorAll('.condition-and-label, .flow-condition-empty').forEach((element) => element.remove());
         const rows = Array.from(list.querySelectorAll('.condition-row'));
@@ -147,7 +156,7 @@
             select.disabled = true;
         });
 
-        const attributesRequest = triggerType === 'LOCATION'
+        const attributesRequest = (triggerType === 'LOCATION' || triggerType === 'SCHEDULE')
             ? Promise.resolve(locationMetrics)
             : loadSensorAttributes(sensorId);
         return attributesRequest.then((attributes) => {
@@ -264,7 +273,24 @@
     function updateTriggerVisibility(path) {
         const type = path.querySelector('.path-trigger-type').value;
         path.querySelector('.path-trigger-sensor-field').style.display = type === 'SENSOR' ? '' : 'none';
+        path.querySelector('.path-trigger-schedule-field').style.display = type === 'SCHEDULE' ? '' : 'none';
         refreshPathConditionMetrics(path);
+    }
+
+    function setSensorTriggerAdvanced(path, advanced) {
+        const select = path.querySelector('.path-trigger-type');
+        const toggle = path.querySelector('.path-trigger-advanced-toggle');
+        let sensorOption = select.querySelector('option[value="SENSOR"]');
+        if (advanced && !sensorOption) {
+            sensorOption = createOption('SENSOR', '센서 값');
+            select.insertBefore(sensorOption, select.firstChild);
+        }
+        if (!advanced && sensorOption) {
+            if (select.value === 'SENSOR') select.value = 'LOCATION';
+            sensorOption.remove();
+        }
+        toggle.setAttribute('aria-pressed', String(advanced));
+        toggle.textContent = advanced ? '고급 설정 끄기' : '고급 설정: 특정 센서로 시작하기';
     }
 
     function addPath(data) {
@@ -272,12 +298,17 @@
         pathList.appendChild(path);
 
         const trigger = data && data.trigger;
-        path.querySelector('.path-trigger-type').value = trigger ? trigger.nodeType : 'SENSOR';
+        const triggerType = trigger ? trigger.nodeType : 'LOCATION';
+        setSensorTriggerAdvanced(path, triggerType === 'SENSOR');
+        path.querySelector('.path-trigger-type').value = triggerType;
         refreshSensorSelect(
             path.querySelector('.path-trigger-sensor'),
             trigger && trigger.configuration ? trigger.configuration.sensorId : null
         );
+        path.querySelector('.path-trigger-cron').value =
+            trigger && trigger.configuration && trigger.configuration.cron ? trigger.configuration.cron : '';
         updateTriggerVisibility(path);
+        updateLocationTriggerLabel();
 
         (data && data.filters ? data.filters : []).forEach((filter) => {
             addCondition(path, filter.configuration ? filter.configuration.expression : '');
@@ -327,7 +358,10 @@
         return action && usedKeys.size === nodes.length ? {trigger, filters, action} : null;
     }
 
-    locationSelect.addEventListener('change', refreshAllSensorOptions);
+    locationSelect.addEventListener('change', () => {
+        refreshAllSensorOptions();
+        updateLocationTriggerLabel();
+    });
 
     pathList.addEventListener('change', (event) => {
         const path = event.target.closest('.flow-path');
@@ -345,6 +379,13 @@
         const path = event.target.closest('.flow-path');
         if (!path) return;
 
+        if (event.target.closest('.path-trigger-advanced-toggle')) {
+            const nowAdvanced = path.querySelector('.path-trigger-advanced-toggle').getAttribute('aria-pressed') !== 'true';
+            setSensorTriggerAdvanced(path, nowAdvanced);
+            if (nowAdvanced) path.querySelector('.path-trigger-type').value = 'SENSOR';
+            updateTriggerVisibility(path);
+            return;
+        }
         if (event.target.closest('.btn-add-path-condition')) {
             addCondition(path);
             return;
@@ -392,14 +433,20 @@
             const prefix = 'flow';
             const triggerType = path.querySelector('.path-trigger-type').value;
             const sensorSelect = path.querySelector('.path-trigger-sensor');
+            const cronInput = path.querySelector('.path-trigger-cron');
             if (triggerType === 'SENSOR' && !sensorSelect.value) {
                 return showError('자동화를 시작할 센서를 선택해주세요.');
+            }
+            if (triggerType === 'SCHEDULE' && !cronInput.value.trim()) {
+                return showError('예약 주기(Cron)를 입력해주세요.');
             }
 
             const triggerKey = `${prefix}-trigger`;
             const triggerConfiguration = triggerType === 'SENSOR'
                 ? {sensorId: Number(sensorSelect.value)}
-                : {};
+                : triggerType === 'SCHEDULE'
+                    ? {cron: cronInput.value.trim()}
+                    : {};
             nodes.push({clientNodeKey: triggerKey, nodeType: triggerType, configuration: triggerConfiguration});
 
             let sourceKey = triggerKey;

@@ -2,6 +2,13 @@
     const gridEl = document.getElementById('widgetGrid');
     if (!gridEl) return;
 
+    // 차트 색을 현재 테마(app.css 토큰)에서 읽어온다 — theme.js가 <head>에서
+    // <html data-theme>를 이미 세팅하므로 페이지 로드 시점의 라이트/다크가 반영됨.
+    function cssVar(name, fallback) {
+        const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return v || fallback;
+    }
+
     const emptyStateEl = document.getElementById('widgetEmptyState');
     const saveStatusEl = document.getElementById('saveStatus');
     const btnAddWidget = document.getElementById('btnAddWidget');
@@ -279,8 +286,10 @@
         if (!el) return;
         const inner = el.querySelector('.chart-inner-canvas');
         const wrapper = el.querySelector('.chart-scroll-wrapper');
-        if (inner && wrapper && labelCount > 0) {
-            const minWidth = Math.max(wrapper.clientWidth, labelCount * 50);
+        if (inner && wrapper) {
+            const wrapperWidth = wrapper.getBoundingClientRect().width || wrapper.clientWidth || 300;
+            const contentWidth = labelCount > 0 ? labelCount * 50 : wrapperWidth;
+            const minWidth = Math.max(wrapperWidth, contentWidth);
             inner.style.width = minWidth + 'px';
 
             const isNearRight = (wrapper.scrollWidth - wrapper.clientWidth - wrapper.scrollLeft) < 80;
@@ -365,7 +374,7 @@
                         max: (maxVal !== undefined && maxVal !== null) ? Math.ceil(maxVal) : 100,
                         ticks: {
                             font: { size: 10, weight: '600' },
-                            color: '#475569',
+                            color: cssVar('--ink-soft', '#475569'),
                             precision: 0,
                             callback: function(val) {
                                 if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
@@ -392,7 +401,7 @@
 
             const legendHtml = fields.map((field, idx) => {
                 const color = getFieldColor(field, idx);
-                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: #334155;">
+                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
                     <span>${field}</span>
                 </div>`;
@@ -400,7 +409,7 @@
 
             body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
             body.innerHTML = `
-                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: #ffffff;">
+                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
                     ${legendHtml}
                 </div>
                 <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
@@ -447,7 +456,7 @@
                         x: { ticks: { font: { size: 10 } }, grid: { display: false } },
                         y: {
                             ticks: { display: false },
-                            grid: { color: '#e2e8f0' }
+                            grid: { color: cssVar('--line', '#e2e8f0') }
                         }
                     }
                 }
@@ -473,7 +482,7 @@
                     labels: ['현재값', '잔여'],
                     datasets: [{
                         data: [0, 100],
-                        backgroundColor: ['#206bc4', '#eef1f6'],
+                        backgroundColor: [cssVar('--primary', '#206bc4'), cssVar('--surface-alt', '#eef1f6')],
                         borderWidth: 0,
                         cutout: '75%'
                     }]
@@ -526,7 +535,7 @@
         if (type === 'GRAPH' || type === 'BAR') {
             const legendHtml = datasets.map((ds, i) => {
                 const color = getFieldColor(ds.label, i);
-                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: #334155;">
+                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
                     <span>${ds.label}</span>
                 </div>`;
@@ -534,7 +543,7 @@
 
             body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
             body.innerHTML = `
-                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: #ffffff;">
+                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
                     ${legendHtml}
                 </div>
                 <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
@@ -580,7 +589,7 @@
                         x: { ticks: { font: { size: 10 } }, grid: { display: false } },
                         y: {
                             ticks: { display: false },
-                            grid: { color: '#e2e8f0' }
+                            grid: { color: cssVar('--line', '#e2e8f0') }
                         }
                     }
                 }
@@ -592,6 +601,7 @@
             const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
             syncYAxis(w, minVal, maxVal);
 
+            w.lastLabelCount = labels.length;
             adjustChartScroll(w, labels.length, true);
             return;
         }
@@ -632,6 +642,7 @@
             w.layoutDirty = true;  // 위치·크기 변경 — 데이터 재조회 불필요
             console.log(`[Widget Layout Changed] 위젯 (${w.uid}) 위치/크기 변경: x=${w.xPos}, y=${w.yPos}, w=${w.width}, h=${w.height}`);
             updateDim(w);
+            adjustChartScroll(w, w.lastLabelCount || 0);
             if (chartInstances[w.uid]) {
                 chartInstances[w.uid].resize();
             }
@@ -641,6 +652,10 @@
     grid.on('resizestop', (event, el) => {
         const uid = el.getAttribute('gs-id');
         console.log(`[Widget Resize Stopped] 위젯 (${uid}) 리사이즈 완료`);
+        const w = state.find((x) => x.uid === String(uid));
+        if (w) {
+            adjustChartScroll(w, w.lastLabelCount || 0);
+        }
         if (uid && chartInstances[uid]) {
             chartInstances[uid].resize();
         }
