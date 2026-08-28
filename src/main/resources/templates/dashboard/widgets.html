@@ -33,8 +33,16 @@
     <main class="app-main dashboard-shell">
         <div class="dashboard-scroll-area">
             <section class="widget-section" id="widgetSection">
-                <div class="section-header">
-                    <p class="section-label mb-0">위젯 (InfluxDB 센서 데이터)</p>
+                <div class="section-header align-items-center mb-3">
+                    <div>
+                        <h2 class="mb-0 font-weight-bold" style="font-size: 1.35rem; color: var(--ink);"
+                            th:text="${location != null ? location.locationName() + ' 대시보드' : (dashboard?.title != null ? dashboard.title : '위치 대시보드')}">
+                            위치 대시보드
+                        </h2>
+                        <p class="section-label mb-0 mt-1" style="font-size: 0.85rem; color: var(--ink-soft);">
+                            위젯 및 센서 데이터 모니터링
+                        </p>
+                    </div>
                     <div class="widget-toolbar" th:if="${canManage}">
                         <button class="btn-add-widget" id="btnAddWidget" type="button">
                             <i class="ti ti-plus"></i>위젯 추가
