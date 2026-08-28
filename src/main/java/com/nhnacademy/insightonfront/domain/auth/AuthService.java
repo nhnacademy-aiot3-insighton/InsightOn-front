@@ -1,5 +1,6 @@
 package com.nhnacademy.insightonfront.domain.auth;
 
+import com.nhnacademy.insightonfront.adapter.admin.AdminClient;
 import com.nhnacademy.insightonfront.adapter.auth.auth.AuthClient;
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.LoginResult;
 import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
@@ -27,6 +28,7 @@ import java.util.List;
 public class AuthService {
 
     private final AuthClient authClient;
+    private final AdminClient adminClient;
     private final GroupClient groupClient;
     private final ObjectMapper objectMapper;
 
@@ -42,6 +44,19 @@ public class AuthService {
 
         return new LoginResult(userId, userName, groupId, accessToken, refreshToken);
     }
+
+    /** Admin 로그인 처리: auth 호출 → 토큰에서 정보 추출 → groupId 조회까지 수행. */
+    public LoginResult loginAdmin(String email, String password) {
+        ResponseEntity<String> response = adminClient.login(new UserLoginRequest(email, password));
+
+        String accessToken = response.getBody();
+        String refreshToken = extractCookie(response.getHeaders(), "refreshToken");
+        Long userId = extractUserId(accessToken);
+        String userName = extractUserName(accessToken);
+
+        return new LoginResult(userId, userName, null, accessToken, refreshToken);
+    }
+
 
     /** 로그아웃: auth에 토큰 무효화 요청. 실패해도 예외를 던지지 않고 로그만 남긴다(로그아웃 자체는 계속 진행). */
     public void logout() {
