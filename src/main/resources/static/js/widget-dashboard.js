@@ -206,9 +206,38 @@
         return state.reduce((max, w) => Math.max(max, w.yPos + w.height), 0);
     }
 
+    // 위젯에 쓰인 센서들의 메트릭 정의(표시명/단위)를 페이지 로드 시 미리 모아 캐싱한다.
+    // metric_definitions는 전역 테이블(센서 무관하게 같은 키는 같은 정의)이라 위젯마다 다시 안 물어봐도 됨
+    const metricDefsByKey = {};
+
+    function metricLabel(key) {
+        return (metricDefsByKey[key] && metricDefsByKey[key].displayName) || key;
+    }
+
+    function metricUnit(key) {
+        return (metricDefsByKey[key] && metricDefsByKey[key].unit) || '';
+    }
+
+    function metricLabelWithUnit(key) {
+        const unit = metricUnit(key);
+        return unit ? `${metricLabel(key)} (${unit})` : metricLabel(key);
+    }
+
+    function loadMetricDefs(sensorIds) {
+        const uniqueIds = [...new Set(sensorIds.filter(Boolean))];
+        return Promise.all(uniqueIds.map((id) =>
+            fetch(`/my-group/sensors/${id}/attributes`)
+                .then((r) => r.ok ? r.json() : [])
+                .then((attrs) => attrs.forEach((a) => {
+                    metricDefsByKey[a.metricKey] = {displayName: a.displayName, unit: a.unit};
+                }))
+                .catch(() => {})
+        ));
+    }
+
     function widgetTitle(w) {
         const sensorName = sensorNameByEui[w.widgetConfig.sensorEui] || '미설정 센서';
-        const fields = (w.widgetConfig.fields || []).join(', ') || '메트릭 미선택';
+        const fields = (w.widgetConfig.fields || []).map(metricLabel).join(', ') || '메트릭 미선택';
         return {sensorName, fields};
     }
 
@@ -436,7 +465,7 @@
                 const color = getFieldColor(field, idx);
                 return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
-                    <span>${field}</span>
+                    <span>${metricLabelWithUnit(field)}</span>
                 </div>`;
             }).join('');
 
@@ -466,7 +495,7 @@
                     datasets: fields.map((field, idx) => {
                         const color = getFieldColor(field, idx);
                         return {
-                            label: field,
+                            label: metricLabelWithUnit(field),
                             data: [],
                             borderColor: color,
                             backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
@@ -497,6 +526,7 @@
 
             syncYAxis(w, 0, 100);
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
+            const gaugeUnit = metricUnit((w.widgetConfig.fields || [])[0]);
             body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center position-relative';
             body.innerHTML = `
                 <div style="width: 100%; height: 75%; position: relative;">
@@ -504,6 +534,7 @@
                 </div>
                 <div style="position: absolute; bottom: 15px; text-align: center;">
                     <span class="grid-widget-value fs-2 fw-bold text-primary">0</span>
+                    <span class="grid-widget-unit text-muted">${gaugeUnit}</span>
                 </div>
             `;
             const canvas = body.querySelector('canvas');
@@ -530,8 +561,9 @@
                 }
             });
         } else {
+            const defaultUnit = metricUnit((w.widgetConfig.fields || [])[0]);
             body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center';
-            body.innerHTML = `<span class="grid-widget-value fs-1 fw-bold">—</span><span class="grid-widget-unit text-muted"></span>`;
+            body.innerHTML = `<span class="grid-widget-value fs-1 fw-bold">—</span><span class="grid-widget-unit text-muted">${defaultUnit}</span>`;
         }
     }
 
@@ -570,7 +602,7 @@
                 const color = getFieldColor(ds.label, i);
                 return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
-                    <span>${ds.label}</span>
+                    <span>${metricLabelWithUnit(ds.label)}</span>
                 </div>`;
             }).join('');
 
@@ -600,7 +632,7 @@
                     datasets: datasets.map((ds, i) => {
                         const color = getFieldColor(ds.label, i);
                         return {
-                            label: ds.label,
+                            label: metricLabelWithUnit(ds.label),
                             data: ds.data,
                             borderColor: color,
                             backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
@@ -704,6 +736,11 @@
                 return r.json();
             })
             .then((attrs) => {
+                // 새로 고른 센서의 정의도 캐시에 넣어둔다 - 위젯 적용 직후 카드/차트가 raw 키로
+                // 잠깐이라도 안 보이고 바로 표시명/단위로 나오게
+                (attrs || []).forEach((a) => {
+                    metricDefsByKey[a.metricKey] = {displayName: a.displayName, unit: a.unit};
+                });
                 if (!attrs || !attrs.length) {
                     metricListEl.innerHTML = `<p class="metric-check-empty">이 센서에 등록된 메트릭이 없습니다.</p>`;
                     return;
@@ -893,6 +930,11 @@
 
     // ---------- init ----------
 
-    state.forEach((w) => addItemToGrid(w));
-    renderAll();
+    // 위젯 카드/차트를 그리기 전에 메트릭 표시명·단위부터 채워둬야, 첫 렌더부터 raw 키(temperature)가
+    // 아니라 "온도 (°C)"로 바로 보인다
+    const widgetSensorIds = state.map((w) => sensorIdByEui[w.widgetConfig.sensorEui]);
+    loadMetricDefs(widgetSensorIds).then(() => {
+        state.forEach((w) => addItemToGrid(w));
+        renderAll();
+    });
 })();
