@@ -3612,13 +3612,10 @@ button:focus-visible,
   grid-template-columns: 36px minmax(150px, 1fr) auto;
   align-items: center;
   gap: var(--sp-3);
-  flex: 1 0 300px;
-  min-width: 300px;
   min-height: 84px;
   padding: var(--sp-4);
   background: var(--surface);
-  border-right: 1px solid var(--line);
-  border-bottom: 0;
+  border-bottom: 1px solid var(--line);
 }
 
 .flow-list-item-icon {
@@ -3654,11 +3651,21 @@ button:focus-visible,
 
 .flow-list-panel .location-summary-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+}
+
+.flow-location-label {
+  padding: 0 var(--sp-3);
+  margin: var(--sp-3) 0;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .flow-list-panel .split-row:last-child {
-  border-right: 0;
+  border-bottom: 0;
 }
 
 .flow-list-panel .split-row.active {
