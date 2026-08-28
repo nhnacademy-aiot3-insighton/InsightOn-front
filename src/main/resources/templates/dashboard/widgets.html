@@ -20,6 +20,7 @@
     <link href="https://cdn.jsdelivr.net/npm/gridstack@latest/dist/gridstack.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
@@ -34,7 +35,7 @@
             <section class="widget-section" id="widgetSection">
                 <div class="section-header">
                     <p class="section-label mb-0">위젯 (InfluxDB 센서 데이터)</p>
-                    <div class="widget-toolbar">
+                    <div class="widget-toolbar" th:if="${canManage}">
                         <button class="btn-add-widget" id="btnAddWidget" type="button">
                             <i class="ti ti-plus"></i>위젯 추가
                         </button>
@@ -48,7 +49,7 @@
 
                 <div class="grid-stack" id="widgetGrid"></div>
                 <p class="grid-widget-empty py-5" id="widgetEmptyState" style="display:none;">
-                    등록된 위젯이 없어요. <strong>위젯 추가</strong>를 눌러 만들어보세요.
+                    등록된 위젯이 없어요. <strong th:if="${canManage}">위젯 추가</strong>를 눌러 만들어보세요.
                 </p>
             </section>
         </div>
@@ -57,19 +58,19 @@
             <p class="section-label">바로가기</p>
             <div class="row g-2">
                 <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/reports(locationId=${locationId})}">
+                    <a class="shortcut-card" th:href="@{/my-group/reports(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-file-text"></i></span>
                         <div class="shortcut-label">리포트</div>
                     </a>
                 </div>
                 <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/engine-alerts(locationId=${locationId})}">
+                    <a class="shortcut-card" th:href="@{/my-group/engine-alerts(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-alert-triangle"></i></span>
                         <div class="shortcut-label">엔진 알람</div>
                     </a>
                 </div>
                 <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/suggestions(locationId=${locationId})}">
+                    <a class="shortcut-card" th:href="@{/my-group/suggestions(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-bulb"></i></span>
                         <div class="shortcut-label">AI 제안</div>
                     </a>
@@ -87,7 +88,7 @@
                     </a>
                 </div>
                 <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/sensors(locationId=${locationId})}">
+                    <a class="shortcut-card" th:href="@{/my-group/sensors(locationId=${locationId})}">
                         <span class="shortcut-icon"><i class="ti ti-cpu"></i></span>
                         <div class="shortcut-label">센서</div>
                     </a>
@@ -174,7 +175,8 @@
     const DASHBOARD_INIT = {
         groupId: /*[[${groupId}]]*/ 1,
         locationId: /*[[${locationId}]]*/ 1,
-        widgets: /*[[${dashboard?.widgetsList}]]*/ []
+        widgets: /*[[${dashboard?.widgetsList}]]*/ [],
+        canManage: /*[[${canManage != null ? canManage : false}]]*/ false
     };
 </script>
 

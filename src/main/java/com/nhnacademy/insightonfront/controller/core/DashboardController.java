@@ -16,9 +16,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+
+import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 
 
 @Controller
@@ -29,12 +33,14 @@ public class DashboardController {
     private final DashboardClient dashboardClient;
     private final SensorClient sensorClient;
     private final LocationClient locationClient;
+    private final GroupPermissionService groupPermissionService;
 
     @GetMapping("/my-group/location/{location-id}/dashboard")
     public String getDashboard(
-            @CookieValue("groupId") Long groupId,
+            @CookieValue(value = "userId", required = false) Long userId,
+            @CookieValue(value = "groupId", required = false) Long groupId,
             @PathVariable("location-id") Long locationId,
-                               Model model
+            Model model
     ) {
 
         // 백엔드 Core 대시보드 구성 조회
@@ -59,43 +65,45 @@ public class DashboardController {
             sensors = sensorClient.search(groupId, null, null, locationId, null);
         } catch (Exception e) {
             log.warn("[DashboardController] 백엔드 센서 목록 조회 실패: {}", e.getMessage());
-            // 로컬 테스트용 sensor list 하드코딩
-//            log.warn("[DashboardController] 백엔드 센서 목록 조회 실패 (테스트 센서 목록 사용): {}", e.getMessage());
-//        }
-//
-//        if (sensors == null || sensors.isEmpty()) {
-//            sensors = List.of(
-//                    new SensorResponse(1L, 1L, locationId, "DEV_TEMP_01", "테스트 온습도 센서 1", java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now()),
-//                    new SensorResponse(2L, 1L, locationId, "DEV_CO2_02", "테스트 CO2 센서 2", java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now()),
-//                    new SensorResponse(3L, 1L, locationId, "DEV_PRESS_03", "테스트 기압 센서 3", java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now())
-//            );
         }
       
+        boolean canManage = false;
+        if (groupId != null && userId != null) {
+            canManage = groupPermissionService.isManagerOrAbove(groupId, userId);
+        }
+
         model.addAttribute("dashboard", response);
         model.addAttribute("locationId", locationId);
         model.addAttribute("location", location);
         model.addAttribute("groupId", groupId);
         model.addAttribute("sensors", sensors);
+        model.addAttribute("canManage", canManage);
 
         return "dashboard/widgets";
     }
 
     @PostMapping("/my-group/location/{location-id}/dashboard/save")
-    public String saveDashboard(
-            @CookieValue("groupId") Long groupId,
+    @ResponseBody
+    public ResponseEntity<List<Long>> saveDashboard(
+            @CookieValue(value = "userId", required = false) Long userId,
+            @CookieValue(value = "groupId", required = false) Long groupId,
             @PathVariable("location-id") Long locationId,
-            @RequestBody List<WidgetSaveRequest> requests,
-            Model model) {
+            @RequestBody List<WidgetSaveRequest> requests) {
 
         try {
+            if (groupId != null && userId != null && !groupPermissionService.isManagerOrAbove(groupId, userId)) {
+                log.warn("[DashboardController] MEMBER 계정의 위젯 저장 요청 차단. groupId: {}, userId: {}", groupId, userId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
             Map<Long, ChartDataResponse> responseMap = dashboardClient.saveDashboard(groupId, locationId, requests);
-            model.addAttribute("chartData", responseMap);
-            log.info("[DashboardController] 대시보드 위젯 저장 성공. groupId: {}, locationId: {}", groupId, locationId);
+            List<Long> widgetIds = new ArrayList<>(responseMap.keySet());
+            log.info("[DashboardController] 대시보드 위젯 저장 성공. groupId: {}, locationId: {}, widgetIds: {}", groupId, locationId, widgetIds);
+            return ResponseEntity.ok(widgetIds);
         } catch (Exception e) {
             log.error("[DashboardController] 대시보드 위젯 저장 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        return "redirect:/my-group/location/" + locationId + "/dashboard";
     }
 
     @GetMapping("/groups/location/{location-id}/dashboard/widgets/{widget-id}/chart-data")

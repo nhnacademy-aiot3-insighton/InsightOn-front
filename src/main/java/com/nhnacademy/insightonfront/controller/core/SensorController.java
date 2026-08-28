@@ -7,6 +7,7 @@ import com.nhnacademy.insightonfront.adapter.core.sensor.dto.SensorResponse;
 import com.nhnacademy.insightonfront.adapter.core.sensor.dto.SensorUpdateRequest;
 import com.nhnacademy.insightonfront.adapter.core.sensorattribute.SensorAttributeClient;
 import com.nhnacademy.insightonfront.adapter.core.sensorattribute.dto.SensorAttributeResponse;
+import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -34,6 +35,10 @@ public class SensorController {
     private final SensorClient sensorClient;
     private final SensorAttributeClient sensorAttributeClient;
     private final LocationClient locationClient;
+    private final GroupPermissionService groupPermissionService;
+
+    // 위치 필터 select에 "미배정"을 끼워넣기 위한 sentinel 값 — 실제 locationId(PK)는 항상 양수라 안겹침
+    private static final long UNASSIGNED_LOCATION_ID = -1L;
 
     @GetMapping
     public String list(@CookieValue(value = "userId", required = false) Long userId,
@@ -44,13 +49,21 @@ public class SensorController {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
-        List<SensorResponse> sensors = sensorClient.search(groupId, null, null, locationId, sensorName);
+
+        // 미배정이면 위치별 검색 대신 core의 미배정 센서 전용 API를 사용
+        boolean unassignedOnly = locationId != null && locationId == UNASSIGNED_LOCATION_ID;
+
+        List<SensorResponse> sensors = unassignedOnly
+                ? sensorClient.getUnassignedSensors(groupId)
+                : sensorClient.search(groupId, null, null, locationId, sensorName);
         List<LocationListResponse> locations = locationClient.getLocationList(groupId);
 
         model.addAttribute("sensors", sensors);
         model.addAttribute("locations", locations);
         model.addAttribute("selectedLocationId", locationId);
         model.addAttribute("searchQuery", sensorName);
+        // MEMBER는 이름/위치 수정·삭제를 못 보게 화면에서 숨긴다 — 서버에서도 update/delete에서 다시 막음
+        model.addAttribute("canManage", groupPermissionService.isManagerOrAbove(groupId, userId));
         return "sensor/list";
     }
 
@@ -69,20 +82,41 @@ public class SensorController {
         model.addAttribute("sensor", sensor);
         model.addAttribute("attributes", attributes);
         model.addAttribute("locations", locations);
+        model.addAttribute("canManage", groupPermissionService.isManagerOrAbove(groupId, userId));
         return "sensor/detail";
     }
 
     @PutMapping("/{sensor-id}")
     @ResponseBody
-    public void update(@PathVariable("sensor-id") Long sensorId,
+    public void update(@CookieValue(value = "userId", required = false) Long userId,
+                        @CookieValue(value = "groupId", required = false) Long groupId,
+                        @PathVariable("sensor-id") Long sensorId,
                         @RequestBody SensorUpdateRequest request) {
+        // 이름/위치 수정은 MANAGER 이상만 — MEMBER가 호출하면 여기서 403
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "센서 정보를 수정할");
         sensorClient.updateSensor(sensorId, request);
     }
 
     @DeleteMapping("/{sensor-id}")
     @ResponseBody
-    public void delete(@PathVariable("sensor-id") Long sensorId) {
+    public void delete(@CookieValue(value = "userId", required = false) Long userId,
+                        @CookieValue(value = "groupId", required = false) Long groupId,
+                        @PathVariable("sensor-id") Long sensorId) {
+        // 삭제도 MANAGER 이상만 — MEMBER가 호출하면 여기서 403
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "센서를 삭제할");
         sensorClient.deleteSensor(sensorId);
+    }
+
+    // 목록 화면에서 체크박스로 여러 센서를 고른 뒤 위치만 한 번에 바꿈
+    // 화면이 이미 들고 있는 각 센서 이름을 그대로 실어 보내 core의 "이름+위치 통째 교체" update를 재사용함
+    @PutMapping("/selected-location")
+    @ResponseBody
+    public void bulkUpdateLocation(@CookieValue(value = "userId", required = false) Long userId,
+                                    @CookieValue(value = "groupId", required = false) Long groupId,
+                                    @RequestBody SelectedLocationRequest request) {
+        groupPermissionService.requireManagerOrAbove(groupId, userId, "센서 위치를 일괄 변경할");
+        request.sensors().forEach(sensor ->
+                sensorClient.updateSensor(sensor.sensorId(), new SensorUpdateRequest(request.locationId(), sensor.sensorName())));
     }
 
     @GetMapping("/{sensor-id}/attributes")
@@ -96,5 +130,9 @@ public class SensorController {
     public void deleteAttribute(@PathVariable("sensor-id") Long sensorId,
                                  @PathVariable("metric-key") String metricKey) {
         sensorAttributeClient.deleteSensorAttribute(sensorId, metricKey);
+    }
+
+    public record SelectedLocationRequest(List<SensorRef> sensors, Long locationId) {
+        public record SensorRef(Long sensorId, String sensorName) {}
     }
 }
