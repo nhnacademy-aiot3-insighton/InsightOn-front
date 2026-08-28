@@ -279,8 +279,10 @@
         if (!el) return;
         const inner = el.querySelector('.chart-inner-canvas');
         const wrapper = el.querySelector('.chart-scroll-wrapper');
-        if (inner && wrapper && labelCount > 0) {
-            const minWidth = Math.max(wrapper.clientWidth, labelCount * 50);
+        if (inner && wrapper) {
+            const wrapperWidth = wrapper.getBoundingClientRect().width || wrapper.clientWidth || 300;
+            const contentWidth = labelCount > 0 ? labelCount * 50 : wrapperWidth;
+            const minWidth = Math.max(wrapperWidth, contentWidth);
             inner.style.width = minWidth + 'px';
 
             const isNearRight = (wrapper.scrollWidth - wrapper.clientWidth - wrapper.scrollLeft) < 80;
@@ -592,6 +594,7 @@
             const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
             syncYAxis(w, minVal, maxVal);
 
+            w.lastLabelCount = labels.length;
             adjustChartScroll(w, labels.length, true);
             return;
         }
@@ -632,6 +635,7 @@
             w.layoutDirty = true;  // 위치·크기 변경 — 데이터 재조회 불필요
             console.log(`[Widget Layout Changed] 위젯 (${w.uid}) 위치/크기 변경: x=${w.xPos}, y=${w.yPos}, w=${w.width}, h=${w.height}`);
             updateDim(w);
+            adjustChartScroll(w, w.lastLabelCount || 0);
             if (chartInstances[w.uid]) {
                 chartInstances[w.uid].resize();
             }
@@ -641,6 +645,10 @@
     grid.on('resizestop', (event, el) => {
         const uid = el.getAttribute('gs-id');
         console.log(`[Widget Resize Stopped] 위젯 (${uid}) 리사이즈 완료`);
+        const w = state.find((x) => x.uid === String(uid));
+        if (w) {
+            adjustChartScroll(w, w.lastLabelCount || 0);
+        }
         if (uid && chartInstances[uid]) {
             chartInstances[uid].resize();
         }
