@@ -959,8 +959,10 @@ button:focus-visible,
   color: #fff;
 }
 
-.chat-offcanvas {
-  width: 560px;
+/* Tabler의 .offcanvas.offcanvas-end(클래스 2개, 우선순위 0,2,0)가 .chat-offcanvas(0,1,0)보다
+   우선순위가 높아서 width가 안 먹혔음 - id 선택자로 확실히 이기게 함 */
+#aiChatPanel.chat-offcanvas {
+  width: 820px;
   max-width: 92vw;
 }
 
