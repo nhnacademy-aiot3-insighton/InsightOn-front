@@ -22,6 +22,7 @@ import java.util.List;
 @RequestMapping("/my-group/members")
 public class GroupMemberController {
     private final GroupMemberClient groupMemberClient;
+    private final com.nhnacademy.insightonfront.common.service.GroupPermissionService groupPermissionService;
 
     @GetMapping
     public String getGroupMemberList(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
@@ -40,7 +41,8 @@ public class GroupMemberController {
     }
 
     @GetMapping("/{group-member-id}")
-    public String getGroupMember(@CookieValue(value = "groupId", required = false) Long groupId,
+    public String getGroupMember(@CookieValue(value = "userId", required = false) Long userId,
+                                 @CookieValue(value = "groupId", required = false) Long groupId,
                                  @PathVariable("group-member-id") Long groupMemberId, Model model) {
         if (groupId == null) {
             return "redirect:/group-registration";
@@ -48,6 +50,13 @@ public class GroupMemberController {
         try {
             GroupMemberResponse groupMember = groupMemberClient.getGroupMember(groupId, groupMemberId);
             model.addAttribute("groupMember", groupMember);
+
+            boolean isSuperManager = false;
+            if (userId != null) {
+                isSuperManager = groupPermissionService.isSuperManager(groupId, userId);
+            }
+            model.addAttribute("isSuperManager", isSuperManager);
+
         } catch (FeignException e) {
             log.warn("그룹 멤버 상세 조회 실패 - groupId:{}, groupMemberId:{}", groupId, groupMemberId, e);
             model.addAttribute("groupMember", null);
