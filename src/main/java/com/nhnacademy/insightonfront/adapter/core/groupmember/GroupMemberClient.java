@@ -2,12 +2,10 @@ package com.nhnacademy.insightonfront.adapter.core.groupmember;
 
 import com.nhnacademy.insightonfront.adapter.core.groupmember.dto.GroupMemberListResponse;
 import com.nhnacademy.insightonfront.adapter.core.groupmember.dto.GroupMemberResponse;
-import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * Core의 퍼블릭 그룹 멤버 API를 Gateway 경유로 호출한다.
@@ -15,6 +13,9 @@ import org.springframework.web.bind.annotation.PutMapping;
  */
 @FeignClient(name = "insighton-gateway", contextId = "groupMemberClient", url = "${service-url.gateway}")
 public interface GroupMemberClient {
+
+    @PostMapping("/api/v1/groups/{group-id}/members/invite")
+    void inviteMemberByEmail(@PathVariable("group-id") Long groupId, @RequestParam("email") String email);
 
     @GetMapping("/api/v1/groups/{group-id}/members")
     List<GroupMemberListResponse> getGroupMemberList(@PathVariable("group-id") Long groupId);
