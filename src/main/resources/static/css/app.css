@@ -63,6 +63,76 @@
   --danger-tint: rgba(184, 57, 47, 0.10);
 }
 
+/* ============================================================
+   다크 모드 — 색 토큰만 재정의하면 시맨틱 토큰과 --bs-* 매핑을
+   통해 대부분의 화면/부트스트랩 컴포넌트가 함께 전환된다.
+   적용 조건: <html data-theme="dark"> (theme.js 가 쿠키/OS 설정으로 세팅)
+   ============================================================ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper: #0e1320;
+  --surface: #161d2b;
+  --surface-alt: #1e2637;
+  --line: #2c3648;
+  --line-strong: #3e4a60;
+  --ink: #e7ebf3;
+  --ink-soft: #9fabbd;
+  --ink-faint: #6d7a8d;
+
+  --primary: #8f74f5;
+  --primary-tint: rgba(143, 116, 245, 0.16);
+  --primary2: #5b9df6;
+  --card-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+
+  --bg-top: #141b29;
+  --bg-bottom: #0e1320;
+  --glass: rgba(22, 29, 43, 0.70);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  --success: #43c98f;
+  --success-tint: rgba(67, 201, 143, 0.16);
+  --warning: #d99a4a;
+  --warning-tint: rgba(217, 154, 74, 0.16);
+  --amber: #eaa457;
+  --danger: #e86b60;
+  --danger-tint: rgba(232, 107, 96, 0.16);
+
+  /* 시맨틱 토큰을 참조하지 않는 부트스트랩 원시값들 */
+  --bs-primary: #8f74f5;
+  --bs-primary-rgb: 143, 116, 245;
+  --bs-primary-bg-subtle: rgba(143, 116, 245, 0.18);
+  --bs-primary-border-subtle: rgba(143, 116, 245, 0.40);
+  --bs-body-bg: var(--paper);
+  --bs-secondary-bg: var(--surface-alt);
+  --bs-tertiary-bg: var(--surface-alt);
+  --bs-emphasis-color: var(--ink);
+}
+
+/* 토큰만으로 안 되는 하드코딩 색 소수 지점 보정 (다크에서만) */
+:root[data-theme="dark"] .app-header,
+:root[data-theme="dark"] .landing-header {
+  background: rgba(14, 19, 32, 0.80);
+}
+:root[data-theme="dark"] .app-nav .nav-link:hover:not(.active),
+:root[data-theme="dark"] .app-sidebar .location-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+:root[data-theme="dark"] .cta-tag,
+:root[data-theme="dark"] .btn-white-round {
+  background: var(--surface);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .auth-visual {
+  background: linear-gradient(160deg, #1b2233 0%, #171d2c 55%, #1d1830 100%);
+}
+:root[data-theme="dark"] .collage .krow {
+  border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+:root[data-theme="dark"] .cta-join-row {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
 :root {
   /* keep Bootstrap's own components (dropdown, buttons, form controls) on our surfaces */
   --bs-border-radius: 10px;
@@ -486,7 +556,7 @@ button:focus-visible,
   flex: 1;
   min-width: 0;
   padding: var(--sp-4);
-  background: linear-gradient(180deg, #ffffff 0%, var(--bg-bottom) 100%);
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
   min-height: calc(100vh - var(--header-height));
 }
 
