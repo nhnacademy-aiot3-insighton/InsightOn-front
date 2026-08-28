@@ -50,7 +50,7 @@
             type: 'GRAPH',
             sensorEui: null,
             range: '-1h',
-            aggregateWindow: '1m',
+            aggregateWindow: '15m',
             fields: []
         },
         layoutDirty: false,  // 위치·크기 변경 여부 (드래그, 리사이즈)
@@ -88,28 +88,61 @@
         };
     }
 
-    // SSE 실시간 데이터 갱신
+    function getAggregateWindowMs(aggStr) {
+        if (!aggStr) return 15 * 60 * 1000;
+        const unit = aggStr.slice(-1);
+        const val = parseInt(aggStr.slice(0, -1), 10) || 15;
+        if (unit === 'm') return val * 60 * 1000;
+        if (unit === 'h') return val * 60 * 60 * 1000;
+        if (unit === 's') return val * 1000;
+        return 15 * 60 * 1000;
+    }
+
+    function formatTelemetryTime(ts) {
+        const d = ts ? new Date(ts) : new Date();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${month}-${day} ${hours}:${minutes}`;
+    }
+
+    // SSE 실시간 데이터 갱신 (widgetConfig.aggregateWindow 버킷 주기에 맞춘 실시간 갱신)
     function updateWidgetRealtime(w, telemetryData) {
         const chart = chartInstances[w.uid];
         const metrics = telemetryData.metrics || {};
         const type = w.widgetConfig.type || 'GRAPH';
 
-        const timeStr = new Date(telemetryData.timestamp).toLocaleTimeString([], {
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-        });
+        const incomingMs = telemetryData.timestamp ? new Date(telemetryData.timestamp).getTime() : Date.now();
+        const windowMs = getAggregateWindowMs(w.widgetConfig.aggregateWindow);
+        const bucketMs = Math.floor(incomingMs / windowMs) * windowMs;
+        const bucketTimeStr = formatTelemetryTime(bucketMs);
 
         if ((type === 'GRAPH' || type === 'BAR') && chart) {
-            chart.data.labels.push(timeStr);
+            const labels = chart.data.labels;
+            const lastLabel = labels.length > 0 ? labels[labels.length - 1] : null;
 
-            chart.data.datasets.forEach((ds) => {
-                const val = metrics[ds.label] ?? null;
-                ds.data.push(val);
-            });
+            if (lastLabel === bucketTimeStr) {
+                // 같은 집계 주기(예: 동일한 15분 구간) 내 수신 데이터는 기존 마지막 포인트를 갱신
+                chart.data.datasets.forEach((ds) => {
+                    const val = metrics[ds.label] ?? null;
+                    if (val !== null && ds.data.length > 0) {
+                        ds.data[ds.data.length - 1] = val;
+                    }
+                });
+            } else {
+                // 새로운 집계 주기 구간이 시작되면 신규 라벨 및 데이터 포인트 추가
+                labels.push(bucketTimeStr);
+                chart.data.datasets.forEach((ds) => {
+                    const val = metrics[ds.label] ?? null;
+                    ds.data.push(val);
+                });
+            }
 
             // 데이터 개수가 많아지면 좌우 스크롤 폭 확장
             adjustChartScroll(w, chart.data.labels.length);
 
-            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 동적 갱신 (redis-cli / SSE 실시간 수치 반영)
+            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 동적 갱신
             const allDataPoints = chart.data.datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
             const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
             const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
@@ -699,7 +732,7 @@
             if (opt.dataset.eui === w.widgetConfig.sensorEui) sensorSelect.value = opt.value;
         });
         rangeSelect.value = w.widgetConfig.range || '-1h';
-        aggSelect.value = w.widgetConfig.aggregateWindow || '1m';
+        aggSelect.value = w.widgetConfig.aggregateWindow || '15m';
 
         if (sensorSelect.value) {
             loadMetrics(sensorSelect.value, w.widgetConfig.fields || []);
@@ -768,7 +801,7 @@
                 yPos: nextFreeRow(),
                 width: 4,
                 height: 4,
-                widgetConfig: {type: 'GRAPH', sensorEui: null, range: '-1h', aggregateWindow: '1m', fields: []}
+                widgetConfig: {type: 'GRAPH', sensorEui: null, range: '-1h', aggregateWindow: '15m', fields: []}
             };
             state.push(w);
             addItemToGrid(w);
