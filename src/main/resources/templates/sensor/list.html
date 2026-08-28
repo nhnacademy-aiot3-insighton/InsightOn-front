@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -23,6 +24,8 @@
         <form method="get" th:action="@{/my-group/sensors}" class="filter-bar">
             <select name="locationId" class="form-select">
                 <option value="">전체 위치</option>
+                <!-- -1은 미배정 센서임 이걸로 미배정된 센서 검색 -->
+                <option value="-1" th:selected="${selectedLocationId != null and selectedLocationId == -1}">미배정</option>
                 <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"
                         th:selected="${selectedLocationId != null and selectedLocationId == loc.locationId()}"></option>
             </select>
@@ -31,16 +34,40 @@
             <button type="submit" class="btn-add-widget">적용</button>
         </form>
 
+        <!-- MEMBER는 체크박스 자체가 안 보임 — 서버(SensorController.bulkUpdateLocation)도 다시 막음
+             선택 개수와 상관없이 항상 떠 있게 두고 버튼만 비활성화 -->
+        <div id="sensorBulkBar" class="filter-bar" th:if="${canManage}">
+            <label style="display:flex; align-items:center; gap: var(--sp-2); margin:0; white-space:nowrap;">
+                <input type="checkbox" id="sensorSelectAll" th:disabled="${#lists.isEmpty(sensors)}">
+                전체 선택
+            </label>
+            <span id="sensorBulkCount" class="field-hint" style="margin:0;">0개 선택됨</span>
+            <select id="sensorBulkLocation" class="form-select" style="max-width: 220px;" disabled>
+                <option th:each="loc : ${locations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"></option>
+            </select>
+            <button type="button" id="btnBulkMoveSensors" class="btn-add-widget" disabled>선택한 센서 위치 변경</button>
+            <button type="button" id="btnBulkDeleteSensors" class="btn btn-outline-secondary text-danger" disabled>선택 삭제</button>
+        </div>
+
         <div class="split-view">
             <div class="split-list">
                 <div class="location-summary-list" th:if="${not #lists.isEmpty(sensors)}">
-                    <a class="split-row" th:each="sensor : ${sensors}"
+                    <!-- 왼쪽 1/3은 체크박스 선택 전용, 오른쪽 2/3은 상세보기 전용으로 영역을 나눔 —
+                         전체가 링크였을 때는 체크박스를 정확히 클릭하기 불편했음 -->
+                    <a class="split-row" style="display:flex; align-items:center; padding:0;" th:each="sensor : ${sensors}"
                        th:href="@{/my-group/sensors/{sensorId}(sensorId=${sensor.sensorId()})}">
-                        <div class="split-row-title">
-                            <i class="ti ti-circle-filled" th:style="'font-size:0.5rem; color:' + (${sensor.isOnline()} ? 'var(--success)' : 'var(--ink-faint)')"></i>
-                            <span th:text="${sensor.sensorName()}"></span>
+                        <div class="split-row-select-zone" th:if="${canManage}"
+                             style="flex:0 0 33%; display:flex; align-items:center; justify-content:center; align-self:stretch; cursor:pointer;">
+                            <input type="checkbox" class="sensor-select"
+                                   th:attr="data-sensor-id=${sensor.sensorId()},data-sensor-name=${sensor.sensorName()}">
                         </div>
-                        <div class="split-row-meta" th:text="${sensor.sensorEui()}"></div>
+                        <div style="flex:1; min-width:0; padding: var(--sp-3) var(--sp-4);">
+                            <div class="split-row-title">
+                                <i class="ti ti-circle-filled" th:style="'font-size:0.5rem; color:' + (${sensor.isOnline()} ? 'var(--success)' : 'var(--ink-faint)')"></i>
+                                <span th:text="${sensor.sensorName()}"></span>
+                            </div>
+                            <div class="split-row-meta" th:text="${sensor.sensorEui()}"></div>
+                        </div>
                     </a>
                 </div>
 
@@ -61,6 +88,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/split-detail.js}"></script>
 <script th:src="@{/js/sensor-panel.js}"></script>
+<script th:src="@{/js/sensor-select.js}"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
 <script>
     initSplitDetail({rowSelector: '.split-list .split-row', panelId: 'detailPanel', contentId: 'detailContent'});

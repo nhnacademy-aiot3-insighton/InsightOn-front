@@ -1,11 +1,7 @@
 package com.nhnacademy.insightonfront.controller.core;
 
 import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.AutoControlMode;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationCreateRequest;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationListResponse;
-import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationUpdateRequest;
+import com.nhnacademy.insightonfront.adapter.core.location.dto.*;
 import com.nhnacademy.insightonfront.common.resolver.LocationNameResolver;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -31,10 +27,13 @@ public class LocationController {
     private final LocationNameResolver locationNameResolver;
 
     @PostMapping("/create")
-    public String createLocation(@CookieValue("groupId") Long groupId,
+    public String createLocation(@CookieValue(value = "groupId", required = false) Long groupId,
                                  @RequestParam String locationName,
                                  @RequestParam AutoControlMode autoControlMode,
                                  RedirectAttributes redirectAttributes) {
+        if (groupId == null) {
+            throw new IllegalArgumentException("소속된 그룹이 없습니다.");
+        }
         try {
             locationClient.createLocation(groupId, new LocationCreateRequest(locationName, autoControlMode));
             locationNameResolver.invalidate(groupId);
@@ -48,7 +47,10 @@ public class LocationController {
     }
 
     @GetMapping("/list")
-    public String getLocationList(@CookieValue("groupId") Long groupId, Model model) {
+    public String getLocationList(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
+        if (groupId == null) {
+            return "redirect:/group-registration";
+        }
         List<LocationListResponse> locationList = locationClient.getLocationList(groupId);
 
         model.addAttribute("locationList", locationList);
@@ -57,19 +59,25 @@ public class LocationController {
     }
 
     @GetMapping("/{location-id}")
-    public String getLocation(@CookieValue("groupId") Long groupId,
+    public String getLocation(@CookieValue(value = "groupId", required = false) Long groupId,
                               @PathVariable("location-id") Long locationId, Model model) {
+        if (groupId == null) {
+            return "redirect:/group-registration";
+        }
         LocationDetailResponse location = locationClient.getLocation(groupId, locationId);
 
         model.addAttribute("location", location);
 
-        return "";
+        return "location/detail";
     }
 
     @PostMapping("/{location-id}/toggle-mode")
-    public String toggleAutoControlMode(@CookieValue("groupId") Long groupId,
+    public String toggleAutoControlMode(@CookieValue(value = "groupId", required = false) Long groupId,
                                         @PathVariable("location-id") Long locationId,
                                         @RequestParam(required = false) String redirect) {
+        if (groupId == null) {
+            throw new IllegalArgumentException("소속된 그룹이 없습니다.");
+        }
         locationClient.toggleAutoControlMode(groupId, locationId);
         locationNameResolver.invalidate(groupId);
 
@@ -80,9 +88,12 @@ public class LocationController {
 
     @PutMapping("/{location-id}/update")
     @ResponseBody
-    public ResponseEntity<Void> updateName(@CookieValue("groupId") Long groupId,
+    public ResponseEntity<Void> updateName(@CookieValue(value = "groupId", required = false) Long groupId,
                              @PathVariable("location-id") Long locationId,
                              @RequestBody LocationUpdateRequest request) {
+        if (groupId == null) {
+            throw new IllegalArgumentException("소속된 그룹이 없습니다.");
+        }
 
         locationClient.updateName(groupId, locationId, request);
         locationNameResolver.invalidate(groupId);
@@ -94,8 +105,11 @@ public class LocationController {
 
     @DeleteMapping("/{location-id}/delete")
     @ResponseBody
-    public ResponseEntity<Void> deleteLocation(@CookieValue("groupId") Long groupId,
+    public ResponseEntity<Void> deleteLocation(@CookieValue(value = "groupId", required = false) Long groupId,
                                  @PathVariable("location-id") Long locationId) {
+        if (groupId == null) {
+            throw new IllegalArgumentException("소속된 그룹이 없습니다.");
+        }
         locationClient.deleteLocation(groupId, locationId);
         locationNameResolver.invalidate(groupId);
 

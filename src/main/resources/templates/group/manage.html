@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -19,21 +20,43 @@
 
     <main class="app-main">
 
-        <div th:if="${section == 'info'}">
+        <div th:if="${section == 'info'}"
+             th:with="prevRegion=${myGroup.groupRegion() != null ? #strings.arraySplit(myGroup.groupRegion(), ' ') : null}">
             <p class="section-label">그룹 정보</p>
-            <div class="settings-card">
-                <div class="settings-field">
-                    <label for="groupName">그룹명</label>
-                    <input type="text" id="groupName" class="form-control" th:value="${myGroup.name()}">
-                </div>
-                <div class="settings-field">
-                    <label for="groupRegion">소재지</label>
-                    <input type="text" id="groupRegion" class="form-control"
-                           th:value="${#strings.replace(myGroup.groupRegion(), ',', ' ')}">
+            <div class="settings-card settings-card-wide">
+                <div class="row g-3">
+                    <div class="col-6 settings-field">
+                        <label for="groupName">그룹명</label>
+                        <input type="text" id="groupName" class="form-control" th:value="${myGroup.name()}">
+                    </div>
+                    <div class="col-6 settings-field">
+                        <label for="createdAt">생성일</label>
+                        <input type="text" id="createdAt" class="form-control"
+                               th:value="${#temporals.format(myGroup.createdAt(), 'yyyy-MM-dd')}" disabled>
+                    </div>
+                    <div class="col-6 settings-field">
+                        <label for="state">시/도</label>
+                        <select class="form-select" id="state">
+                            <option value="">선택하세요</option>
+                            <option th:each="s : ${states}" th:selected="${prevRegion != null and prevRegion[0] == s}"
+                                    th:text="${s}"
+                                    th:value="${s}"></option>
+                        </select>
+                    </div>
+                    <div class="col-6 settings-field">
+                        <label for="city">시/군/구</label>
+                        <select class="form-select" id="city">
+                            <option value="">선택하세요</option>
+                            <option th:each="c : ${cities}"
+                                    th:selected="${prevRegion != null and #strings.trim(prevRegion[1]) == c}"
+                                    th:text="${c}"
+                                    th:value="${c}"></option>
+                        </select>
+                    </div>
                 </div>
                 <div class="settings-field">
                     <label for="description">설명</label>
-                    <textarea id="description" class="form-control" rows="3" th:text="${myGroup.description()}"></textarea>
+                    <textarea id="description" class="form-control" rows="4" th:text="${myGroup.description()}"></textarea>
                 </div>
                 <div class="settings-field">
                     <label for="inviteToken">초대 코드</label>
@@ -46,14 +69,10 @@
                     </div>
                     <p class="form-text">이 코드로 신규 멤버를 그룹에 초대할 수 있습니다. 새로 발급하면 이전 코드는 더 이상 쓸 수 없어요.</p>
                 </div>
-                <div class="settings-field">
-                    <label for="createdAt">생성일</label>
-                    <input type="text" id="createdAt" class="form-control"
-                           th:value="${#temporals.format(myGroup.createdAt(), 'yyyy-MM-dd')}" disabled>
-                </div>
+                <div id="groupInfoSaveStatus" class="field-hint danger" style="display:none;"></div>
                 <div class="settings-actions">
-                    <button type="button" class="btn btn-outline-secondary">취소</button>
-                    <button type="button" class="btn btn-primary">저장</button>
+                    <button type="button" id="btnCancelGroupInfo" class="btn btn-outline-secondary">취소</button>
+                    <button type="button" id="btnSaveGroupInfo" class="btn btn-primary">저장</button>
                 </div>
             </div>
         </div>
@@ -172,11 +191,20 @@
                     </div>
 
                     <div class="settings-field">
-                        <label>연결 설정</label>
-                        <div id="connectionConfigList"></div>
-                        <button type="button" id="btnAddConfigRow" class="btn-add-widget" style="margin-top: var(--sp-2);">
-                            <i class="ti ti-plus"></i>설정 추가
-                        </button>
+                        <label for="gatewayBrokerUrl">브로커 주소</label>
+                        <input type="text" id="gatewayBrokerUrl" class="form-control" placeholder="예: tcp://mqtt.insighton.io:1883">
+                    </div>
+                    <div class="settings-field">
+                        <label for="gatewayTopic">구독 토픽 (선택, 비우면 ChirpStack 기본 규격 사용)</label>
+                        <input type="text" id="gatewayTopic" class="form-control" placeholder="예: application/+/sensor/+/event/up">
+                    </div>
+                    <div class="settings-field">
+                        <label for="gatewayUsername">사용자명 (선택)</label>
+                        <input type="text" id="gatewayUsername" class="form-control">
+                    </div>
+                    <div class="settings-field">
+                        <label for="gatewayPassword">비밀번호 (선택)</label>
+                        <input type="password" id="gatewayPassword" class="form-control">
                     </div>
 
                     <div class="settings-actions">
@@ -187,15 +215,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- 연결 설정 key-value 행 템플릿 -->
-        <template id="configRowTemplate">
-            <div class="condition-row" style="grid-template-columns: 1fr 1fr auto;">
-                <input type="text" class="config-key form-control" placeholder="키 (예: host)">
-                <input type="text" class="config-value form-control" placeholder="값 (예: mqtt.insighton.io)">
-                <button type="button" class="btn-remove-condition" aria-label="설정 삭제"><i class="ti ti-x"></i></button>
-            </div>
-        </template>
 
     </main>
 </div>
@@ -213,7 +232,59 @@
         const input = document.getElementById('inviteToken');
         navigator.clipboard.writeText(input.value);
     });
+
+    document.getElementById('btnCancelGroupInfo').addEventListener('click', () => location.reload());
+
+    document.getElementById('btnSaveGroupInfo').addEventListener('click', () => {
+        const statusEl = document.getElementById('groupInfoSaveStatus');
+        const name = document.getElementById('groupName').value.trim();
+        const state = document.getElementById('state').value;
+        const city = document.getElementById('city').value;
+
+        statusEl.style.display = 'none';
+        if (!name) {
+            statusEl.textContent = '그룹명을 입력하세요.';
+            statusEl.style.display = 'block';
+            return;
+        }
+        if (!state || !city) {
+            statusEl.textContent = '소재지를 선택하세요.';
+            statusEl.style.display = 'block';
+            return;
+        }
+
+        const btnSave = document.getElementById('btnSaveGroupInfo');
+        btnSave.disabled = true;
+
+        fetch('/my-group/update', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name,
+                description: document.getElementById('description').value.trim(),
+                groupRegion: `${state} ${city}`
+            })
+        })
+            .then((r) => {
+                if (!r.ok) throw new Error('save failed');
+                location.reload();
+            })
+            .catch(() => {
+                statusEl.textContent = '저장하지 못했어요. 잠시 후 다시 시도해주세요.';
+                statusEl.style.display = 'block';
+                btnSave.disabled = false;
+            });
+    });
 </script>
+
+<script th:inline="javascript" th:if="${section == 'info'}"
+        th:with="prevRegion=${myGroup.groupRegion() != null ? #strings.arraySplit(myGroup.groupRegion(), ' ') : null}">
+    const REGISTRATION_INIT = {
+        previousState: /*[[${prevRegion != null ? prevRegion[0] : null}]]*/ null,
+        previousCity: /*[[${prevRegion != null ? #strings.trim(prevRegion[1]) : null}]]*/ null
+    };
+</script>
+<script th:if="${section == 'info'}" th:src="@{/js/group-registration.js}"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:if="${section == 'gateway'}" th:src="@{/js/gateway-panel.js}"></script>

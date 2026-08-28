@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -25,11 +26,12 @@
                     <span class="location-avatar" th:text="${#strings.substring(loc.locationName(), 0, 1)}">1</span>
                     <span th:text="${loc.locationName()}">위치명</span>
                 </a>
-                <span class="status-badge neutral" style="margin-top:0; white-space:nowrap;"
-                      th:text="${loc.autoControlMode().name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
-                <form th:action="@{/my-group/location/{id}/toggle-mode(id=${loc.locationId()}, redirect='/my-group/location/list')}" method="post" style="display:inline;">
-                    <button type="submit" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta);">모드 전환</button>
-                </form>
+                <div class="d-flex align-items-center gap-2">
+                    <a th:href="@{/my-group/location/{id}(id=${loc.locationId()})}" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta); text-decoration:none;">상세 보기</a>
+                    <form th:action="@{/my-group/location/{id}/toggle-mode(id=${loc.locationId()}, redirect='/my-group/location/list')}" method="post" style="display:inline;">
+                        <button type="submit" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta);">모드 전환</button>
+                    </form>
+                </div>
             </div>
         </div>
         <p class="grid-widget-empty py-5" th:if="${locationList == null or #lists.isEmpty(locationList)}">

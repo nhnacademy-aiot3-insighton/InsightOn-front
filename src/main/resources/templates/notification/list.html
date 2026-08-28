@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>알림 - InsightOn</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body>
+
+<header th:replace="~{fragments/layout :: groupHeader}"></header>
+
+<div class="d-flex">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="app-main">
+        <p class="section-label">알림</p>
+
+        <form method="get" th:action="@{/my-group/notifications}" class="filter-bar">
+            <select name="isRead" class="form-select">
+                <option value="" th:selected="${selectedIsRead == null}">전체</option>
+                <option value="false" th:selected="${selectedIsRead != null and selectedIsRead == false}">안읽음</option>
+                <option value="true" th:selected="${selectedIsRead != null and selectedIsRead == true}">읽음</option>
+            </select>
+            <select name="notificationType" class="form-select">
+                <option value="" th:selected="${selectedNotificationType == null}">전체 유형</option>
+                <option value="ENGINE_ALERT" th:selected="${selectedNotificationType != null and selectedNotificationType.name() == 'ENGINE_ALERT'}">엔진알람</option>
+                <option value="SUGGESTION" th:selected="${selectedNotificationType != null and selectedNotificationType.name() == 'SUGGESTION'}">제안</option>
+                <option value="REPORT" th:selected="${selectedNotificationType != null and selectedNotificationType.name() == 'REPORT'}">리포트</option>
+                <option value="GATEWAY" th:selected="${selectedNotificationType != null and selectedNotificationType.name() == 'GATEWAY'}">게이트웨이</option>
+            </select>
+            <button type="submit" class="btn-add-widget">적용</button>
+        </form>
+
+        <div class="notification-list" th:if="${not #lists.isEmpty(notifications.content())}">
+            <a href="#" th:each="n : ${notifications.content()}"
+               class="notif-item"
+               th:classappend="${n.isRead()} ? 'is-read' : ''"
+               th:attr="data-id=${n.dashboardNotificationId()}, data-type=${n.notificationType()}, data-source-id=${n.sourceId()}">
+                <div class="notif-item-title" th:text="${#strings.isEmpty(n.locationName())} ? ${n.title()} : ${n.locationName()} + ' · ' + ${n.title()}"></div>
+                <div class="notif-item-meta" th:text="${#temporals.format(n.createdAt(), 'yyyy-MM-dd HH:mm')}"></div>
+            </a>
+        </div>
+
+        <p class="grid-widget-empty py-5" th:if="${#lists.isEmpty(notifications.content())}">
+            조건에 맞는 알림이 없어요.
+        </p>
+
+        <nav th:if="${notifications.totalPages() > 1}" class="list-pagination">
+            <a th:if="${!notifications.first()}"
+               th:href="@{/my-group/notifications(isRead=${selectedIsRead}, notificationType=${selectedNotificationType}, page=${notifications.number()-1})}"
+               class="btn-landing-secondary">이전</a>
+            <span th:text="${notifications.number()+1} + ' / ' + ${notifications.totalPages()}"></span>
+            <a th:if="${!notifications.last()}"
+               th:href="@{/my-group/notifications(isRead=${selectedIsRead}, notificationType=${selectedNotificationType}, page=${notifications.number()+1})}"
+               class="btn-landing-secondary">다음</a>
+        </nav>
+    </main>
+</div>
+
+<div th:replace="~{fragments/layout :: chatWidget}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/chat-widget.js}"></script>
+</body>
+</html>

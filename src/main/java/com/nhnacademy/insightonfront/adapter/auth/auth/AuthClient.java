@@ -2,6 +2,9 @@ package com.nhnacademy.insightonfront.adapter.auth.auth;
 
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.TokenRefreshResponse;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.FindEmailRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetConfirmRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,4 +41,16 @@ public interface AuthClient {
     @PostMapping("/api/v1/auth/logout")
     ResponseEntity<Void> logout();
 
+    // 이메일 찾기
+    @PostMapping("/api/v1/auth/find-email")
+    ResponseEntity<String> findEmail(@RequestBody FindEmailRequest findEmailRequest);
+
+    // 비밀번호 재설정 요청
+    @PostMapping("/api/v1/auth/password/reset-request")
+    ResponseEntity<Void> passwordReset(@RequestBody PasswordResetRequest passwordResetRequest);
+
+    // 비밀번호 재설정 확인
+    @PostMapping("/api/v1/auth/password/reset-confirm")
+    ResponseEntity<Void> passwordResetConfirm(
+            @RequestBody PasswordResetConfirmRequest passwordResetConfirmRequest);
 }

@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -109,7 +110,7 @@
                     <div class="widget-icon"><i class="ti ti-building"></i></div>
                     <div class="widget-label">그룹</div>
                     <div class="widget-value" th:text="${myGroup.name()}">그룹명</div>
-                    <div class="widget-sub" th:text="${#strings.replace(myGroup.groupRegion(), ',', ' ')}">소재지</div>
+                    <div class="widget-sub" th:text="${myGroup.groupRegion()}">소재지</div>
                 </div>
             </div>
             <div class="col">
@@ -175,7 +176,6 @@
         <p class="split-detail-empty" th:if="${locationSummaries == null}">
             위치 요약을 불러오지 못했어요.
         </p>
-        </div>
     </main>
 </div>
 

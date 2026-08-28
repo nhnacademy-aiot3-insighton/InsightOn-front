@@ -3,6 +3,7 @@ package com.nhnacademy.insightonfront.controller.core;
 import com.nhnacademy.insightonfront.adapter.core.groupmember.GroupMemberClient;
 import com.nhnacademy.insightonfront.adapter.core.groupmember.dto.GroupMemberListResponse;
 import com.nhnacademy.insightonfront.adapter.core.groupmember.dto.GroupMemberResponse;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -23,22 +24,36 @@ public class GroupMemberController {
     private final GroupMemberClient groupMemberClient;
 
     @GetMapping
-    public String getGroupMemberList(@CookieValue("groupId") Long groupId, Model model) {
-        List<GroupMemberListResponse> groupMemberList = groupMemberClient.getGroupMemberList(groupId);
+    public String getGroupMemberList(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
+        if (groupId == null) {
+            return "redirect:/group-registration";
+        }
+        try {
+            List<GroupMemberListResponse> groupMemberList = groupMemberClient.getGroupMemberList(groupId);
+            model.addAttribute("groupMemberList", groupMemberList);
+        } catch (FeignException e) {
+            log.warn("그룹 멤버 목록 조회 실패 - groupId:{}", groupId, e);
+            model.addAttribute("groupMemberList", null);
+        }
 
-        model.addAttribute("groupMemberList", groupMemberList);
-
-        return "";
+        return "groupmember/list";
     }
 
     @GetMapping("/{group-member-id}")
-    public String getGroupMember(@CookieValue("groupId") Long groupId,
+    public String getGroupMember(@CookieValue(value = "groupId", required = false) Long groupId,
                                  @PathVariable("group-member-id") Long groupMemberId, Model model) {
-        GroupMemberResponse groupMember = groupMemberClient.getGroupMember(groupId, groupMemberId);
+        if (groupId == null) {
+            return "redirect:/group-registration";
+        }
+        try {
+            GroupMemberResponse groupMember = groupMemberClient.getGroupMember(groupId, groupMemberId);
+            model.addAttribute("groupMember", groupMember);
+        } catch (FeignException e) {
+            log.warn("그룹 멤버 상세 조회 실패 - groupId:{}, groupMemberId:{}", groupId, groupMemberId, e);
+            model.addAttribute("groupMember", null);
+        }
 
-        model.addAttribute("groupMember", groupMember);
-
-        return "";
+        return "groupmember/detail";
     }
 
     @PutMapping("/{group-member-id}/toggle-manager")
@@ -70,7 +85,7 @@ public class GroupMemberController {
 
         log.info("멤버가 추방 되었습니다. Group ID : {}, 추방된 멤버 ID : {}", groupId, groupMemberId);
 
-        return "redirect:/my-group/member-list";
+        return "redirect:/my-group/member";
     }
 
     @DeleteMapping("/leave")
