@@ -6,7 +6,10 @@ import com.nhnacademy.insightonfront.adapter.core.groupregistration.dto.GroupReg
 import com.nhnacademy.insightonfront.adapter.core.groupregistration.dto.GroupRegistrationStatus;
 import com.nhnacademy.insightonfront.adapter.core.region.RegionClient;
 import com.nhnacademy.insightonfront.domain.groupregistration.service.GroupRegistrationStatusService;
+
 import java.util.List;
+
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * 그룹이 없는 사용자가 로그인 후 도착하는 곳 — 신청서를 작성하거나, 이미 낸 신청의 승인 대기
@@ -50,6 +54,8 @@ public class GroupRegistrationController {
 
         GroupRegistrationResponse latest = groupRegistrationStatusService.findLatest();
 
+        model.addAttribute("history", groupRegistrationStatusService.findHistory(latest != null ? latest.groupRegistrationId() : null));
+
         if (latest != null && latest.status() == GroupRegistrationStatus.PENDING) {
             model.addAttribute("state", "PENDING");
             model.addAttribute("registration", latest);
@@ -63,21 +69,25 @@ public class GroupRegistrationController {
 
     @PostMapping
     public String submit(@CookieValue(value = "userId", required = false) Long userId,
-                          @RequestParam String groupName,
-                          @RequestParam String state,
-                          @RequestParam String city,
-                          @RequestParam(required = false) String description) {
+                         @RequestParam String groupName,
+                         @RequestParam String state,
+                         @RequestParam String city,
+                         @RequestParam(required = false) String description,
+                         RedirectAttributes redirectAttributes) {
         if (userId == null) {
             return "redirect:/login";
         }
-        groupRegistrationClient.createRequest(
-                new CreateGroupRegistrationRequest(groupName, description, state, city));
+        try {
+            groupRegistrationClient.createRequest(new CreateGroupRegistrationRequest(groupName, description, state, city));
+        } catch (FeignException.Conflict e) {
+            redirectAttributes.addFlashAttribute("registrationError", "이미 처리 대기 중인 신청이 있어요. 관리자 승인을 기다려주세요.");
+        }
         return "redirect:/group-registration";
     }
 
     @PostMapping("/cancel")
     public String cancel(@CookieValue(value = "userId", required = false) Long userId,
-                          @RequestParam Long groupRegistrationId) {
+                         @RequestParam Long groupRegistrationId) {
         if (userId == null) {
             return "redirect:/login";
         }
@@ -85,7 +95,9 @@ public class GroupRegistrationController {
         return "redirect:/group-registration";
     }
 
-    /** 신청 폼의 시/도 선택 시 시/군/구 옵션을 채우는 AJAX. */
+    /**
+     * 신청 폼의 시/도 선택 시 시/군/구 옵션을 채우는 AJAX.
+     */
     @GetMapping("/cities")
     @ResponseBody
     public List<String> cities(@RequestParam String state) {
