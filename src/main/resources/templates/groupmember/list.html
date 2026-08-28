@@ -73,13 +73,21 @@
             </a>
         </div>
 
-        <!-- 빈 상태 -->
+        <!-- 권한 없음 안내 -->
+        <div class="py-5 text-center" th:if="${permissionError != null}">
+            <i class="ti ti-shield-lock d-block mb-2" style="font-size: 2.5rem; color: var(--ink-faint);"></i>
+            <p style="color: var(--ink-soft); font-size: 1rem; font-weight: 500;" th:text="${permissionError}">
+                멤버 목록을 볼 수 있는 권한이 없습니다.
+            </p>
+        </div>
+
+        <!-- 기타 실패 및 빈 상태 -->
         <p class="grid-widget-empty py-5"
-           th:if="${groupMemberList != null and #lists.isEmpty(groupMemberList)}">
+           th:if="${permissionError == null and groupMemberList != null and #lists.isEmpty(groupMemberList)}">
             등록된 멤버가 없어요.
         </p>
         <p class="split-detail-empty"
-           th:if="${groupMemberList == null}">
+           th:if="${permissionError == null and groupMemberList == null}">
             멤버 목록을 불러오지 못했어요.
         </p>
 
@@ -127,8 +135,13 @@
 <script th:src="@{/js/chat-widget.js}"></script>
 <script th:inline="javascript">
     document.addEventListener("DOMContentLoaded", function() {
-        const hasInviteError = /*[[${inviteError != null}]]*/ false;
-        if (hasInviteError) {
+        const inviteSuccessMsg = /*[[${inviteSuccess}]]*/ null;
+        const inviteErrorMsg = /*[[${inviteError}]]*/ null;
+
+        if (inviteSuccessMsg) {
+            alert(inviteSuccessMsg);
+        } else if (inviteErrorMsg) {
+            alert(inviteErrorMsg);
             const modalEl = document.getElementById('inviteMemberModal');
             if (modalEl) {
                 const modal = new bootstrap.Modal(modalEl);
