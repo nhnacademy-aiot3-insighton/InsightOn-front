@@ -99,16 +99,19 @@
                         <input type="password" id="password" name="password" class="form-control" placeholder="8자 이상" minlength="8" required>
                         <button type="button" class="password-toggle" aria-label="비밀번호 표시"><i class="ti ti-eye"></i></button>
                     </div>
+                    <p id="passwordHint" class="field-hint" data-default="영문·숫자·특수문자를 각각 포함해 8~64자로 입력해주세요.">영문·숫자·특수문자를 각각 포함해 8~64자로 입력해주세요</p>
                 </div>
 
                 <div class="settings-field">
                     <label for="name">이름</label>
                     <input type="text" id="name" name="name" class="form-control" placeholder="홍길동" th:value="${name}" required>
+                    <p id="nameHint" class="field-hint" data-default="2~100자로 입력해주세요.">2~100자로 입력해주세요</p>
                 </div>
 
                 <div class="settings-field">
                     <label for="phone">전화번호</label>
                     <input type="tel" id="phone" name="phone" class="form-control" placeholder="010-1234-5678" th:value="${phone}" required>
+                    <p id="phoneHint" class="field-hint" data-default="전화번호를 입력해 주세요">전화번호를 입력해 주세요</p>
                 </div>
 
                 <button type="submit" id="btnSubmitSignup" class="btn-landing-primary w-100 justify-content-center" disabled>
