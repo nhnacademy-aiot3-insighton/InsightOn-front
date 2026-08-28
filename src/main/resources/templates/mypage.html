@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <script th:src="@{/js/theme.js}"></script>
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -60,6 +61,28 @@
         </div>
     </section>
 
+    <!-- 화면 모드 (다크/라이트) -->
+    <section class="account-section">
+        <div class="settings-card">
+            <h2 style="font-size:1rem; font-weight:600; margin-bottom: var(--sp-4);">화면 모드</h2>
+            <p class="field-hint" style="margin-bottom: var(--sp-3);">라이트 / 다크 테마를 선택하세요. '시스템'은 기기 설정을 따릅니다.</p>
+            <div class="type-choice-group" id="themeChoiceGroup">
+                <label class="type-choice">
+                    <input type="radio" name="themePref" value="system">
+                    <i class="ti ti-device-desktop"></i>시스템
+                </label>
+                <label class="type-choice">
+                    <input type="radio" name="themePref" value="light">
+                    <i class="ti ti-sun"></i>라이트
+                </label>
+                <label class="type-choice">
+                    <input type="radio" name="themePref" value="dark">
+                    <i class="ti ti-moon"></i>다크
+                </label>
+            </div>
+        </div>
+    </section>
+
     <!-- 연동된 소셜 계정 -->
     <section class="account-section">
         <div class="settings-card">
@@ -104,5 +127,19 @@
 </div>
 
 <script th:src="@{/js/mypage/mypage.js}"></script>
+<script>
+    (function () {
+        var group = document.getElementById('themeChoiceGroup');
+        if (!group || !window.InsightTheme) return;
+        var current = window.InsightTheme.getPref();
+        var input = group.querySelector('input[value="' + current + '"]');
+        if (input) input.checked = true;
+        group.addEventListener('change', function (e) {
+            if (e.target && e.target.name === 'themePref') {
+                window.InsightTheme.set(e.target.value);
+            }
+        });
+    })();
+</script>
 </body>
 </html>
