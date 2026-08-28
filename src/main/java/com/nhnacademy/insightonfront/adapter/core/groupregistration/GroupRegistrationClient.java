@@ -5,13 +5,7 @@ import com.nhnacademy.insightonfront.adapter.core.groupregistration.dto.GroupReg
 import com.nhnacademy.insightonfront.adapter.core.groupregistration.dto.GroupRegistrationStatus;
 import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * Core의 퍼블릭 그룹 등록 신청 API를 Gateway 경유로 호출한다.
@@ -24,27 +18,25 @@ public interface GroupRegistrationClient {
     GroupRegistrationResponse createRequest(@RequestBody CreateGroupRegistrationRequest request);
 
     @GetMapping("/api/v1/group-registrations")
-    PageResponse<GroupRegistrationResponse> getGroupRegistrations(@RequestHeader(value = "X-User-Role", required = false) String userRole,
-                                                                    @RequestParam(value = "status", required = false) GroupRegistrationStatus status,
-                                                                    @RequestParam("page") int page,
-                                                                    @RequestParam("size") int size);
+    PageResponse<GroupRegistrationResponse> getGroupRegistrations(@RequestParam(value = "status", required = false) GroupRegistrationStatus status,
+                                                                  @RequestParam("page") int page,
+                                                                  @RequestParam("size") int size,
+                                                                  @RequestParam("sort") String sort);
 
     @GetMapping("/api/v1/group-registrations/my")
     PageResponse<GroupRegistrationResponse> getMyGroupRegistrations(@RequestParam("page") int page,
-                                                                      @RequestParam("size") int size);
+                                                                    @RequestParam("size") int size,
+                                                                    @RequestParam("sort") String sort);
 
     @GetMapping("/api/v1/group-registrations/{group-registration-id}")
-    GroupRegistrationResponse getGroupRegistration(@RequestHeader(value = "X-User-Role", required = false) String userRole,
-                                                    @PathVariable("group-registration-id") Long groupRegistrationId);
+    GroupRegistrationResponse getGroupRegistration(@PathVariable("group-registration-id") Long groupRegistrationId);
 
     @PutMapping("/api/v1/group-registrations/{group-registration-id}/cancel")
     void cancelGroupRegistration(@PathVariable("group-registration-id") Long groupRegistrationId);
 
     @PutMapping("/api/v1/group-registrations/{group-registration-id}/approve")
-    void approveGroupRegistration(@RequestHeader(value = "X-User-Role", required = false) String userRole,
-                                  @PathVariable("group-registration-id") Long groupRegistrationId);
+    void approveGroupRegistration(@PathVariable("group-registration-id") Long groupRegistrationId);
 
     @PutMapping("/api/v1/group-registrations/{group-registration-id}/reject")
-    void rejectGroupRegistration(@RequestHeader(value = "X-User-Role", required = false) String userRole,
-                                 @PathVariable("group-registration-id") Long groupRegistrationId);
+    void rejectGroupRegistration(@PathVariable("group-registration-id") Long groupRegistrationId);
 }
