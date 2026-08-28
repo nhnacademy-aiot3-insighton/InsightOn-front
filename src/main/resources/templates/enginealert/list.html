@@ -47,7 +47,7 @@
                             <span class="status-badge danger" style="margin-top:0;" th:if="${alert.severity().name() == 'CRITICAL'}">위험</span>
                             <span th:text="${alert.title()}"></span>
                         </div>
-                        <div class="split-row-meta" th:text="${alert.locationName()} + ' · ' + ${#temporals.format(alert.createdAt(), 'yyyy-MM-dd HH:mm')}"></div>
+                        <div class="split-row-meta" th:text="${alert.locationName()} + ' · ' + ${#temporals.format(alert.createdAt().withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'yyyy-MM-dd HH:mm')}"></div>
                     </a>
                 </div>
 
