@@ -52,10 +52,17 @@ public class FlowViewService {
     private final SensorClient sensorClient;
 
     public List<FlowViewModel> getFlows(Long groupId, FlowStatus status) {
+        return getFlows(groupId, status, null);
+    }
+
+    // locationId는 백엔드가 아니라 여기서 거른다 - Rule Engine의 locationId 조회는 status도
+    // 함께 있어야 해서, "전체 상태" 필터(status=null)와 궁합이 안 맞기 때문이다.
+    public List<FlowViewModel> getFlows(Long groupId, FlowStatus status, Long locationId) {
         List<FlowResponse> flows = flowClient.list(groupId, status);
         Map<Long, String> locationNames = locationNameResolver.resolve(groupId);
         return flows.stream()
                 .map(flow -> toViewModel(flow, locationNames))
+                .filter(flow -> locationId == null || locationId.equals(flow.locationId()))
                 .toList();
     }
 
@@ -65,6 +72,7 @@ public class FlowViewService {
                 flow.name(),
                 flow.description(),
                 flow.status(),
+                flow.locationId(),
                 locationNames.getOrDefault(flow.locationId(), UNKNOWN_LOCATION),
                 flow.createdAt()
         );

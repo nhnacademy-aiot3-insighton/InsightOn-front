@@ -8,6 +8,7 @@ public record FlowViewModel(
         String name,
         String description,
         FlowStatus status,
+        Long locationId,
         String locationName,
         OffsetDateTime createdAt
 ) {
