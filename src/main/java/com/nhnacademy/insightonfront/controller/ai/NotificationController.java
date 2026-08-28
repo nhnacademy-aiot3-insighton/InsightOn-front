@@ -2,15 +2,19 @@ package com.nhnacademy.insightonfront.controller.ai;
 
 import com.nhnacademy.insightonfront.adapter.ai.notification.dto.NotificationType;
 import com.nhnacademy.insightonfront.common.dto.PageResponse;
+import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 import com.nhnacademy.insightonfront.domain.notification.dto.DashboardNotificationViewModel;
 import com.nhnacademy.insightonfront.domain.notification.service.DashboardNotificationViewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * "전체 알림 보기" 페이지. 헤더 벨(/groups/notifications, 안읽음만·JSON)과 달리
@@ -22,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class NotificationController {
 
     private final DashboardNotificationViewService dashboardNotificationViewService;
+    private final GroupPermissionService groupPermissionService;
 
     @GetMapping
     public String list(@CookieValue(value = "userId", required = false) Long userId,
@@ -40,6 +45,19 @@ public class NotificationController {
         model.addAttribute("notifications", notifications);
         model.addAttribute("selectedIsRead", isRead);
         model.addAttribute("selectedNotificationType", notificationType);
+        // 모두 읽음 처리는 AI 쪽도 MANAGER 이상만 허용 - 버튼 자체를 일반 멤버에겐 안 보여줌
+        model.addAttribute("canManage", groupPermissionService.isManagerOrAbove(groupId, userId));
         return "notification/list";
+    }
+
+    @PostMapping("/read-all")
+    @ResponseBody
+    public ResponseEntity<Void> readAll(@CookieValue(value = "userId", required = false) Long userId,
+                                        @CookieValue(value = "groupId", required = false) Long groupId) {
+        if (userId == null || groupId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        dashboardNotificationViewService.markAllAsRead(groupId);
+        return ResponseEntity.noContent().build();
     }
 }

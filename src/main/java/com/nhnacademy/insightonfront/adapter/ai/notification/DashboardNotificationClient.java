@@ -33,4 +33,8 @@ public interface DashboardNotificationClient {
                                                         @RequestParam(value = "notificationType", required = false) NotificationType notificationType,
                                                         @RequestParam("page") int page,
                                                         @RequestParam("size") int size);
+
+    // MANAGER 이상만 가능 - AI가 X-User-Id로 다시 검증하므로 여기선 groupId만 넘긴다
+    @PostMapping("/api/v1/dashboard-notifications/read-all")
+    void markAllAsRead(@RequestParam("groupId") Long groupId);
 }
