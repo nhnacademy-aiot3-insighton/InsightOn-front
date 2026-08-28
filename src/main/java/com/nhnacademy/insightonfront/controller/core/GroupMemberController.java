@@ -56,7 +56,11 @@ public class GroupMemberController {
             model.addAttribute("groupMemberList", groupMemberList);
         } catch (FeignException e) {
             log.warn("그룹 멤버 목록 조회 실패 - groupId:{}", groupId, e);
-            model.addAttribute("groupMemberList", null);
+            if (e.status() == 403) {
+                model.addAttribute("permissionError", "멤버 목록을 볼 수 있는 권한이 없습니다.");
+            } else {
+                model.addAttribute("groupMemberList", null);
+            }
         }
 
         return "groupmember/list";
