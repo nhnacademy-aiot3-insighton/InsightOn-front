@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <script th:src="@{/js/theme.js}"></script>
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -19,7 +20,15 @@
     <aside th:replace="~{fragments/layout :: sidebar}"></aside>
 
     <main class="app-main">
-        <p class="section-label">위치</p>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <p class="section-label mb-0">위치</p>
+            <button type="button" class="btn-landing-primary" data-bs-toggle="modal" data-bs-target="#createLocationModal" style="padding: var(--sp-2) var(--sp-3); font-size: var(--fs-body);">
+                <i class="ti ti-plus"></i>위치 추가
+            </button>
+        </div>
+
+        <p th:if="${createError}" th:text="${createError}" class="form-text" style="color: var(--danger); margin-bottom: var(--sp-2);"></p>
+
         <div class="location-summary-list" th:if="${locationList != null and not #lists.isEmpty(locationList)}">
             <div th:each="loc : ${locationList}" class="location-summary-row">
                 <a th:href="@{/my-group/location/{id}/dashboard(id=${loc.locationId()})}" class="location-summary-name" style="text-decoration:none; color:inherit;">
@@ -37,30 +46,65 @@
         <p class="grid-widget-empty py-5" th:if="${locationList == null or #lists.isEmpty(locationList)}">
             등록된 위치가 없어요.
         </p>
+    </main>
+</div>
 
-        <p class="section-label" style="margin-top: var(--sp-5);">위치 추가</p>
-        <p th:if="${createError}" th:text="${createError}" class="form-text" style="color: var(--danger); margin-bottom: var(--sp-2);"></p>
-        <form th:action="@{/my-group/location/create}" method="post" style="max-width: 420px; display: flex; flex-direction: column; gap: var(--sp-3);">
-            <div>
-                <label for="locationName" class="form-label">위치 이름</label>
-                <input type="text" id="locationName" name="locationName" class="form-control" placeholder="예: 2층 사무실" required>
+<!-- 위치 추가 모달 팝업 -->
+<div class="modal fade" id="createLocationModal" tabindex="-1" aria-labelledby="createLocationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: var(--radius-lg); border: 1px solid var(--line); box-shadow: var(--shadow-lg);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--line); padding: var(--sp-4);">
+                <h5 class="modal-title font-weight-bold" id="createLocationModalLabel" style="font-size: 1.1rem; color: var(--ink);">새 위치 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div>
-                <label for="autoControlMode" class="form-label">자동 제어 모드</label>
-                <select id="autoControlMode" name="autoControlMode" class="form-control" required>
-                    <option value="SUGGESTION">제안만 받기 (SUGGESTION)</option>
-                    <option value="AI_DIRECT">AI 자동 제어 (AI_DIRECT)</option>
-                </select>
-            </div>
-            <button type="submit" class="btn-landing-primary" style="align-self: flex-start;">
-                <i class="ti ti-plus"></i>위치 추가
-            </button>
-        </form>
+            <form th:action="@{/my-group/location/create}" method="post">
+                <div class="modal-body" style="padding: var(--sp-4);">
+                    <div class="mb-3">
+                        <label for="locationName" class="form-label" style="font-weight: 500; color: var(--ink);">위치 이름</label>
+                        <input type="text" id="locationName" name="locationName" class="form-control" placeholder="예: 2층 사무실, B동 로비" required style="border-radius: var(--radius-md);">
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--line); padding: var(--sp-3) var(--sp-4);">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn-landing-primary">
+                        <i class="ti ti-plus"></i>추가하기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
     </main>
 </div>
 
 <div th:replace="~{fragments/layout :: chatWidget}"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('openModal') === 'true') {
+            const modalEl = document.getElementById('createLocationModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+
+        const sidebarAddBtn = document.getElementById('sidebarAddLocationBtn');
+        if (sidebarAddBtn) {
+            sidebarAddBtn.addEventListener('click', function(e) {
+                if (window.location.pathname === '/my-group/location/list') {
+                    e.preventDefault();
+                    const modalEl = document.getElementById('createLocationModal');
+                    if (modalEl) {
+                        const modal = new bootstrap.Modal(modalEl);
+                        modal.show();
+                    }
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>

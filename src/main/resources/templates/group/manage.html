@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <script th:src="@{/js/theme.js}"></script>
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -48,7 +49,7 @@
                         <select class="form-select" id="city">
                             <option value="">선택하세요</option>
                             <option th:each="c : ${cities}"
-                                    th:selected="${prevRegion != null and #strings.trim(prevRegion[1]) == c}"
+                                    th:selected="${prevRegion != null and #lists.size(prevRegion) > 1 and #strings.trim(prevRegion[1]) == c}"
                                     th:text="${c}"
                                     th:value="${c}"></option>
                         </select>
@@ -280,8 +281,8 @@
 <script th:inline="javascript" th:if="${section == 'info'}"
         th:with="prevRegion=${myGroup.groupRegion() != null ? #strings.arraySplit(myGroup.groupRegion(), ' ') : null}">
     const REGISTRATION_INIT = {
-        previousState: /*[[${prevRegion != null ? prevRegion[0] : null}]]*/ null,
-        previousCity: /*[[${prevRegion != null ? #strings.trim(prevRegion[1]) : null}]]*/ null
+        previousState: /*[[${prevRegion != null and #lists.size(prevRegion) > 0 ? prevRegion[0] : null}]]*/ null,
+        previousCity: /*[[${prevRegion != null and #lists.size(prevRegion) > 1 ? #strings.trim(prevRegion[1]) : null}]]*/ null
     };
 </script>
 <script th:if="${section == 'info'}" th:src="@{/js/group-registration.js}"></script>

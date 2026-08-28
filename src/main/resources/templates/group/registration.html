@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
@@ -112,8 +113,53 @@
         </form>
     </div>
 
+    <!-- 과거 신청 이력 (현재 화면에 나온 최신 건 제외, 최신순) -->
+    <div class="auth-card auth-card-wide" th:if="${history != null and !history.isEmpty()}" style="margin-top: var(--sp-6);">
+        <h1 style="font-size:1.125rem; margin-bottom: var(--sp-2);">지난 신청 내역</h1>
+        <dl style="margin:0;">
+            <div class="registration-detail-row" th:each="item : ${history}">
+                <dt>
+                    <div th:text="${item.groupName()}"></div>
+                    <div style="color:var(--ink-faint); font-size:var(--fs-meta); margin-top:2px;"
+                         th:text="${item.groupRegion()} + ' · ' + ${#temporals.format(item.createdAt(), 'yyyy-MM-dd')}"></div>
+                </dt>
+                <dd>
+                    <span class="status-badge" style="margin-top:0;" th:classappend="${item.status().badgeClass}"
+                          th:text="${item.status().label}"></span>
+                </dd>
+            </div>
+        </dl>
+    </div>
+
+    <!-- 이미 대기 중인 신청이 있는데 다시 제출했을 때(409) 뜨는 안내 팝업 -->
+    <div class="modal fade" id="registrationConflictModal" tabindex="-1" aria-hidden="true" th:if="${registrationError}">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ti ti-clock-hour-4" style="color:var(--warning); margin-right: var(--sp-2);"></i>
+                        신청 처리 대기 중
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="auth-subtitle" style="margin-bottom:0;" th:text="${registrationError}"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/group-registration.js}"></script>
+<script th:if="${registrationError}" th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', () => {
+        new bootstrap.Modal(document.getElementById('registrationConflictModal')).show();
+    });
+</script>
 </body>
 </html>

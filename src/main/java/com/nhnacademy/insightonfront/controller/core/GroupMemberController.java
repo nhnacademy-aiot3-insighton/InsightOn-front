@@ -3,12 +3,14 @@ package com.nhnacademy.insightonfront.controller.core;
 import com.nhnacademy.insightonfront.adapter.core.groupmember.GroupMemberClient;
 import com.nhnacademy.insightonfront.adapter.core.groupmember.dto.GroupMemberListResponse;
 import com.nhnacademy.insightonfront.adapter.core.groupmember.dto.GroupMemberResponse;
+import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -22,6 +24,27 @@ import java.util.List;
 @RequestMapping("/my-group/members")
 public class GroupMemberController {
     private final GroupMemberClient groupMemberClient;
+    private final GroupPermissionService groupPermissionService;
+
+    @PostMapping("/invite")
+    public String inviteMemberByEmail(@CookieValue(value = "groupId", required = false) Long groupId,
+                                      @RequestParam("email") String email,
+                                      RedirectAttributes redirectAttributes) {
+        if (groupId == null) {
+            return "redirect:/group-registration";
+        }
+
+        try {
+            groupMemberClient.inviteMemberByEmail(groupId, email);
+            log.info("멤버 초대가 완료 되었습니다. Group ID: {}, Email: {}", groupId, email);
+            redirectAttributes.addFlashAttribute("inviteSuccess", "멤버 초대가 완료되었습니다!");
+        } catch (FeignException e) {
+            log.warn("멤버 초대 실패 - groupId:{}, email:{}", groupId, email, e);
+            redirectAttributes.addFlashAttribute("inviteError", "초대에 실패했습니다. 가입되지 않은 이메일이거나 이미 그룹에 소속된 유저입니다.");
+        }
+
+        return "redirect:/my-group/members";
+    }
 
     @GetMapping
     public String getGroupMemberList(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
@@ -40,7 +63,8 @@ public class GroupMemberController {
     }
 
     @GetMapping("/{group-member-id}")
-    public String getGroupMember(@CookieValue(value = "groupId", required = false) Long groupId,
+    public String getGroupMember(@CookieValue(value = "userId", required = false) Long userId,
+                                 @CookieValue(value = "groupId", required = false) Long groupId,
                                  @PathVariable("group-member-id") Long groupMemberId, Model model) {
         if (groupId == null) {
             return "redirect:/group-registration";
@@ -48,6 +72,13 @@ public class GroupMemberController {
         try {
             GroupMemberResponse groupMember = groupMemberClient.getGroupMember(groupId, groupMemberId);
             model.addAttribute("groupMember", groupMember);
+
+            boolean isSuperManager = false;
+            if (userId != null) {
+                isSuperManager = groupPermissionService.isSuperManager(groupId, userId);
+            }
+            model.addAttribute("isSuperManager", isSuperManager);
+
         } catch (FeignException e) {
             log.warn("그룹 멤버 상세 조회 실패 - groupId:{}, groupMemberId:{}", groupId, groupMemberId, e);
             model.addAttribute("groupMember", null);
