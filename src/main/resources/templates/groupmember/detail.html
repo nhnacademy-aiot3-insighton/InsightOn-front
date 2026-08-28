@@ -114,9 +114,9 @@
                     </button>
                 </div>
 
-                <!-- 최고관리자 권한 양도 (MANAGER에게만) -->
+                <!-- 최고관리자 권한 양도 (내가 SUPER_MANAGER이고, 대상 멤버가 MANAGER인 경우에만 표시) -->
                 <div class="settings-field" style="flex-direction: row; align-items: center; justify-content: space-between; gap: var(--sp-4);"
-                     th:if="${groupMember.groupRole().name() == 'MANAGER'}">
+                     th:if="${isSuperManager and groupMember.groupRole().name() == 'MANAGER'}">
                     <div>
                         <div style="font-weight: 500;">최고관리자 권한 양도</div>
                         <div class="field-hint" style="margin-top: var(--sp-1);">
