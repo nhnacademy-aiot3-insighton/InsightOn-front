@@ -108,7 +108,7 @@
                         </div>
                     </div>
                     <button type="button" id="btnToggleManager" class="btn btn-outline-secondary"
-                            th:attr="data-member-id=${groupMember.userId()}">
+                            th:attr="data-member-id=${groupMember.groupMemberId()}">
                         <i class="ti ti-shield-check"></i>
                         <span th:text="${groupMember.groupRole().name() == 'MANAGER' ? '권한 해제' : '권한 부여'}">권한 부여</span>
                     </button>
@@ -125,7 +125,7 @@
                     </div>
                     <button type="button" id="btnToggleSuperManager" class="btn btn-outline-secondary"
                             style="color: var(--warning); border-color: var(--warning);"
-                            th:attr="data-member-id=${groupMember.userId()}">
+                            th:attr="data-member-id=${groupMember.groupMemberId()}">
                         <i class="ti ti-crown"></i> 권한 양도
                     </button>
                 </div>
@@ -137,7 +137,7 @@
                         <div class="field-hint" style="margin-top: var(--sp-1);">이 멤버를 그룹에서 내보냅니다. 되돌릴 수 없어요.</div>
                     </div>
                     <button type="button" id="btnKick" class="btn btn-outline-secondary text-danger"
-                            th:attr="data-member-id=${groupMember.userId()}">
+                            th:attr="data-member-id=${groupMember.groupMemberId()}">
                         <i class="ti ti-user-minus"></i> 내보내기
                     </button>
                 </div>
