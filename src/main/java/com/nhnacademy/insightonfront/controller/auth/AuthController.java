@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -230,11 +231,18 @@ public class AuthController {
      */
     @PostMapping("/signup/submit")
     @ResponseBody
-    public ResponseEntity<UserSignupResponse> signup(@RequestBody UserSignupRequest request) {
-        UserSignupResponse response = signupService.signup(
-                request.email(), request.password(), request.userName(),
-                request.phoneNumber(), request.token());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<?> signup(@RequestBody UserSignupRequest request) {
+        try {
+            UserSignupResponse response = signupService.signup(
+                    request.email(), request.password(), request.userName(),
+                    request.phoneNumber(), request.token());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (FeignException e) {
+            log.warn("[Auth] 회원가입 처리 중 FeignException: status={}", e.status());
+            return ResponseEntity.status(e.status() > 0 ? e.status() : 500)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(e.contentUTF8());
+        }
     }
 
     // ================================================================

@@ -2657,6 +2657,9 @@ button:focus-visible,
 .verify-status.danger { color: var(--danger); }
 .verify-status.warning { color: var(--warning); }
 
+.verify-status.is-error { color: var(--danger); animation: hint-shake 0.4s ease; }
+.verify-status.is-success { color: var(--success); }
+
 .field-hint {
   font-size: var(--fs-meta);
   color: var(--ink-faint);
@@ -2665,6 +2668,16 @@ button:focus-visible,
 
 .field-hint.danger { color: var(--danger); }
 .field-hint.success { color: var(--success); }
+.field-hint.is-error { color: var(--danger); animation: hint-shake 0.4s ease; }
+.field-hint.is-success { color: var(--success); }
+
+@keyframes hint-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
 
 /* find-id result: the one thing that page exists to show */
 .masked-email-result {
