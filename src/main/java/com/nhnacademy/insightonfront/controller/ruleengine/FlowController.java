@@ -65,14 +65,16 @@ public class FlowController {
     public String list(@CookieValue(value = "userId", required = false) Long userId,
                         @CookieValue(value = "groupId", required = false) Long groupId,
                         @RequestParam(required = false) FlowStatus status,
+                        @RequestParam(required = false) Long locationId,
                         Model model, HttpServletResponse response) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
         }
         return renderOrError(response, model, () -> {
-            List<FlowViewModel> flows = flowViewService.getFlows(groupId, status);
+            List<FlowViewModel> flows = flowViewService.getFlows(groupId, status, locationId);
             model.addAttribute("flows", flows);
             model.addAttribute("selectedStatus", status);
+            model.addAttribute("selectedLocationId", locationId);
             model.addAttribute("canManage", flowPermissionService.isManagerOrAbove(groupId, userId));
             return "flow/list";
         });
