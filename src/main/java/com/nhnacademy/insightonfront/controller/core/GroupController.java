@@ -145,11 +145,9 @@ public class GroupController {
     @ResponseBody
     public ResponseEntity<?> getGroupPreview(@CookieValue(value = "groupId", required = false) Long groupId,
                                               @RequestParam("inviteToken") String inviteToken) {
-        if (groupId == null) {
-            throw new IllegalArgumentException("소속된 그룹이 없습니다.");
-        }
         try {
-            GroupResponse groupPreview = groupClient.getGroupPreview(groupId, inviteToken);
+            Long targetGroupId = groupId != null ? groupId : 0L;
+            GroupResponse groupPreview = groupClient.getGroupPreview(targetGroupId, inviteToken);
             return ResponseEntity.ok(groupPreview);
         } catch (FeignException.NotFound e) {
             return ResponseEntity.status(404).body(Map.of("message", "유효하지 않거나 만료된 초대 코드입니다."));
