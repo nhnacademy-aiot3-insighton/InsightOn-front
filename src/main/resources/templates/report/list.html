@@ -44,7 +44,7 @@
                             <span class="status-badge neutral" style="margin-top:0;" th:text="${report.reportType().name() == 'WEEKLY'} ? '주간' : '월간'"></span>
                             <span th:text="${report.title()}"></span>
                         </div>
-                        <div class="split-row-meta" th:text="${report.locationName()} + ' · ' + ${#temporals.format(report.createdAt(), 'yyyy-MM-dd')}"></div>
+                        <div class="split-row-meta" th:text="${report.locationName()} + ' · ' + ${#temporals.format(report.createdAt().withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'yyyy-MM-dd')}"></div>
                     </a>
                 </div>
 

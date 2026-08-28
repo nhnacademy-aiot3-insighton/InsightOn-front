@@ -4624,7 +4624,14 @@ button:focus-visible,
   margin-bottom: var(--sp-1);
 }
 
+/* 제안쪽 줄밀림 수정 */
+.split-row-title .status-badge {
+  flex-shrink: 0;
+}
+
 .split-row-title span:last-child {
+  flex: 1;
+  min-width: 0; /* 제안쪽 줄밀림 수정 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

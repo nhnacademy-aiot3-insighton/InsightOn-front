@@ -42,7 +42,7 @@
                th:classappend="${n.isRead()} ? 'is-read' : ''"
                th:attr="data-id=${n.dashboardNotificationId()}, data-type=${n.notificationType()}, data-source-id=${n.sourceId()}">
                 <div class="notif-item-title" th:text="${#strings.isEmpty(n.locationName())} ? ${n.title()} : ${n.locationName()} + ' · ' + ${n.title()}"></div>
-                <div class="notif-item-meta" th:text="${#temporals.format(n.createdAt(), 'yyyy-MM-dd HH:mm')}"></div>
+                <div class="notif-item-meta" th:text="${#temporals.format(n.createdAt().withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'yyyy-MM-dd HH:mm')}"></div>
             </a>
         </div>
 
