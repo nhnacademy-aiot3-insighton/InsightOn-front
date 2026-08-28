@@ -9,7 +9,7 @@
            th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}"
            class="location-link" th:text="${location.locationName()}"></a>
     </div>
-    <a th:href="@{/my-group/location/list}" class="add-location-link">
+    <a th:href="@{/my-group/location/list?openModal=true}" class="add-location-link" id="sidebarAddLocationBtn">
         <i class="ti ti-plus"></i>위치 추가
     </a>
 </div>
@@ -24,11 +24,12 @@
 </div>
 
 <header th:fragment="groupHeader" class="app-header d-flex align-items-center px-4 gap-4">
-    <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
+    <a th:href="@{/}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <i class="ti ti-chart-line"></i>
         InsightOn <span class="text-muted-group">· 우리회사</span>
     </a>
     <nav class="app-nav d-flex gap-2">
+        <a th:href="@{/}" class="nav-link"><i class="ti ti-home"></i> 홈</a>
         <a th:href="@{/my-group/reports}" class="nav-link">리포트</a>
         <a th:href="@{/my-group/engine-alerts}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions}" class="nav-link">제안</a>
@@ -80,7 +81,7 @@
 </header>
 
 <header th:fragment="locationHeader(locationName, locationId, autoControlMode)" class="app-header d-flex align-items-center px-4 gap-4">
-    <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
+    <a th:href="@{/}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <i class="ti ti-chart-line"></i>
         우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
         <span th:text="${locationName}">위치명</span>
@@ -88,6 +89,7 @@
     <span th:if="${autoControlMode != null}" class="status-badge neutral" style="margin-top:0; white-space:nowrap;"
           th:text="${autoControlMode.name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
     <nav class="app-nav d-flex gap-2">
+        <a th:href="@{/}" class="nav-link"><i class="ti ti-home"></i> 홈</a>
         <a th:href="@{/my-group/reports(locationId=${locationId})}" class="nav-link active">리포트</a>
         <a th:href="@{/my-group/engine-alerts(locationId=${locationId})}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions(locationId=${locationId})}" class="nav-link">제안</a>
@@ -95,9 +97,9 @@
         <a th:href="@{/locations/{locationId}/actuators(locationId=${locationId})}" class="nav-link">액추에이터</a>
     </nav>
     <div class="flex-grow-1"></div>
-    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#locationManageModal">
+    <a th:href="@{/my-group/location/list}" class="btn btn-outline-secondary">
         위치 관리
-    </button>
+    </a>
     <div class="dropdown">
         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="ti ti-bell"></i>
