@@ -7,6 +7,9 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Objects;
+
 /**
  * "이 사용자가 그룹을 이미 갖고 있는지"를 직접 조회하는 API는 아직 없어서, 가장 최근 그룹
  * 신청의 상태로 대신 판단한다. {@link com.nhnacademy.insightonfront.controller.HomeController}와
@@ -23,7 +26,7 @@ public class GroupRegistrationStatusService {
     public GroupRegistrationResponse findLatest() {
         try {
             PageResponse<GroupRegistrationResponse> page =
-                    groupRegistrationClient.getMyGroupRegistrations(0, 1);
+                    groupRegistrationClient.getMyGroupRegistrations(0, 1, "groupRegistrationId,desc");
 
             if (page == null || page.content() == null || page.content().isEmpty()) {
                 return null;
@@ -34,4 +37,15 @@ public class GroupRegistrationStatusService {
             return null;   // ★ 신청 이력 없음 → null (에러 아님)
         }
     }
+
+    public List<GroupRegistrationResponse> findHistory(Long excludeId) {
+        PageResponse<GroupRegistrationResponse> page = groupRegistrationClient.getMyGroupRegistrations(0, 20, "groupRegistrationId,desc");
+
+        if (Objects.isNull(page) || Objects.isNull(page.content())) {
+            return List.of();
+        }
+        return page.content().stream()
+                .filter(r -> !r.groupRegistrationId().equals(excludeId)).toList();
+    }
+
 }
