@@ -119,12 +119,27 @@ public class GroupMemberController {
         return "redirect:/my-group/member";
     }
 
+    @PostMapping("/leave")
+    public String leaveGroupPost(@CookieValue(value = "groupId", required = false) Long groupId,
+                                 jakarta.servlet.http.HttpServletResponse response) {
+        return leaveGroup(groupId, response);
+    }
+
     @DeleteMapping("/leave")
-    public String leaveGroup(@CookieValue("groupId") Long groupId) {
-
-        groupMemberClient.leaveGroup(groupId);
-
-        log.info("group({})을 떠나셨습니다.", groupId);
+    public String leaveGroup(@CookieValue(value = "groupId", required = false) Long groupId,
+                             jakarta.servlet.http.HttpServletResponse response) {
+        if (groupId != null) {
+            try {
+                groupMemberClient.leaveGroup(groupId);
+                log.info("group({})을 떠나셨습니다.", groupId);
+            } catch (FeignException e) {
+                log.warn("그룹 탈퇴 실패 - groupId:{}", groupId, e);
+            }
+        }
+        jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("groupId", null);
+        cookie.setMaxAge(0);
+        cookie.setPath("/");
+        response.addCookie(cookie);
 
         return "redirect:/";
     }
