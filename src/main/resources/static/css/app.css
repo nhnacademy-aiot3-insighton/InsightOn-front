@@ -3115,6 +3115,11 @@ button:focus-visible,
   border-left-color: var(--primary);
 }
 
+.flow-page .app-main .path-trigger-advanced-toggle {
+  display: block;
+  margin-top: var(--sp-1);
+}
+
 .flow-node-action {
   border-left-color: var(--ink-soft);
 }
@@ -3649,9 +3654,7 @@ button:focus-visible,
 
 .flow-list-panel .location-summary-list {
   display: flex;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
+  flex-wrap: wrap;
 }
 
 .flow-list-panel .split-row:last-child {

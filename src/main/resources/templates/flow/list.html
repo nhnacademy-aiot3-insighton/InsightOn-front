@@ -33,6 +33,14 @@
                 <p>어떤 상황에 무엇이 실행되는지 확인하고, 필요한 자동화를 관리하세요.</p>
             </div>
             <form method="get" th:action="@{/my-group/flows}" class="flow-list-filter">
+                <label for="flowLocationFilter">위치</label>
+                <select id="flowLocationFilter" name="locationId" class="form-select">
+                    <option value="">전체 위치</option>
+                    <option th:each="loc : ${sidebarLocations}"
+                            th:value="${loc.locationId()}"
+                            th:text="${loc.locationName()}"
+                            th:selected="${selectedLocationId != null and selectedLocationId == loc.locationId()}"></option>
+                </select>
                 <label for="flowStatusFilter">상태</label>
                 <select id="flowStatusFilter" name="status" class="form-select">
                     <option value="">전체 (휴지통 제외)</option>
