@@ -21,6 +21,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,6 +65,12 @@ public class FlowViewService {
                 .map(flow -> toViewModel(flow, locationNames))
                 .filter(flow -> locationId == null || locationId.equals(flow.locationId()))
                 .toList();
+    }
+
+    /** 화면에서 위치별 섹션으로 나눠 보여주기 위한 그룹핑 - 화면 표시용 조립이라 여기(domain)에 둔다. */
+    public Map<String, List<FlowViewModel>> groupByLocation(List<FlowViewModel> flows) {
+        return flows.stream()
+                .collect(Collectors.groupingBy(FlowViewModel::locationName, LinkedHashMap::new, Collectors.toList()));
     }
 
     private FlowViewModel toViewModel(FlowResponse flow, Map<Long, String> locationNames) {
