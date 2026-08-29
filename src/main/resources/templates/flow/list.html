@@ -62,22 +62,25 @@
                     <span>자동화 목록</span>
                     <span class="num" th:text="${#lists.size(flows)} + '개'">0개</span>
                 </div>
-                <div class="location-summary-list" th:if="${not #lists.isEmpty(flows)}">
-                    <a class="split-row" th:each="flow : ${flows}"
-                       th:href="@{/my-group/flows/{flowId}(flowId=${flow.flowId()})}">
-                        <span class="flow-list-item-icon"><i class="ti ti-git-branch"></i></span>
-                        <div class="flow-list-item-copy">
-                            <div class="split-row-title">
-                                <span th:text="${flow.name()}"></span>
+                <div th:each="group : ${flowsByLocation}" style="margin-bottom: var(--sp-4);">
+                    <p class="flow-location-label" th:text="${group.key}">위치</p>
+                    <div class="location-summary-list">
+                        <a class="split-row" th:each="flow : ${group.value}"
+                           th:href="@{/my-group/flows/{flowId}(flowId=${flow.flowId()})}">
+                            <span class="flow-list-item-icon"><i class="ti ti-git-branch"></i></span>
+                            <div class="flow-list-item-copy">
+                                <div class="split-row-title">
+                                    <span th:text="${flow.name()}"></span>
+                                </div>
+                                <div class="split-row-meta"
+                                     th:text="${#temporals.format(flow.createdAt(), 'yyyy-MM-dd HH:mm')}"></div>
                             </div>
-                            <div class="split-row-meta"
-                                 th:text="${flow.locationName()} + ' · ' + ${#temporals.format(flow.createdAt(), 'yyyy-MM-dd HH:mm')}"></div>
-                        </div>
-                        <span class="status-badge success" style="margin-top:0;" th:if="${flow.status().name() == 'ACTIVE'}">활성</span>
-                        <span class="status-badge neutral" style="margin-top:0;" th:if="${flow.status().name() == 'INACTIVE'}">비활성</span>
-                        <span class="status-badge danger" style="margin-top:0;" th:if="${flow.status().name() == 'ERROR'}">오류</span>
-                        <span class="status-badge neutral" style="margin-top:0;" th:if="${flow.status().name() == 'ARCHIVED'}">휴지통</span>
-                    </a>
+                            <span class="status-badge success" style="margin-top:0;" th:if="${flow.status().name() == 'ACTIVE'}">활성</span>
+                            <span class="status-badge neutral" style="margin-top:0;" th:if="${flow.status().name() == 'INACTIVE'}">비활성</span>
+                            <span class="status-badge danger" style="margin-top:0;" th:if="${flow.status().name() == 'ERROR'}">오류</span>
+                            <span class="status-badge neutral" style="margin-top:0;" th:if="${flow.status().name() == 'ARCHIVED'}">휴지통</span>
+                        </a>
+                    </div>
                 </div>
 
                 <p class="flow-list-empty" th:if="${#lists.isEmpty(flows)}">
