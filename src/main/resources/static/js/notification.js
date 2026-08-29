@@ -76,6 +76,27 @@
             });
     });
 
+    // 드롭다운 안 "전체 읽기" - 벨은 원래부터 정적으로 있던 요소라(render()가 .notif-list만 갈아끼움)
+    // 초기화 시점에 한 번만 걸어두면 됨. 실패해도(예: MANAGER 미만) 별도 상태 영역이 없어서
+    // 버튼 텍스트를 잠깐 바꿔 알려준다
+    document.querySelectorAll('.btn-read-all-notifs').forEach((btn) => {
+        const originalText = btn.textContent;
+        btn.addEventListener('click', () => {
+            btn.disabled = true;
+            fetch('/my-group/notifications/read-all', {method: 'POST'})
+                .then((r) => {
+                    if (!r.ok) throw new Error('read-all failed');
+                    loadNotifications();
+                })
+                .catch((err) => {
+                    console.warn('[notifications] 전체 읽음 처리 실패', err);
+                    btn.textContent = '처리 실패';
+                    setTimeout(() => { btn.textContent = originalText; }, 2000);
+                })
+                .finally(() => { btn.disabled = false; });
+        });
+    });
+
     loadNotifications();
 
     const stream = new EventSource('/groups/notifications/stream');
