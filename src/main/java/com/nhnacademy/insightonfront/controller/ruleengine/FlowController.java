@@ -73,6 +73,7 @@ public class FlowController {
         return renderOrError(response, model, () -> {
             List<FlowViewModel> flows = flowViewService.getFlows(groupId, status, locationId);
             model.addAttribute("flows", flows);
+            model.addAttribute("flowsByLocation", flowViewService.groupByLocation(flows));
             model.addAttribute("selectedStatus", status);
             model.addAttribute("selectedLocationId", locationId);
             model.addAttribute("canManage", flowPermissionService.isManagerOrAbove(groupId, userId));

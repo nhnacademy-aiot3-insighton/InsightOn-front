@@ -48,6 +48,10 @@ public class DashboardNotificationViewService {
         return toViewModel(notification, locationNames);
     }
 
+    public void markAllAsRead(Long groupId) {
+        dashboardNotificationClient.markAllAsRead(groupId);
+    }
+
     private DashboardNotificationViewModel toViewModel(DashboardNotificationResponse notification,
                                                          Map<Long, String> locationNames) {
         return new DashboardNotificationViewModel(
