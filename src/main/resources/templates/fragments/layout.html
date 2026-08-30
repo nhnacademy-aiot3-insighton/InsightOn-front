@@ -9,7 +9,7 @@
            th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}"
            class="location-link" th:text="${location.locationName()}"></a>
     </div>
-    <a th:href="@{/my-group/location/list?openModal=true}" class="add-location-link" id="sidebarAddLocationBtn">
+    <a th:href="@{/my-group/location/list?openModal=true}" class="add-location-link" id="sidebarAddLocationBtn" th:if="${isManager == null or isManager}">
         <i class="ti ti-plus"></i>위치 추가
     </a>
 </div>
