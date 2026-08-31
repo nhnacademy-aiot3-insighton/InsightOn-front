@@ -20,7 +20,7 @@
     <link href="https://cdn.jsdelivr.net/npm/gridstack@latest/dist/gridstack.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
     <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
@@ -111,6 +111,17 @@
             </div>
             <div class="modal-body">
                 <div class="widget-config-field">
+                    <label>차트 보기 방식</label>
+                    <div class="type-choice-group" id="widgetDisplayModeChoices">
+                        <label class="type-choice">
+                            <input checked name="widgetDisplayMode" type="radio" value="SCROLL">
+                            <i class="ti ti-arrows-left-right"></i>드래그/스크롤 상세 보기
+                        </label>
+                        <label class="type-choice">
+                            <input name="widgetDisplayMode" type="radio" value="FIT">
+                            <i class="ti ti-maximize"></i>한 화면 전체 보기
+                        </label>
+                    </div>
                     <label>표현 형태</label>
                     <div class="type-choice-group" id="widgetTypeChoices">
                         <label class="type-choice">
@@ -157,7 +168,7 @@
                     <div class="col-6 widget-config-field">
                         <label for="widgetAggSelect">집계 주기</label>
                         <select class="form-select" id="widgetAggSelect">
-                            <option value="15m" selected>15분</option>
+                            <option selected value="15m">15분</option>
                             <option value="1m">1분</option>
                             <option value="1h">1시간</option>
                         </select>
