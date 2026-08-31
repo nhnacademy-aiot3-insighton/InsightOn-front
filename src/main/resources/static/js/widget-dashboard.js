@@ -805,6 +805,15 @@
             ? Array.from(checkboxEls).filter((c) => c.checked).map((c) => c.value)
             : (w.widgetConfig.fields || []);
 
+        if (!sensorEui) {
+            alert('센서를 선택해주세요.');
+            return;
+        }
+        if (!fields || fields.length === 0) {
+            alert('최소 1개 이상의 메트릭을 선택해 주세요.');
+            return;
+        }
+
         w.widgetConfig = {
             type,
             sensorEui: sensorEui || null,
