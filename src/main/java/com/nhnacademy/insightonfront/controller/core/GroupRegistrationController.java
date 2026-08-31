@@ -81,17 +81,34 @@ public class GroupRegistrationController {
             groupRegistrationClient.createRequest(new CreateGroupRegistrationRequest(groupName, description, state, city));
         } catch (FeignException.Conflict e) {
             redirectAttributes.addFlashAttribute("registrationError", "이미 처리 대기 중인 신청이 있어요. 관리자 승인을 기다려주세요.");
+        } catch (FeignException.BadRequest e) {
+            redirectAttributes.addFlashAttribute("registrationError", "입력 정보가 올바르지 않습니다 (시/도 및 시/군/구 조합 확인).");
+        } catch (FeignException.Forbidden e) {
+            redirectAttributes.addFlashAttribute("registrationError", "그룹 신청 권한이 없습니다.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("registrationError", "그룹 신청 중 오류가 발생했습니다.");
         }
         return "redirect:/group-registration";
     }
 
     @PostMapping("/cancel")
     public String cancel(@CookieValue(value = "userId", required = false) Long userId,
-                         @RequestParam Long groupRegistrationId) {
+                         @RequestParam Long groupRegistrationId,
+                         RedirectAttributes redirectAttributes) {
         if (userId == null) {
             return "redirect:/login";
         }
-        groupRegistrationClient.cancelGroupRegistration(groupRegistrationId);
+        try {
+            groupRegistrationClient.cancelGroupRegistration(groupRegistrationId);
+        } catch (FeignException.NotFound e) {
+            redirectAttributes.addFlashAttribute("registrationError", "존재하지 않는 그룹 신청 내역입니다.");
+        } catch (FeignException.Forbidden e) {
+            redirectAttributes.addFlashAttribute("registrationError", "본인의 그룹 신청 건만 취소할 수 있습니다.");
+        } catch (FeignException.BadRequest e) {
+            redirectAttributes.addFlashAttribute("registrationError", "이미 승인/거절 처리되었거나 취소할 수 없는 상태입니다.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("registrationError", "신청 취소 중 오류가 발생했습니다.");
+        }
         return "redirect:/group-registration";
     }
 
