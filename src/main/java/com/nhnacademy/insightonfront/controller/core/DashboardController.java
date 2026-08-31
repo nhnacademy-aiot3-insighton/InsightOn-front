@@ -106,6 +106,12 @@ public class DashboardController {
         } catch (FeignException.Conflict e) {
             log.warn("[DashboardController] 대시보드 위젯 저장 충돌(409). 이미 수정되었거나 삭제된 위젯입니다. locationId: {}", locationId);
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        } catch (FeignException.Forbidden e) {
+            log.warn("[DashboardController] 대시보드 위젯 저장 권한 없음(403). locationId: {}", locationId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        } catch (FeignException.NotFound e) {
+            log.warn("[DashboardController] 대시보드 저장 대상 위치/그룹 없음(404). locationId: {}", locationId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (Exception e) {
             log.error("[DashboardController] 대시보드 위젯 저장 실패: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -126,6 +132,9 @@ public class DashboardController {
         } catch (FeignException.NotFound e) {
             log.info("[DashboardController] 초기 위젯 차트 데이터 준비 중 (또는 데이터 없음). widgetId: {}", widgetId);
             return ResponseEntity.ok(new ChartDataResponse(Collections.emptyList(), Collections.emptyList()));
+        } catch (FeignException.Forbidden e) {
+            log.warn("[DashboardController] 위젯 차트 데이터 조회 권한 없음(403). widgetId: {}", widgetId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (Exception e) {
             log.warn("[DashboardController] InfluxDB 차트 데이터 조회 실패. widgetId: {}, message: {}", widgetId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
