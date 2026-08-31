@@ -109,11 +109,57 @@
                                 <label>센서</label>
                                 <select class="form-select path-trigger-sensor" aria-label="시작 센서"></select>
                             </div>
-                            <div class="settings-field path-trigger-schedule-field">
-                                <label>예약 주기 (Cron)</label>
-                                <input type="text" class="form-control path-trigger-cron" aria-label="예약 주기"
-                                       placeholder="예: 0 9 * * * (매일 오전 9시)">
-                                <p class="field-hint">분 시 일 월 요일 순서의 Cron 표현식이에요.</p>
+                            <div class="path-trigger-schedule-field">
+                                <div class="settings-field">
+                                    <label>반복</label>
+                                    <select class="form-select path-schedule-repeat" aria-label="반복 주기">
+                                        <option value="DAILY">매일</option>
+                                        <option value="WEEKLY">매주</option>
+                                        <option value="MONTHLY">매월</option>
+                                    </select>
+                                </div>
+                                <div class="settings-field path-schedule-weekday-field">
+                                    <label>요일</label>
+                                    <div class="d-flex flex-wrap gap-2" role="group" aria-label="반복 요일">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input path-schedule-weekday" type="checkbox" value="0" id="weekday-0">
+                                            <label class="form-check-label" for="weekday-0">일</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input path-schedule-weekday" type="checkbox" value="1" id="weekday-1">
+                                            <label class="form-check-label" for="weekday-1">월</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input path-schedule-weekday" type="checkbox" value="2" id="weekday-2">
+                                            <label class="form-check-label" for="weekday-2">화</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input path-schedule-weekday" type="checkbox" value="3" id="weekday-3">
+                                            <label class="form-check-label" for="weekday-3">수</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input path-schedule-weekday" type="checkbox" value="4" id="weekday-4">
+                                            <label class="form-check-label" for="weekday-4">목</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input path-schedule-weekday" type="checkbox" value="5" id="weekday-5">
+                                            <label class="form-check-label" for="weekday-5">금</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input path-schedule-weekday" type="checkbox" value="6" id="weekday-6">
+                                            <label class="form-check-label" for="weekday-6">토</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="settings-field path-schedule-day-field">
+                                    <label>날짜</label>
+                                    <select class="form-select path-schedule-day" aria-label="반복 날짜"></select>
+                                </div>
+                                <div class="settings-field">
+                                    <label>시간</label>
+                                    <input type="time" class="form-control path-schedule-time" aria-label="반복 시간" value="09:00">
+                                </div>
+                                <p class="field-hint path-schedule-summary" aria-live="polite">매일 오전 9시에 시작합니다.</p>
                             </div>
                             <span class="flow-port flow-port-out" aria-hidden="true"></span>
                         </article>

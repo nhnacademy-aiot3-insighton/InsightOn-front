@@ -19,6 +19,7 @@ import com.nhnacademy.insightonfront.domain.flow.dto.FlowStepViewModel;
 import com.nhnacademy.insightonfront.domain.flow.dto.FlowViewModel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -47,6 +48,10 @@ public class FlowViewService {
             "temperature", "°C", "humidity", "%", "co2", "ppm", "illuminance", "lx");
     private static final Map<String, String> OPERATOR_LABELS = Map.of(
             ">", "초과", ">=", "이상", "<", "미만", "<=", "이하", "==", "같음", "!=", "다름");
+    private static final String[] WEEKDAY_LABELS = {"일", "월", "화", "수", "목", "금", "토"};
+    // Flow Editor(flow-editor.js의 buildCron)가 만들어내는 "매일/매주/매월" 3가지 형태만 인식한다.
+    private static final Pattern SCHEDULE_CRON = Pattern.compile(
+            "^(\\d{1,2})\\s+(\\d{1,2})\\s+(\\*|\\d{1,2})\\s+\\*\\s+(\\*|[0-6](?:,[0-6])*)$");
 
     private final FlowClient flowClient;
     private final LocationNameResolver locationNameResolver;
@@ -130,7 +135,7 @@ public class FlowViewService {
             case ALERT -> alertStep(node, configuration);
             case SCHEDULE -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "시작", "예약한 시간에 시작",
                     "설정한 일정에 맞춰 Flow를 시작합니다.", "ti-calendar-time",
-                    fields(new FlowStepFieldViewModel("일정", text(configuration, "cron", "설정 없음"))));
+                    fields(new FlowStepFieldViewModel("일정", cronSummary(text(configuration, "cron", "")))));
             case TIME_WINDOW -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "조건", "운영 시간 확인",
                     "현재 시간이 설정한 범위에 포함되는지 확인합니다.", "ti-clock",
                     fields(new FlowStepFieldViewModel("시간", text(configuration, "startTime", "-")
@@ -213,6 +218,34 @@ public class FlowViewService {
             case "WARNING" -> "경고";
             default -> "안내";
         };
+    }
+
+    private String cronSummary(String cron) {
+        if (cron.isBlank()) return "설정 없음";
+        Matcher matcher = SCHEDULE_CRON.matcher(cron.trim());
+        if (!matcher.matches()) return cron;
+        int minute = Integer.parseInt(matcher.group(1));
+        int hour = Integer.parseInt(matcher.group(2));
+        String day = matcher.group(3);
+        String weekday = matcher.group(4);
+        if (minute > 59 || hour > 23) return cron;
+        String time = String.format("%02d:%02d", hour, minute);
+        if (day.equals("*") && weekday.equals("*")) {
+            return "매일 " + time;
+        }
+        if (!day.equals("*") && weekday.equals("*")) {
+            int dayOfMonth = Integer.parseInt(day);
+            return dayOfMonth >= 1 && dayOfMonth <= 31 ? "매월 " + dayOfMonth + "일 " + time : cron;
+        }
+        if (day.equals("*")) {
+            String days = Arrays.stream(weekday.split(","))
+                    .map(Integer::parseInt)
+                    .sorted()
+                    .map(index -> WEEKDAY_LABELS[index])
+                    .collect(Collectors.joining(", "));
+            return "매주 " + days + "요일 " + time;
+        }
+        return cron;
     }
 
     private String duration(long seconds) {
