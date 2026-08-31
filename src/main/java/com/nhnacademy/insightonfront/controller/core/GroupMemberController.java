@@ -93,51 +93,106 @@ public class GroupMemberController {
 
     @PutMapping("/{group-member-id}/toggle-manager")
     public String toggleManagerRole(@CookieValue("groupId") Long groupId,
-                                    @PathVariable("group-member-id") Long groupMemberId) {
-
-        groupMemberClient.toggleManagerRole(groupId, groupMemberId);
-
-        log.info("멤버의 권한이 변경 되었습니다. Group ID : {}, groupMember ID : {}", groupId, groupMemberId);
+                                    @PathVariable("group-member-id") Long groupMemberId,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            groupMemberClient.toggleManagerRole(groupId, groupMemberId);
+            log.info("멤버의 권한이 변경 되었습니다. Group ID : {}, groupMember ID : {}", groupId, groupMemberId);
+        } catch (FeignException.Forbidden e) {
+            log.warn("매니저 권한 변경 실패(403) - SuperManager만 변경 가능. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "매니저 권한 변경은 Super Manager만 가능합니다.");
+        } catch (FeignException.BadRequest e) {
+            log.warn("매니저 권한 변경 실패(400) - 잘못된 대상이거나 변경 조건 미충족. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "권한을 변경할 수 없는 대상입니다.");
+        } catch (FeignException.NotFound e) {
+            log.warn("매니저 권한 변경 실패(404) - 존재하지 않는 멤버. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "존재하지 않는 멤버입니다.");
+        } catch (Exception e) {
+            log.warn("매니저 권한 변경 중 예외 발생 - groupId:{}, targetMemberId:{}", groupId, groupMemberId, e);
+            redirectAttributes.addFlashAttribute("memberError", "권한 변경 중 오류가 발생했습니다.");
+        }
 
         return "redirect:/my-group/members/" + groupMemberId;
     }
 
     @PutMapping("/{group-member-id}/toggle-super-manager")
     public String toggleSuperManagerRole(@CookieValue("groupId") Long groupId,
-                                         @PathVariable("group-member-id") Long groupMemberId) {
-        groupMemberClient.toggleSuperManagerRole(groupId, groupMemberId);
-
-        log.info("super manager의 권한이 양도 되었습니다. Group ID : {}, 새로운 super manager groupMember ID: {}", groupId, groupMemberId);
+                                         @PathVariable("group-member-id") Long groupMemberId,
+                                         RedirectAttributes redirectAttributes) {
+        try {
+            groupMemberClient.toggleSuperManagerRole(groupId, groupMemberId);
+            log.info("super manager의 권한이 양도 되었습니다. Group ID : {}, 새로운 super manager groupMember ID: {}", groupId, groupMemberId);
+        } catch (FeignException.Forbidden e) {
+            log.warn("SuperManager 권한 양도 실패(403) - 권한 없음. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "Super Manager 권한 양도는 현재 Super Manager만 가능합니다.");
+        } catch (FeignException.BadRequest e) {
+            log.warn("SuperManager 권한 양도 실패(400) - 대상이 Manager가 아니거나 양도 불가. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "Manager 역할 이상의 멤버에게만 Super Manager 권한을 양도할 수 있습니다.");
+        } catch (FeignException.NotFound e) {
+            log.warn("SuperManager 권한 양도 실패(404) - 존재하지 않는 멤버. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "존재하지 않는 멤버입니다.");
+        } catch (Exception e) {
+            log.warn("SuperManager 권한 양도 중 예외 발생 - groupId:{}, targetMemberId:{}", groupId, groupMemberId, e);
+            redirectAttributes.addFlashAttribute("memberError", "권한 양도 중 오류가 발생했습니다.");
+        }
 
         return "redirect:/my-group/members/" + groupMemberId;
     }
 
     @DeleteMapping("/{group-member-id}/kick")
     public String kickGroupMember(@CookieValue("groupId") Long groupId,
-                                  @PathVariable("group-member-id") Long groupMemberId) {
-
-        groupMemberClient.kickGroupMember(groupId, groupMemberId);
-
-        log.info("멤버가 추방 되었습니다. Group ID : {}, 추방된 멤버 ID : {}", groupId, groupMemberId);
-
-        return "redirect:/my-group/member";
+                                  @PathVariable("group-member-id") Long groupMemberId,
+                                  RedirectAttributes redirectAttributes) {
+        try {
+            groupMemberClient.kickGroupMember(groupId, groupMemberId);
+            log.info("멤버가 추방 되었습니다. Group ID : {}, 추방된 멤버 ID : {}", groupId, groupMemberId);
+            return "redirect:/my-group/members";
+        } catch (FeignException.Forbidden e) {
+            log.warn("멤버 추방 실패(403) - 권한 없음. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "멤버 추방 권한이 없습니다.");
+            return "redirect:/my-group/members/" + groupMemberId;
+        } catch (FeignException.BadRequest e) {
+            log.warn("멤버 추방 실패(400) - 본인 추방 불가 또는 SuperManager 추방 불가. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "자기 자신 또는 Super Manager는 추방할 수 없습니다.");
+            return "redirect:/my-group/members/" + groupMemberId;
+        } catch (FeignException.NotFound e) {
+            log.warn("멤버 추방 실패(404) - 존재하지 않는 멤버. groupId:{}, targetMemberId:{}", groupId, groupMemberId);
+            redirectAttributes.addFlashAttribute("memberError", "존재하지 않는 멤버입니다.");
+            return "redirect:/my-group/members";
+        } catch (Exception e) {
+            log.warn("멤버 추방 중 예외 발생 - groupId:{}, targetMemberId:{}", groupId, groupMemberId, e);
+            redirectAttributes.addFlashAttribute("memberError", "멤버 추방 중 오류가 발생했습니다.");
+            return "redirect:/my-group/members/" + groupMemberId;
+        }
     }
 
     @PostMapping("/leave")
     public String leaveGroupPost(@CookieValue(value = "groupId", required = false) Long groupId,
-                                 jakarta.servlet.http.HttpServletResponse response) {
-        return leaveGroup(groupId, response);
+                                 jakarta.servlet.http.HttpServletResponse response,
+                                 RedirectAttributes redirectAttributes) {
+        return leaveGroup(groupId, response, redirectAttributes);
     }
 
     @DeleteMapping("/leave")
     public String leaveGroup(@CookieValue(value = "groupId", required = false) Long groupId,
-                             jakarta.servlet.http.HttpServletResponse response) {
+                             jakarta.servlet.http.HttpServletResponse response,
+                             RedirectAttributes redirectAttributes) {
         if (groupId != null) {
             try {
                 groupMemberClient.leaveGroup(groupId);
                 log.info("group({})을 떠나셨습니다.", groupId);
+            } catch (FeignException.BadRequest e) {
+                log.warn("그룹 탈퇴 실패(400) - SuperManager는 양도 전 탈퇴 불가. groupId:{}", groupId);
+                redirectAttributes.addFlashAttribute("leaveError", "Super Manager는 권한을 양도한 후에만 그룹을 탈퇴할 수 있습니다.");
+                return "redirect:/my-group/members";
+            } catch (FeignException.Forbidden e) {
+                log.warn("그룹 탈퇴 권한 없음(403) - groupId:{}", groupId);
+                redirectAttributes.addFlashAttribute("leaveError", "그룹 탈퇴 권한이 없습니다.");
+                return "redirect:/my-group/members";
             } catch (FeignException e) {
                 log.warn("그룹 탈퇴 실패 - groupId:{}", groupId, e);
+                redirectAttributes.addFlashAttribute("leaveError", "그룹 탈퇴 중 오류가 발생했습니다.");
+                return "redirect:/my-group/members";
             }
         }
         jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("groupId", null);

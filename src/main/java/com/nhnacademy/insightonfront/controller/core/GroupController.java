@@ -138,6 +138,18 @@ public class GroupController {
         try {
             groupClient.joinGroup(inviteToken);
             return "redirect:/my-group";
+        } catch (FeignException.Conflict e) {
+            log.warn("그룹 참가 실패(409) - 이미 처리 대기 중이거나 소속된 그룹이 있음. inviteToken:{}", inviteToken);
+            redirectAttributes.addFlashAttribute("joinError", "이미 처리 중인 가입 신청이 있거나 이미 소속된 그룹이 있어요.");
+            return "redirect:/my-group/join";
+        } catch (FeignException.NotFound e) {
+            log.warn("그룹 참가 실패(404) - 유효하지 않거나 만료된 초대 토큰. inviteToken:{}", inviteToken);
+            redirectAttributes.addFlashAttribute("joinError", "존재하지 않거나 만료된 초대 코드입니다.");
+            return "redirect:/my-group/join";
+        } catch (FeignException.BadRequest e) {
+            log.warn("그룹 참가 실패(400) - 잘못된 요청. inviteToken:{}", inviteToken);
+            redirectAttributes.addFlashAttribute("joinError", "초대 코드가 올바르지 않거나 참가 조건을 충족하지 못했습니다.");
+            return "redirect:/my-group/join";
         } catch (Exception e) {
             log.warn("그룹 참가 실패 - inviteToken:{}", inviteToken, e);
             redirectAttributes.addFlashAttribute("joinError", "초대 코드가 올바르지 않거나 만료됐거나, 이미 처리 중인 가입 신청이 있어요.");
@@ -173,6 +185,12 @@ public class GroupController {
         try {
             groupClient.newInviteToken(groupId);
             log.info("토큰이 새로 발급되었습니다. Group ID : {}", groupId);
+        } catch (FeignException.Forbidden e) {
+            log.warn("토큰 재발급 권한 없음(403) - groupId:{}", groupId);
+            redirectAttributes.addFlashAttribute("tokenError", "토큰 재발급 권한이 없습니다 (Manager 이상 필요).");
+        } catch (FeignException.NotFound e) {
+            log.warn("토큰 재발급 대상 그룹 없음(404) - groupId:{}", groupId);
+            redirectAttributes.addFlashAttribute("tokenError", "존재하지 않는 그룹입니다.");
         } catch (Exception e) {
             log.warn("토큰 재발급 실패 - groupId:{}", groupId, e);
             redirectAttributes.addFlashAttribute("tokenError", "토큰 재발급 권한이 없거나 처리 중 실패했어요.");
@@ -185,19 +203,38 @@ public class GroupController {
     @ResponseBody
     public ResponseEntity<Void> updateGroup(@CookieValue("groupId") Long groupId,
                                             @RequestBody GroupRequest request) {
-
-        groupClient.updateGroup(groupId, request);
-
-        return ResponseEntity.noContent().build();
+        try {
+            groupClient.updateGroup(groupId, request);
+            return ResponseEntity.noContent().build();
+        } catch (FeignException.Conflict e) {
+            log.warn("[GroupController] 그룹 정보 수정 충돌(409). 이미 사용 중인 그룹명입니다. groupId: {}", groupId);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).build();
+        } catch (FeignException.Forbidden e) {
+            log.warn("[GroupController] 그룹 정보 수정 권한 없음(403). groupId: {}", groupId);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+        } catch (FeignException.NotFound e) {
+            log.warn("[GroupController] 수정할 그룹을 찾을 수 없음(404). groupId: {}", groupId);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).build();
+        } catch (FeignException.BadRequest e) {
+            log.warn("[GroupController] 그룹 정보 수정 잘못된 요청(400). groupId: {}", groupId);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST).build();
+        }
     }
 
     @DeleteMapping("/delete")
-    public String deleteGroup(@CookieValue("groupId") Long groupId) {
-
-        groupClient.deleteGroup(groupId);
-
-        log.info("성공적으로 삭제되었습니다. Group ID : {}", groupId);
-        return "redirect:/";
+    public String deleteGroup(@CookieValue("groupId") Long groupId, RedirectAttributes redirectAttributes) {
+        try {
+            groupClient.deleteGroup(groupId);
+            log.info("성공적으로 삭제되었습니다. Group ID : {}", groupId);
+            return "redirect:/";
+        } catch (FeignException.Forbidden e) {
+            log.warn("그룹 삭제 권한 없음(403) - groupId:{}", groupId);
+            redirectAttributes.addFlashAttribute("groupError", "그룹을 삭제할 권한이 없습니다.");
+            return "redirect:/my-group/manage";
+        } catch (FeignException.NotFound e) {
+            log.warn("삭제할 그룹 존재하지 않음(404) - groupId:{}", groupId);
+            return "redirect:/";
+        }
     }
 
     private List<LocationSummary> safeLocationSummaries(Long groupId) {
