@@ -26,7 +26,7 @@
                 <span class="num" style="color: var(--ink-faint); font-size: var(--fs-meta); margin-left: var(--sp-2);"
                       th:text="${groupMemberList != null ? groupMemberList.size() + '명' : ''}"></span>
             </p>
-            <button type="button" class="btn-landing-primary" data-bs-toggle="modal" data-bs-target="#inviteMemberModal" style="padding: var(--sp-2) var(--sp-3); font-size: var(--fs-body);">
+            <button type="button" class="btn-landing-primary" data-bs-toggle="modal" data-bs-target="#inviteMemberModal" style="padding: var(--sp-2) var(--sp-3); font-size: var(--fs-body);" th:if="${isManager}">
                 <i class="ti ti-user-plus"></i>멤버 초대
             </button>
         </div>

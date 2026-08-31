@@ -125,17 +125,19 @@
             if (lastLabel === bucketTimeStr) {
                 // 같은 집계 주기(예: 동일한 15분 구간) 내 수신 데이터는 기존 마지막 포인트를 갱신
                 chart.data.datasets.forEach((ds) => {
-                    const val = metrics[ds.label] ?? null;
+                    const key = ds.fieldKey || ds.label;
+                    const val = metrics[key] ?? metrics[ds.label] ?? null;
                     if (val !== null && ds.data.length > 0) {
-                        ds.data[ds.data.length - 1] = val;
+                        ds.data[ds.data.length - 1] = Number(val);
                     }
                 });
             } else {
                 // 새로운 집계 주기 구간이 시작되면 신규 라벨 및 데이터 포인트 추가
                 labels.push(bucketTimeStr);
                 chart.data.datasets.forEach((ds) => {
-                    const val = metrics[ds.label] ?? null;
-                    ds.data.push(val);
+                    const key = ds.fieldKey || ds.label;
+                    const val = metrics[key] ?? metrics[ds.label] ?? null;
+                    ds.data.push(val !== null ? Number(val) : null);
                 });
             }
 
@@ -495,6 +497,7 @@
                     datasets: fields.map((field, idx) => {
                         const color = getFieldColor(field, idx);
                         return {
+                            fieldKey: field,
                             label: metricLabelWithUnit(field),
                             data: [],
                             borderColor: color,
@@ -630,9 +633,11 @@
                 data: {
                     labels,
                     datasets: datasets.map((ds, i) => {
-                        const color = getFieldColor(ds.label, i);
+                        const rawKey = ds.label;
+                        const color = getFieldColor(rawKey, i);
                         return {
-                            label: metricLabelWithUnit(ds.label),
+                            fieldKey: rawKey,
+                            label: metricLabelWithUnit(rawKey),
                             data: ds.data,
                             borderColor: color,
                             backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',

@@ -50,8 +50,11 @@
             <!-- 그룹 미리보기 결과 창 -->
             <div id="previewResult" class="mb-4" style="display: none;"></div>
 
-            <div class="settings-actions" style="justify-content: stretch;">
-                <button class="btn-landing-primary w-100 justify-content-center" type="submit">
+            <div class="settings-actions d-flex gap-2" style="justify-content: stretch;">
+                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1; border-radius: var(--radius-md);" type="button" onclick="history.back()">
+                    <i class="ti ti-arrow-left"></i> 뒤로가기
+                </button>
+                <button class="btn-landing-primary justify-content-center" style="flex: 2;" type="submit">
                     가입하기<i class="ti ti-arrow-right"></i>
                 </button>
             </div>
