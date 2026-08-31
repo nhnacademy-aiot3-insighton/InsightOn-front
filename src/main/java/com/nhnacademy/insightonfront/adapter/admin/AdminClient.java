@@ -2,6 +2,7 @@ package com.nhnacademy.insightonfront.adapter.admin;
 
 import com.nhnacademy.insightonfront.adapter.admin.dto.AdminFindUsersResponse;
 import com.nhnacademy.insightonfront.adapter.admin.dto.AdminUserDetailResponse;
+import com.nhnacademy.insightonfront.adapter.auth.auth.dto.UserLoginResponse;
 import com.nhnacademy.insightonfront.domain.admin.dto.RoleChangeRequest;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -26,7 +27,7 @@ public interface AdminClient {
             value = "/api/v1/admin/login",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    ResponseEntity<String> login(@RequestBody UserLoginRequest userLoginRequest);
+    ResponseEntity<UserLoginResponse> login(@RequestBody UserLoginRequest userLoginRequest);
 
     // 회원 목록 조회 (검색·페이징)
     @GetMapping("/api/v1/admin/users")
