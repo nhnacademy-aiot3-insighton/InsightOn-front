@@ -1,5 +1,7 @@
 package com.nhnacademy.insightonfront.controller.ruleengine;
 
+import com.nhnacademy.insightonfront.adapter.core.actuator.ActuatorCommandPreset;
+import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorType;
 import com.nhnacademy.insightonfront.adapter.core.sensor.SensorClient;
 import com.nhnacademy.insightonfront.adapter.core.sensor.dto.SensorResponse;
 import com.nhnacademy.insightonfront.adapter.core.sensorattribute.SensorAttributeClient;
@@ -19,7 +21,9 @@ import com.nhnacademy.insightonfront.domain.flow.service.FlowPermissionService;
 import com.nhnacademy.insightonfront.domain.flow.service.FlowViewService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -108,6 +112,7 @@ public class FlowController {
             model.addAttribute("mode", "create");
             model.addAttribute("flow", null);
             model.addAttribute("sensors", sensors);
+            model.addAttribute("actuatorCommandRules", actuatorCommandRules());
             return "flow/editor";
         });
     }
@@ -127,6 +132,7 @@ public class FlowController {
             model.addAttribute("mode", "edit");
             model.addAttribute("flow", flow);
             model.addAttribute("sensors", sensors);
+            model.addAttribute("actuatorCommandRules", actuatorCommandRules());
             return "flow/editor";
         });
     }
@@ -145,6 +151,15 @@ public class FlowController {
             model.addAttribute("canManage", flowPermissionService.isManagerOrAbove(groupId, userId));
             return "flow/detail";
         });
+    }
+
+    /** ActuatorController.panel()과 동일한 방식으로 타입별 명령·값 규칙을 만든다(ACTUATOR_CONTROL 노드 속성 패널용). */
+    private Map<String, Object> actuatorCommandRules() {
+        Map<String, Object> commandRules = new LinkedHashMap<>();
+        for (ActuatorType type : ActuatorType.values()) {
+            commandRules.put(type.name(), ActuatorCommandPreset.forTemplate(type));
+        }
+        return commandRules;
     }
 
     @GetMapping("/sensors/{sensorId}/attributes")

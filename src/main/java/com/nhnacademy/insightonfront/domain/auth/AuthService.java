@@ -3,6 +3,7 @@ package com.nhnacademy.insightonfront.domain.auth;
 import com.nhnacademy.insightonfront.adapter.admin.AdminClient;
 import com.nhnacademy.insightonfront.adapter.auth.auth.AuthClient;
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.LoginResult;
+import com.nhnacademy.insightonfront.adapter.auth.auth.dto.UserLoginResponse;
 import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
 import com.nhnacademy.insightonfront.auth.AccessTokenContext;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
@@ -34,27 +35,44 @@ public class AuthService {
 
     /** 로그인 처리: auth 호출 → 토큰에서 정보 추출 → groupId 조회까지 수행. */
     public LoginResult login(String email, String password) {
-        ResponseEntity<String> response = authClient.login(new UserLoginRequest(email, password));
+        ResponseEntity<UserLoginResponse> response = authClient.login(new UserLoginRequest(email, password));
+        UserLoginResponse body = requireBody(response.getBody());
 
-        String accessToken = response.getBody();
+        if (body.isPendingRestore()) {
+            return LoginResult.pendingRestore(body.restoreToken());
+        }
+
+        String accessToken = body.accessToken();
         String refreshToken = extractCookie(response.getHeaders(), "refreshToken");
         Long userId = extractUserId(accessToken);
         String userName = extractUserName(accessToken);
         Long groupId = resolveGroupId(accessToken);
 
-        return new LoginResult(userId, userName, groupId, accessToken, refreshToken);
+        return LoginResult.success(userId, userName, groupId, accessToken, refreshToken);
     }
 
     /** Admin 로그인 처리: auth 호출 → 토큰에서 정보 추출 → groupId 조회까지 수행. */
     public LoginResult loginAdmin(String email, String password) {
-        ResponseEntity<String> response = adminClient.login(new UserLoginRequest(email, password));
+        ResponseEntity<UserLoginResponse> response = adminClient.login(new UserLoginRequest(email, password));
+        UserLoginResponse body = requireBody(response.getBody());
 
-        String accessToken = response.getBody();
+        if (body.isPendingRestore()) {
+            return LoginResult.pendingRestore(body.restoreToken());
+        }
+
+        String accessToken = body.accessToken();
         String refreshToken = extractCookie(response.getHeaders(), "refreshToken");
         Long userId = extractUserId(accessToken);
         String userName = extractUserName(accessToken);
 
-        return new LoginResult(userId, userName, null, accessToken, refreshToken);
+        return LoginResult.success(userId, userName, null, accessToken, refreshToken);
+    }
+
+    private UserLoginResponse requireBody(UserLoginResponse body) {
+        if (body == null) {
+            throw new IllegalStateException("로그인 응답 본문이 비어 있습니다.");
+        }
+        return body;
     }
 
 
