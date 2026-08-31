@@ -71,6 +71,14 @@ public class AuthController {
                         Model model) {
         try {
             LoginResult result = authService.login(email, password);
+
+            if (result.isPendingRestore()) {
+                log.info("[Auth] 탈퇴 복구 대기 계정 로그인 시도");
+                model.addAttribute("loginError",
+                        "탈퇴 후 복구 가능 기간 내 계정이에요. 계정을 복구한 뒤 다시 로그인해 주세요.");
+                return "login";
+            }
+
             boolean secure = servletRequest.isSecure();
 
             servletResponse.addHeader(HttpHeaders.SET_COOKIE,
