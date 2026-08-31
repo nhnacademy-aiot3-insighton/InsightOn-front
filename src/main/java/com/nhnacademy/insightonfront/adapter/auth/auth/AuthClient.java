@@ -1,6 +1,7 @@
 package com.nhnacademy.insightonfront.adapter.auth.auth;
 
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.TokenRefreshResponse;
+import com.nhnacademy.insightonfront.adapter.auth.auth.dto.UserLoginResponse;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
 import com.nhnacademy.insightonfront.domain.signup.dto.FindEmailRequest;
 import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetConfirmRequest;
@@ -27,7 +28,7 @@ public interface AuthClient {
             value = "/api/v1/auth/login",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    ResponseEntity<String> login(@RequestBody UserLoginRequest userLoginRequest);
+    ResponseEntity<UserLoginResponse> login(@RequestBody UserLoginRequest userLoginRequest);
 
     /**
      * refreshToken으로 새 accessToken 재발급.
