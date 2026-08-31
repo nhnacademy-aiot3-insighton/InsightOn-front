@@ -102,6 +102,7 @@ public class FlowController {
     @GetMapping("/new")
     public String newFlow(@CookieValue(value = "userId", required = false) Long userId,
                            @CookieValue(value = "groupId", required = false) Long groupId,
+                           @RequestParam(required = false) Long locationId,
                            Model model, HttpServletResponse response) {
         if (userId == null || groupId == null) {
             return "redirect:/login";
@@ -113,6 +114,7 @@ public class FlowController {
             model.addAttribute("flow", null);
             model.addAttribute("sensors", sensors);
             model.addAttribute("actuatorCommandRules", actuatorCommandRules());
+            model.addAttribute("presetLocationId", locationId);
             return "flow/editor";
         });
     }
