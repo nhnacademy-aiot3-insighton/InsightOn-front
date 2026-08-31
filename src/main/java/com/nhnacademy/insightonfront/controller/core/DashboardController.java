@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 
+import feign.FeignException;
 import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 
 
@@ -47,6 +48,8 @@ public class DashboardController {
         DashboardResponse response = null;
         try {
             response = dashboardClient.getDashboard(groupId, locationId);
+        } catch (FeignException.NotFound e) {
+            log.info("[DashboardController] 아직 생성되지 않은 신규 위치 대시보드입니다. locationId: {}", locationId);
         } catch (Exception e) {
             log.warn("[DashboardController] 백엔드 대시보드 데이터 조회 실패: {}", e.getMessage());
         }
@@ -66,7 +69,7 @@ public class DashboardController {
         } catch (Exception e) {
             log.warn("[DashboardController] 백엔드 센서 목록 조회 실패: {}", e.getMessage());
         }
-      
+
         boolean canManage = false;
         if (groupId != null && userId != null) {
             canManage = groupPermissionService.isManagerOrAbove(groupId, userId);
@@ -100,6 +103,9 @@ public class DashboardController {
             List<Long> widgetIds = new ArrayList<>(responseMap.keySet());
             log.info("[DashboardController] 대시보드 위젯 저장 성공. groupId: {}, locationId: {}, widgetIds: {}", groupId, locationId, widgetIds);
             return ResponseEntity.ok(widgetIds);
+        } catch (FeignException.Conflict e) {
+            log.warn("[DashboardController] 대시보드 위젯 저장 충돌(409). 이미 수정되었거나 삭제된 위젯입니다. locationId: {}", locationId);
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         } catch (Exception e) {
             log.error("[DashboardController] 대시보드 위젯 저장 실패: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -114,12 +120,14 @@ public class DashboardController {
             @PathVariable("widget-id") Long widgetId
     ) {
 
-
         try {
             ChartDataResponse chartDataResponse = dashboardClient.getWidgetChartData(groupId, locationId, widgetId);
             return ResponseEntity.ok(chartDataResponse);
+        } catch (FeignException.NotFound e) {
+            log.info("[DashboardController] 초기 위젯 차트 데이터 준비 중 (또는 데이터 없음). widgetId: {}", widgetId);
+            return ResponseEntity.ok(new ChartDataResponse(Collections.emptyList(), Collections.emptyList()));
         } catch (Exception e) {
-            log.error("[DashboardController] InfluxDB 차트 데이터 조회 실패. widgetId: {}", widgetId, e);
+            log.warn("[DashboardController] InfluxDB 차트 데이터 조회 실패. widgetId: {}, message: {}", widgetId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
