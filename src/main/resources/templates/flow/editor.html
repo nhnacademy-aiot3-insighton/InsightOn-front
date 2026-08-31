@@ -57,6 +57,7 @@
                             <option th:each="loc : ${sidebarLocations}" th:value="${loc.locationId()}" th:text="${loc.locationName()}"></option>
                         </select>
                         <p class="field-hint" th:if="${mode == 'edit'}">수정 시 위치는 바꿀 수 없어요.</p>
+                        <p class="field-hint" th:if="${mode != 'edit' and presetLocationId != null}">선택한 위치로 자동화를 만들고 있어요.</p>
                     </div>
                     <div class="settings-field flow-meta-description">
                         <label for="flowDescription">설명</label>
@@ -217,7 +218,8 @@
         mode: /*[[${mode}]]*/ 'create',
         flow: /*[[${flow}]]*/ null,
         sensors: /*[[${sensors}]]*/ [],
-        actuatorCommandRules: /*[[${actuatorCommandRules}]]*/ {}
+        actuatorCommandRules: /*[[${actuatorCommandRules}]]*/ {},
+        presetLocationId: /*[[${presetLocationId}]]*/ null
     };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
