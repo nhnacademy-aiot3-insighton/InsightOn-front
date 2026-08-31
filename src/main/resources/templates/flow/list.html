@@ -23,7 +23,8 @@
             <p class="section-label">Flow Automation</p>
             <div class="flow-header-actions">
                 <a class="btn btn-outline-secondary" th:href="@{/my-group/flows/trash}"><i class="ti ti-trash"></i> 휴지통</a>
-                <a class="btn btn-primary" th:if="${canManage}" th:href="@{/my-group/flows/new}"><i class="ti ti-plus"></i> Flow 추가</a>
+                <a class="btn btn-primary" th:if="${canManage}"
+                   th:href="@{/my-group/flows/new(locationId=${selectedLocationId})}"><i class="ti ti-plus"></i> Flow 추가</a>
             </div>
         </div>
 

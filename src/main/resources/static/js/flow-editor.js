@@ -7,6 +7,7 @@
     const init = window.FLOW_EDITOR_INIT || {};
     const mode = init.mode;
     const flow = init.flow;
+    const presetLocationId = init.presetLocationId;
     const sensors = init.sensors || [];
     const actuatorCommandRules = init.actuatorCommandRules || {};
     const defaultRequiredCount = 3;
@@ -172,7 +173,9 @@
         sensors
             .filter((sensor) => Number(sensor.locationId) === locationId)
             .forEach((sensor) => select.appendChild(createOption(sensor.sensorId, sensor.sensorName)));
-        if (selectedValue != null) select.value = String(selectedValue);
+        // selectedValue가 빈 문자열이면(이전 위치에 센서가 없어 선택된 게 없던 경우) 되돌리지 않고
+        // 새로 채워진 옵션의 기본 선택(첫 번째 센서)을 그대로 둔다.
+        if (selectedValue) select.value = String(selectedValue);
     }
 
     function refreshAllSensorOptions() {
@@ -257,11 +260,22 @@
 
     function refreshPathConditionMetrics(path) {
         const triggerType = path.querySelector('.path-trigger-type').value;
-        const sensorId = triggerType === 'SENSOR' ? path.querySelector('.path-trigger-sensor').value : null;
+        const sensorSelect = path.querySelector('.path-trigger-sensor');
+        const sensorId = triggerType === 'SENSOR' ? sensorSelect.value : null;
         const requestId = String(++metricRequestSequence);
         path.dataset.metricRequestId = requestId;
         path.dataset.metricsReady = 'false';
         const status = path.querySelector('.flow-metric-status');
+
+        if (triggerType === 'SENSOR' && !sensorSelect.options.length) {
+            path.querySelectorAll('.condition-metric').forEach((select) => {
+                select.replaceChildren(createOption('', '측정 항목을 불러오지 못함'));
+                select.disabled = true;
+            });
+            status.textContent = '이 위치에는 등록된 센서가 없어요. 다른 위치를 선택하거나 먼저 센서를 등록해주세요.';
+            return Promise.resolve();
+        }
+
         status.textContent = triggerType === 'SENSOR' ? '센서 측정 항목을 불러오는 중...' : '위치 전체의 공통 측정 항목을 사용합니다.';
 
         path.querySelectorAll('.condition-metric').forEach((select) => {
@@ -661,6 +675,10 @@
             addPath(parsedFlow);
         }
     } else {
+        if (presetLocationId != null) {
+            locationSelect.value = String(presetLocationId);
+            locationSelect.disabled = true;
+        }
         addPath();
     }
 
