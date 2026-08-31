@@ -25,6 +25,7 @@ import java.util.List;
 public class LocationController {
     private final LocationClient locationClient;
     private final LocationNameResolver locationNameResolver;
+    private final com.nhnacademy.insightonfront.common.service.GroupPermissionService groupPermissionService;
 
     @PostMapping("/create")
     public String createLocation(@CookieValue(value = "groupId", required = false) Long groupId,
@@ -48,13 +49,16 @@ public class LocationController {
     }
 
     @GetMapping("/list")
-    public String getLocationList(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
+    public String getLocationList(@CookieValue(value = "userId", required = false) Long userId,
+                                  @CookieValue(value = "groupId", required = false) Long groupId, Model model) {
         if (groupId == null) {
             return "redirect:/group-registration";
         }
         List<LocationListResponse> locationList = locationClient.getLocationList(groupId);
+        boolean isManager = (userId != null) && groupPermissionService.isManagerOrAbove(groupId, userId);
 
         model.addAttribute("locationList", locationList);
+        model.addAttribute("isManager", isManager);
 
         return "location/list";
     }

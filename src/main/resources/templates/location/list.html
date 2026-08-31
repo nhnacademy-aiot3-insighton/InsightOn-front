@@ -22,7 +22,7 @@
     <main class="app-main">
         <div class="d-flex align-items-center justify-content-between mb-3">
             <p class="section-label mb-0">위치</p>
-            <button type="button" class="btn-landing-primary" data-bs-toggle="modal" data-bs-target="#createLocationModal" style="padding: var(--sp-2) var(--sp-3); font-size: var(--fs-body);">
+            <button type="button" class="btn-landing-primary" data-bs-toggle="modal" data-bs-target="#createLocationModal" style="padding: var(--sp-2) var(--sp-3); font-size: var(--fs-body);" th:if="${isManager}">
                 <i class="ti ti-plus"></i>위치 추가
             </button>
         </div>

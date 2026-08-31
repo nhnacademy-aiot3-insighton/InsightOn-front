@@ -19,6 +19,7 @@
     const errorEl = document.getElementById('editorError');
     const saveBtn = document.getElementById('btnSaveFlow');
     const attributeCache = new Map();
+    const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
     const locationMetrics = [
         {metricKey: 'temperature', displayName: '온도', unit: '°C'},
         {metricKey: 'humidity', displayName: '습도', unit: '%'},
@@ -42,6 +43,108 @@
         option.value = String(value);
         option.textContent = label;
         return option;
+    }
+
+    // 화면에서 고른 반복 규칙을 Rule Engine이 이해하는 5필드(분 시 일 월 요일) cron 문자열로 바꾼다.
+    function buildCron(schedule) {
+        const minute = String(schedule.minute);
+        const hour = String(schedule.hour);
+        if (schedule.repeatType === 'WEEKLY') {
+            const days = schedule.weekdays.length ? schedule.weekdays.slice().sort().join(',') : '*';
+            return `${minute} ${hour} * * ${days}`;
+        }
+        if (schedule.repeatType === 'MONTHLY') {
+            return `${minute} ${hour} ${schedule.day} * *`;
+        }
+        return `${minute} ${hour} * * *`;
+    }
+
+    // buildCron의 역변환. 화면에서 만들 수 있는 3가지 형태(매일/매주/매월)만 인식하고,
+    // 그 외(다른 사람이 손으로 만든 복잡한 cron 등)는 null을 돌려줘 호출부가 기본값으로 대체하게 한다.
+    function parseCron(cron) {
+        const parts = String(cron || '').trim().split(/\s+/);
+        if (parts.length !== 5) return null;
+        const [minute, hour, day, month, weekday] = parts;
+        if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour) || month !== '*') return null;
+        const m = Number(minute);
+        const h = Number(hour);
+        if (m < 0 || m > 59 || h < 0 || h > 23) return null;
+        if (day !== '*' && weekday === '*') {
+            if (!/^\d+$/.test(day)) return null;
+            const d = Number(day);
+            if (d < 1 || d > 31) return null;
+            return {repeatType: 'MONTHLY', hour: h, minute: m, day: d, weekdays: []};
+        }
+        if (day === '*' && weekday !== '*') {
+            const weekdays = weekday.split(',').map(Number);
+            if (weekdays.some((value) => !Number.isInteger(value) || value < 0 || value > 6)) return null;
+            return {repeatType: 'WEEKLY', hour: h, minute: m, day: null, weekdays};
+        }
+        if (day === '*' && weekday === '*') {
+            return {repeatType: 'DAILY', hour: h, minute: m, day: null, weekdays: []};
+        }
+        return null;
+    }
+
+    function cronToSummary(cron) {
+        const parsed = parseCron(cron);
+        if (!parsed) return null;
+        const time = `${String(parsed.hour).padStart(2, '0')}:${String(parsed.minute).padStart(2, '0')}`;
+        if (parsed.repeatType === 'WEEKLY') {
+            const days = parsed.weekdays.slice().sort().map((value) => weekdayLabels[value]).join(', ');
+            return days ? `매주 ${days}요일 ${time}에 시작합니다.` : '요일을 선택해주세요.';
+        }
+        if (parsed.repeatType === 'MONTHLY') {
+            return `매월 ${parsed.day}일 ${time}에 시작합니다.`;
+        }
+        return `매일 ${time}에 시작합니다.`;
+    }
+
+    function populateScheduleDaySelect(select) {
+        for (let day = 1; day <= 31; day++) {
+            select.appendChild(createOption(day, `${day}일`));
+        }
+    }
+
+    function readSchedule(path) {
+        const repeatType = path.querySelector('.path-schedule-repeat').value;
+        const [hour, minute] = path.querySelector('.path-schedule-time').value.split(':').map(Number);
+        const weekdays = Array.from(path.querySelectorAll('.path-schedule-weekday:checked')).map((box) => Number(box.value));
+        const day = Number(path.querySelector('.path-schedule-day').value);
+        return {repeatType, hour, minute, weekdays, day};
+    }
+
+    function updateScheduleSummary(path) {
+        const schedule = readSchedule(path);
+        path.querySelector('.path-schedule-weekday-field').style.display = schedule.repeatType === 'WEEKLY' ? '' : 'none';
+        path.querySelector('.path-schedule-day-field').style.display = schedule.repeatType === 'MONTHLY' ? '' : 'none';
+        const summary = path.querySelector('.path-schedule-summary');
+        if (Number.isNaN(schedule.hour) || Number.isNaN(schedule.minute)) {
+            summary.textContent = '반복 시간을 선택해주세요.';
+            return;
+        }
+        if (schedule.repeatType === 'WEEKLY' && !schedule.weekdays.length) {
+            summary.textContent = '반복할 요일을 선택해주세요.';
+            return;
+        }
+        summary.textContent = cronToSummary(buildCron(schedule));
+    }
+
+    function applyScheduleFromCron(path, cron) {
+        const daySelect = path.querySelector('.path-schedule-day');
+        if (!daySelect.options.length) populateScheduleDaySelect(daySelect);
+
+        const parsed = cron ? parseCron(cron) : null;
+        const schedule = parsed || {repeatType: 'DAILY', hour: 9, minute: 0, day: 1, weekdays: []};
+        path.querySelector('.path-schedule-repeat').value = schedule.repeatType;
+        path.querySelector('.path-schedule-time').value =
+            `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
+        path.querySelectorAll('.path-schedule-weekday').forEach((box) => {
+            box.checked = schedule.weekdays.includes(Number(box.value));
+        });
+        daySelect.value = String(schedule.day || 1);
+        updateScheduleSummary(path);
+        return cron && !parsed;
     }
 
     function secondsToMinutes(seconds, fallbackMinutes) {
@@ -274,6 +377,7 @@
         const type = path.querySelector('.path-trigger-type').value;
         path.querySelector('.path-trigger-sensor-field').style.display = type === 'SENSOR' ? '' : 'none';
         path.querySelector('.path-trigger-schedule-field').style.display = type === 'SCHEDULE' ? '' : 'none';
+        if (type === 'SCHEDULE') updateScheduleSummary(path);
         refreshPathConditionMetrics(path);
     }
 
@@ -305,8 +409,13 @@
             path.querySelector('.path-trigger-sensor'),
             trigger && trigger.configuration ? trigger.configuration.sensorId : null
         );
-        path.querySelector('.path-trigger-cron').value =
-            trigger && trigger.configuration && trigger.configuration.cron ? trigger.configuration.cron : '';
+        const cronNotRecognized = applyScheduleFromCron(
+            path,
+            trigger && trigger.configuration ? trigger.configuration.cron : null
+        );
+        if (cronNotRecognized) {
+            showError('저장된 예약 주기를 새 화면 형식으로 옮기지 못해 기본값(매일 09:00)으로 표시했어요. 필요하면 다시 설정해주세요.');
+        }
         updateTriggerVisibility(path);
         updateLocationTriggerLabel();
 
@@ -329,7 +438,8 @@
             outgoing.get(key).push(link);
         });
 
-        const triggers = nodes.filter((node) => node.nodeType === 'SENSOR' || node.nodeType === 'LOCATION');
+        const triggers = nodes.filter((node) =>
+            node.nodeType === 'SENSOR' || node.nodeType === 'LOCATION' || node.nodeType === 'SCHEDULE');
         if (triggers.length !== 1) return null;
         const usedKeys = new Set();
         const trigger = triggers[0];
@@ -369,6 +479,9 @@
         if (event.target.matches('.path-trigger-type')) updateTriggerVisibility(path);
         if (event.target.matches('.path-trigger-sensor')) refreshPathConditionMetrics(path);
         if (event.target.matches('.action-required-count')) updateCountTimeout(event.target.closest('.flow-action-item'));
+        if (event.target.matches('.path-schedule-repeat, .path-schedule-time, .path-schedule-day, .path-schedule-weekday')) {
+            updateScheduleSummary(path);
+        }
     });
 
     pathList.addEventListener('input', (event) => {
@@ -433,19 +546,28 @@
             const prefix = 'flow';
             const triggerType = path.querySelector('.path-trigger-type').value;
             const sensorSelect = path.querySelector('.path-trigger-sensor');
-            const cronInput = path.querySelector('.path-trigger-cron');
             if (triggerType === 'SENSOR' && !sensorSelect.value) {
                 return showError('자동화를 시작할 센서를 선택해주세요.');
             }
-            if (triggerType === 'SCHEDULE' && !cronInput.value.trim()) {
-                return showError('예약 주기(Cron)를 입력해주세요.');
+            let schedule = null;
+            if (triggerType === 'SCHEDULE') {
+                schedule = readSchedule(path);
+                if (Number.isNaN(schedule.hour) || Number.isNaN(schedule.minute)) {
+                    return showError('예약 시간을 선택해주세요.');
+                }
+                if (schedule.repeatType === 'WEEKLY' && !schedule.weekdays.length) {
+                    return showError('예약할 요일을 하나 이상 선택해주세요.');
+                }
+                if (schedule.repeatType === 'MONTHLY' && !schedule.day) {
+                    return showError('예약할 날짜를 선택해주세요.');
+                }
             }
 
             const triggerKey = `${prefix}-trigger`;
             const triggerConfiguration = triggerType === 'SENSOR'
                 ? {sensorId: Number(sensorSelect.value)}
                 : triggerType === 'SCHEDULE'
-                    ? {cron: cronInput.value.trim()}
+                    ? {cron: buildCron(schedule)}
                     : {};
             nodes.push({clientNodeKey: triggerKey, nodeType: triggerType, configuration: triggerConfiguration});
 

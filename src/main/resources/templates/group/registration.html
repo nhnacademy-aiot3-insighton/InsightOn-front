@@ -26,7 +26,12 @@
     <!-- 아직 그룹 신청 이력이 없거나, 이전 신청이 반려/취소돼서 다시 신청할 수 있는 상태 -->
     <div class="auth-card auth-card-wide" th:if="${state == 'FORM'}"
          th:with="prevRegion=${previous != null ? #strings.arraySplit(previous.groupRegion(), ' ') : null}">
-        <h1>그룹 신청</h1>
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h1 class="m-0">그룹 신청</h1>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onclick="history.back()">
+                <i class="ti ti-arrow-left"></i> 뒤로가기
+            </button>
+        </div>
         <p class="auth-subtitle">아직 속한 그룹이 없어요. 그룹을 신청하면 관리자 승인 후 대시보드를 쓸 수 있어요.</p>
 
         <div class="auth-error" th:if="${previous != null and previous.status().name() == 'REJECTED'}">
@@ -69,8 +74,11 @@
                           rows="3"
                           th:text="${previous != null} ? ${previous.description()} : ''"></textarea>
             </div>
-            <div class="settings-actions" style="justify-content: stretch;">
-                <button class="btn-landing-primary w-100 justify-content-center" type="submit">
+            <div class="settings-actions d-flex gap-2" style="justify-content: stretch;">
+                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1; border-radius: var(--radius-md);" type="button" onclick="history.back()">
+                    <i class="ti ti-arrow-left"></i> 뒤로가기
+                </button>
+                <button class="btn-landing-primary justify-content-center" style="flex: 2;" type="submit">
                     신청하기<i class="ti ti-arrow-right"></i>
                 </button>
             </div>
