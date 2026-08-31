@@ -187,9 +187,9 @@
                             <span class="flow-port flow-port-in" aria-hidden="true"></span>
                             <div class="flow-node-header">
                                 <span class="flow-node-icon"><i class="ti ti-bell"></i></span>
-                                <div><span class="flow-node-kind">동작</span><h4>어떤 알림을 보낼까요?</h4></div>
+                                <div><span class="flow-node-kind">동작</span><h4>어떤 동작을 실행할까요?</h4></div>
                             </div>
-                            <p class="flow-node-help">앞의 조건을 모두 만족하면 이 알림을 보냅니다.</p>
+                            <p class="flow-node-help">앞의 조건을 모두 만족하면 이 동작을 실행합니다.</p>
                             <div class="path-action-list"></div>
                         </article>
                     </div>
@@ -216,7 +216,8 @@
     window.FLOW_EDITOR_INIT = {
         mode: /*[[${mode}]]*/ 'create',
         flow: /*[[${flow}]]*/ null,
-        sensors: /*[[${sensors}]]*/ []
+        sensors: /*[[${sensors}]]*/ [],
+        actuatorCommandRules: /*[[${actuatorCommandRules}]]*/ {}
     };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
