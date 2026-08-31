@@ -351,6 +351,14 @@
         const inner = el.querySelector('.chart-inner-canvas');
         const wrapper = el.querySelector('.chart-scroll-wrapper');
         if (inner && wrapper) {
+            const displayMode = (w.widgetConfig && w.widgetConfig.displayMode) || 'SCROLL';
+            if (displayMode === 'FIT') {
+                inner.style.width = '100%';
+                wrapper.style.overflowX = 'hidden';
+                return;
+            }
+
+            wrapper.style.overflowX = 'auto';
             const wrapperWidth = wrapper.getBoundingClientRect().width || wrapper.clientWidth || 300;
             const contentWidth = labelCount > 0 ? labelCount * 50 : wrapperWidth;
             const minWidth = Math.max(wrapperWidth, contentWidth);
@@ -766,6 +774,10 @@
 
     function openConfigModal(w) {
         editingUid = w.uid;
+        const displayMode = (w.widgetConfig && w.widgetConfig.displayMode) || 'SCROLL';
+        modalEl.querySelectorAll('input[name="widgetDisplayMode"]').forEach((r) => {
+            r.checked = r.value === displayMode;
+        });
         modalEl.querySelectorAll('input[name="widgetType"]').forEach((r) => {
             r.checked = r.value === w.widgetConfig.type;
         });
@@ -796,6 +808,7 @@
         const w = state.find((x) => x.uid === editingUid);
         if (!w) return;
 
+        const displayMode = modalEl.querySelector('input[name="widgetDisplayMode"]:checked')?.value || 'SCROLL';
         const type = modalEl.querySelector('input[name="widgetType"]:checked')?.value || 'GRAPH';
         const sensorOpt = sensorSelect.options[sensorSelect.selectedIndex];
         const sensorEui = sensorOpt ? sensorOpt.dataset.eui : null;
@@ -805,12 +818,22 @@
             ? Array.from(checkboxEls).filter((c) => c.checked).map((c) => c.value)
             : (w.widgetConfig.fields || []);
 
+        if (!sensorEui) {
+            alert('센서를 선택해주세요.');
+            return;
+        }
+        if (!fields || fields.length === 0) {
+            alert('최소 1개 이상의 메트릭을 선택해 주세요.');
+            return;
+        }
+
         w.widgetConfig = {
             type,
             sensorEui: sensorEui || null,
             range: rangeSelect.value,
             aggregateWindow: aggSelect.value,
-            fields
+            fields,
+            displayMode
         };
         w.configDirty = true;  // 설정 변경 — 저장 필요 + InfluxDB 재조회 필요
 
@@ -843,7 +866,7 @@
                 yPos: nextFreeRow(),
                 width: 4,
                 height: 4,
-                widgetConfig: {type: 'GRAPH', sensorEui: null, range: '-1h', aggregateWindow: '15m', fields: []}
+                widgetConfig: {type: 'GRAPH', sensorEui: null, range: '-1h', aggregateWindow: '15m', fields: [], displayMode: 'SCROLL'}
             };
             state.push(w);
             addItemToGrid(w);

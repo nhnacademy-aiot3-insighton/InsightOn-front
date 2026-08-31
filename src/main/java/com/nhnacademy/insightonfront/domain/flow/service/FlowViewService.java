@@ -49,9 +49,20 @@ public class FlowViewService {
     private static final Map<String, String> OPERATOR_LABELS = Map.of(
             ">", "초과", ">=", "이상", "<", "미만", "<=", "이하", "==", "같음", "!=", "다름");
     private static final String[] WEEKDAY_LABELS = {"일", "월", "화", "수", "목", "금", "토"};
+    // SuggestionLogViewService와 같은 한글 표기를 쓴다(대시보드 액추에이터 화면과도 동일).
+    private static final Map<String, String> ACTUATOR_TYPE_LABELS = Map.of(
+            "AIRCON", "에어컨", "AIR_PURIFIER", "공기청정기", "VENTILATION_FAN", "환풍기");
+    private static final Map<String, String> ACTUATOR_COMMAND_LABELS = Map.of(
+            "power", "전원", "mode", "모드", "temperature", "온도");
+    private static final Map<String, String> ACTUATOR_VALUE_LABELS = Map.ofEntries(
+            Map.entry("ON", "켜기"), Map.entry("OFF", "끄기"),
+            Map.entry("COOL", "냉방"), Map.entry("DRY", "제습"), Map.entry("FAN", "송풍"), Map.entry("AUTO", "자동"),
+            Map.entry("SLEEP", "취침"), Map.entry("TURBO", "터보"),
+            Map.entry("LOW", "약"), Map.entry("MID", "중"), Map.entry("HIGH", "강"));
     // Flow Editor(flow-editor.js의 buildCron)가 만들어내는 "매일/매주/매월" 3가지 형태만 인식한다.
+    // Rule Engine의 CronExpressionValidator가 요구하는 Spring 6필드(초 분 시 일 월 요일) 형식이며 초는 항상 "0"이다.
     private static final Pattern SCHEDULE_CRON = Pattern.compile(
-            "^(\\d{1,2})\\s+(\\d{1,2})\\s+(\\*|\\d{1,2})\\s+\\*\\s+(\\*|[0-6](?:,[0-6])*)$");
+            "^0\\s+(\\d{1,2})\\s+(\\d{1,2})\\s+(\\*|\\d{1,2})\\s+\\*\\s+(\\*|[0-6](?:,[0-6])*)$");
 
     private final FlowClient flowClient;
     private final LocationNameResolver locationNameResolver;
@@ -143,9 +154,7 @@ public class FlowViewService {
             case TIMER -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "조건", "반복 간격 확인",
                     "같은 동작이 너무 자주 실행되지 않도록 간격을 둡니다.", "ti-hourglass",
                     fields(new FlowStepFieldViewModel("간격", duration(number(configuration, "intervalSeconds", 0)))));
-            case ACTUATOR_CONTROL -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "동작", "기기 제어",
-                    "연결된 기기에 제어 명령을 보냅니다.", "ti-toggle-right",
-                    fields(new FlowStepFieldViewModel("명령", text(configuration, "command", "기기 제어"))));
+            case ACTUATOR_CONTROL -> actuatorControlStep(node, configuration);
             case EXTERNAL_NOTIFICATION -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "동작", "외부 알림 보내기",
                     "이메일 또는 Telegram으로 알림을 보냅니다.", "ti-send",
                     fields(new FlowStepFieldViewModel("채널", text(configuration, "channel", "알림"))));
@@ -175,6 +184,28 @@ public class FlowViewService {
                 + OPERATOR_LABELS.getOrDefault(matcher.group(2), matcher.group(2));
         return new FlowStepViewModel(node.nodeId(), node.nodeType(), "조건", condition,
                 "이 조건을 만족하면 다음 단계로 진행합니다.", "ti-adjustments-horizontal", List.of());
+    }
+
+    private FlowStepViewModel actuatorControlStep(FlowNodeResponse node, Map<String, Object> configuration) {
+        String actuatorType = text(configuration, "actuatorType", "");
+        String command = text(configuration, "command", "");
+        String commandValue = text(configuration, "commandValue", "");
+        String typeLabel = ACTUATOR_TYPE_LABELS.getOrDefault(actuatorType, "기기");
+        return new FlowStepViewModel(node.nodeId(), node.nodeType(), "동작", typeLabel + " 제어",
+                "연결된 기기에 제어 명령을 보냅니다.", "ti-toggle-right",
+                fields(new FlowStepFieldViewModel("명령", actuatorCommandSummary(typeLabel, command, commandValue))));
+    }
+
+    private String actuatorCommandSummary(String typeLabel, String command, String commandValue) {
+        if (command.isBlank() || commandValue.isBlank()) {
+            return "기기 제어";
+        }
+        if ("temperature".equals(command)) {
+            return typeLabel + " 설정 온도 " + commandValue + "°C로 변경";
+        }
+        String commandLabel = ACTUATOR_COMMAND_LABELS.getOrDefault(command, command);
+        String valueLabel = ACTUATOR_VALUE_LABELS.getOrDefault(commandValue, commandValue);
+        return typeLabel + " " + commandLabel + " " + valueLabel;
     }
 
     private FlowStepViewModel alertStep(FlowNodeResponse node, Map<String, Object> configuration) {

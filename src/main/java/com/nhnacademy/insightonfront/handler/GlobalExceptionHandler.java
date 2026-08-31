@@ -2,6 +2,7 @@ package com.nhnacademy.insightonfront.handler;
 
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,8 +27,9 @@ public class GlobalExceptionHandler {
     private final ObjectMapper objectMapper;
 
     @ExceptionHandler(FeignException.class)
-    public String handleFeignException(FeignException e, HttpServletRequest request, Model model) {
+    public String handleFeignException(FeignException e, HttpServletRequest request, HttpServletResponse response, Model model) {
         int status = e.status() > 0 ? e.status() : HttpStatus.INTERNAL_SERVER_ERROR.value();
+        response.setStatus(status);
         log.warn("[Front Global Handler] FeignException - URI: {}, status: {}, message: {}",
                 request.getRequestURI(), status, e.getMessage());
 
@@ -43,17 +45,20 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ResponseStatusException.class)
-    public String handleResponseStatusException(ResponseStatusException e, HttpServletRequest request, Model model) {
+    public String handleResponseStatusException(ResponseStatusException e, HttpServletRequest request, HttpServletResponse response, Model model) {
+        int status = e.getStatusCode().value();
+        response.setStatus(status);
         log.warn("[Front Global Handler] ResponseStatusException - URI: {}, status: {}, reason: {}",
-                request.getRequestURI(), e.getStatusCode().value(), e.getReason());
+                request.getRequestURI(), status, e.getReason());
 
-        model.addAttribute("status", e.getStatusCode().value());
+        model.addAttribute("status", status);
         model.addAttribute("errorMessage", e.getReason());
         return "error";
     }
 
     @ExceptionHandler(Exception.class)
-    public String handleGeneralException(Exception e, HttpServletRequest request, Model model) {
+    public String handleGeneralException(Exception e, HttpServletRequest request, HttpServletResponse response, Model model) {
+        response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
         log.error("[Front Global Handler] Unhandled Exception - URI: {}", request.getRequestURI(), e);
 
         model.addAttribute("status", 500);
