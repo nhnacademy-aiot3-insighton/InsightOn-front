@@ -545,6 +545,33 @@ button:focus-visible,
   background: var(--primary-tint);
   color: var(--primary);
   font-weight: 600;
+  border-left-color: var(--primary);
+}
+
+/* 사이드바 — 선택된 위치 아래에 펼쳐지는 바로가기 */
+.app-sidebar .location-sublinks {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 8px var(--sp-4);
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+.app-sidebar .location-sublink {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px 10px;
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  text-decoration: none;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.app-sidebar .location-sublink i { font-size: var(--icon-sm); flex-shrink: 0; }
+.app-sidebar .location-sublink:hover {
+  color: var(--primary);
+  background: var(--primary-tint);
 }
 
 .app-sidebar .add-location-link {
