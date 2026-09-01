@@ -424,41 +424,72 @@
         return fallbackColors[index % fallbackColors.length];
     }
 
-    function syncYAxis(w, minVal, maxVal) {
-        const el = contentEl(w.uid);
-        if (!el) return;
-        const yCanvas = el.querySelector('.y-axis-canvas');
-        if (!yCanvas) return;
+    function createSmartChartScales(fields) {
+        const leftField = fields && fields.length ? fields[0] : '';
+        const rightField = fields && fields.length > 1 ? fields[1] : null;
 
-        destroyChart(w.uid + '_y');
-        chartInstances[w.uid + '_y'] = new Chart(yCanvas, {
-            type: 'line',
-            data: { labels: [''], datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                scales: {
-                    x: { display: false },
-                    y: {
-                        min: (minVal !== undefined && minVal !== null) ? Math.floor(minVal) : 0,
-                        max: (maxVal !== undefined && maxVal !== null) ? Math.ceil(maxVal) : 100,
-                        ticks: {
-                            font: { size: 10, weight: '600' },
-                            color: cssVar('--ink-soft', '#475569'),
-                            precision: 0,
-                            callback: function(val) {
-                                if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
-                                if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
-                                return Number(val).toLocaleString();
+        const scales = {
+            x: {
+                ticks: {
+                    font: {size: 10, weight: '500'},
+                    color: cssVar('--ink-soft', '#64748b'),
+                    maxRotation: 0,
+                    autoSkip: true,
+                    callback: function (val, index, ticks) {
+                        const rawLabel = this.getLabelForValue(val);
+                        if (!rawLabel || typeof rawLabel !== 'string') return rawLabel;
+                        const parts = rawLabel.trim().split(' ');
+                        if (parts.length === 2) {
+                            const dateStr = parts[0]; // e.g. "08-31"
+                            const timeStr = parts[1]; // e.g. "14:00"
+                            const prevLabel = (index > 0 && ticks[index - 1]) ? this.getLabelForValue(ticks[index - 1].value) : null;
+                            const prevDate = (prevLabel && typeof prevLabel === 'string') ? prevLabel.trim().split(' ')[0] : null;
+                            if (index === 0 || dateStr !== prevDate) {
+                                return dateStr.replace('-', '/') + ' ' + timeStr;
                             }
-                        },
-                        grid: { color: 'transparent' }
+                            return timeStr;
+                        }
+                        return rawLabel;
+                    }
+                },
+                grid: {display: false}
+            },
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                grid: {color: cssVar('--line', '#e2e8f0')},
+                ticks: {
+                    font: {size: 10, weight: '600'},
+                    color: getFieldColor(leftField, 0),
+                    callback: function (val) {
+                        if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                        if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
+                        return Number(val).toLocaleString();
                     }
                 }
             }
-        });
+        };
+
+        if (rightField) {
+            scales.y1 = {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                grid: {drawOnChartArea: false},
+                ticks: {
+                    font: {size: 10, weight: '600'},
+                    color: getFieldColor(rightField, 1),
+                    callback: function (val) {
+                        if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                        if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
+                        return Number(val).toLocaleString();
+                    }
+                }
+            };
+        }
+
+        return scales;
     }
 
     function initEmptyChart(w, el) {
@@ -485,10 +516,7 @@
                     ${legendHtml}
                 </div>
                 <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
-                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative;">
                         <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
                     </div>
                 </div>
@@ -504,10 +532,12 @@
                     labels: [],
                     datasets: fields.map((field, idx) => {
                         const color = getFieldColor(field, idx);
+                        const yAxisID = (fields.length > 1 && idx > 0) ? 'y1' : 'y';
                         return {
                             fieldKey: field,
                             label: metricLabelWithUnit(field),
                             data: [],
+                            yAxisID: yAxisID,
                             borderColor: color,
                             backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
                             borderWidth: (type === 'BAR') ? 1 : 1.5,
@@ -523,19 +553,21 @@
                     maintainAspectRatio: false,
                     animation: false,
                     plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-                        y: {
-                            ticks: { display: false },
-                            grid: { color: cssVar('--line', '#e2e8f0') }
+                        legend: {display: false},
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: function (items) {
+                                    if (!items || !items.length) return '';
+                                    return '🕒 ' + items[0].label;
+                                }
+                            }
                         }
-                    }
+                    },
+                    scales: createSmartChartScales(fields)
                 }
             });
-
-            syncYAxis(w, 0, 100);
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
             const gaugeUnit = metricUnit((w.widgetConfig.fields || [])[0]);
             body.className = 'card-body grid-widget-body p-2 d-flex flex-column align-items-center justify-content-center position-relative';
@@ -568,7 +600,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                    plugins: {legend: {display: false}}
                 }
             });
         } else {
@@ -579,125 +611,109 @@
     }
 
     function fetchAndRenderData(w, el) {
-        fetch(`/groups/location/${LOCATION_ID}/dashboard/widgets/${w.widgetId}/chart-data`)
-            .then((r) => {
-                if (!r.ok) throw new Error('chart-data fetch failed');
-                return r.json();
-            })
-            .then((data) => {
-                // influxDB에서 가져온 과거 데이터를 차트에 쭉 그려넣음
-                paintWidgetData(w, el, data);
-                // InfluxDB 시계열 수신 후 SSE 구독 시작
-                const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
-                if (sensorId) {
-                    subscribeWidgetSse(w, sensorId);
-                }
-            })
-            .catch(() => {
-                console.warn('[InfluxDB Data Fetch Failed] 실시간 SSE만 연결 시도:');
-                const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
-                if (sensorId) {
-                    subscribeWidgetSse(w, sensorId);
-                }
-            });
-    }
-
-    function paintWidgetData(w, el, data) {
         const type = w.widgetConfig.type || 'GRAPH';
-        const labels = data.labels || [];
-        const datasets = data.datasets || [];
         const body = el.querySelector('.grid-widget-body');
+        if (!body) return;
 
-        if (type === 'GRAPH' || type === 'BAR') {
-            const legendHtml = datasets.map((ds, i) => {
-                const color = getFieldColor(ds.label, i);
-                return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
-                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
-                    <span>${metricLabelWithUnit(ds.label)}</span>
-                </div>`;
-            }).join('');
+        fetch(`${BASE_URL}/widgets/${w.widgetId}/chart-data`)
+            .then((r) => r.json())
+            .then((res) => {
+                const labels = res.timeLabels || [];
+                const datasets = res.datasets || [];
+                w.configDirty = false;
 
-            body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
-            body.innerHTML = `
-                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
-                    ${legendHtml}
-                </div>
-                <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
-                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
-                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                </div>
-            `;
-            const canvas = body.querySelector('.main-canvas');
-            if (!canvas) return;
-            destroyChart(w.uid);
-            const chartType = (type === 'BAR') ? 'bar' : 'line';
+                if (type === 'GRAPH' || type === 'BAR') {
+                    const legendHtml = datasets.map((ds, i) => {
+                        const color = getFieldColor(ds.label, i);
+                        return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
+                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
+                            <span>${metricLabelWithUnit(ds.label)}</span>
+                        </div>`;
+                    }).join('');
 
-            chartInstances[w.uid] = new Chart(canvas, {
-                type: chartType,
-                data: {
-                    labels,
-                    datasets: datasets.map((ds, i) => {
-                        const rawKey = ds.label;
-                        const color = getFieldColor(rawKey, i);
-                        return {
-                            fieldKey: rawKey,
-                            label: metricLabelWithUnit(rawKey),
-                            data: ds.data,
-                            borderColor: color,
-                            backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
-                            borderWidth: 1.5,
-                            tension: 0.3,
-                            fill: i === 0,
-                            pointRadius: 3,
-                            pointHoverRadius: 5
-                        };
-                    })
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-                        y: {
-                            ticks: { display: false },
-                            grid: { color: cssVar('--line', '#e2e8f0') }
+                    body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
+                    body.innerHTML = `
+                        <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
+                            ${legendHtml}
+                        </div>
+                        <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
+                            <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative;">
+                                <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
+                            </div>
+                        </div>
+                    `;
+                    const canvas = body.querySelector('.main-canvas');
+                    if (!canvas) return;
+                    destroyChart(w.uid);
+                    const chartType = (type === 'BAR') ? 'bar' : 'line';
+                    const fields = datasets.map(ds => ds.label);
+
+                    chartInstances[w.uid] = new Chart(canvas, {
+                        type: chartType,
+                        data: {
+                            labels,
+                            datasets: datasets.map((ds, i) => {
+                                const rawKey = ds.label;
+                                const color = getFieldColor(rawKey, i);
+                                const yAxisID = (datasets.length > 1 && i > 0) ? 'y1' : 'y';
+                                return {
+                                    fieldKey: rawKey,
+                                    label: metricLabelWithUnit(rawKey),
+                                    data: ds.data,
+                                    yAxisID: yAxisID,
+                                    borderColor: color,
+                                    backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
+                                    borderWidth: 1.5,
+                                    tension: 0.3,
+                                    fill: i === 0,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 5
+                                };
+                            })
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {display: false},
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                    callbacks: {
+                                        title: function (items) {
+                                            if (!items || !items.length) return '';
+                                            return '🕒 ' + items[0].label;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: createSmartChartScales(fields)
                         }
-                    }
+                    });
+
+                    w.lastLabelCount = labels.length;
+                    adjustChartScroll(w, labels.length, true);
+                    return;
                 }
+
+                const firstSeries = datasets[0]?.data || [];
+                const latest = firstSeries.length ? firstSeries[firstSeries.length - 1] : null;
+                const valueEl = body.querySelector('.grid-widget-value');
+                if (valueEl) {
+                    valueEl.textContent = latest === null || latest === undefined ? '0' : Number(latest).toLocaleString(undefined, {maximumFractionDigits: 1});
+                }
+
+                if ((type === 'GAUGE' || type === 'SINGLE_STAT') && chartInstances[w.uid] && latest !== null && latest !== undefined) {
+                    const numericVal = Number(latest);
+                    const maxVal = 100;
+                    const fillVal = Math.min(Math.max(numericVal, 0), maxVal);
+                    chartInstances[w.uid].data.datasets[0].data = [fillVal, maxVal - fillVal];
+                    chartInstances[w.uid].update('quiet');
+                }
+            })
+            .catch((err) => {
+                console.warn('[InfluxDB Data Fetch Failed]', err);
             });
-
-            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 렌더링
-            const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
-            const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
-            const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
-            syncYAxis(w, minVal, maxVal);
-
-            w.lastLabelCount = labels.length;
-            adjustChartScroll(w, labels.length, true);
-            return;
-        }
-
-        const firstSeries = datasets[0]?.data || [];
-        const latest = firstSeries.length ? firstSeries[firstSeries.length - 1] : null;
-        const valueEl = body.querySelector('.grid-widget-value');
-        if (valueEl) {
-            valueEl.textContent = latest === null || latest === undefined ? '0' : Number(latest).toLocaleString(undefined, {maximumFractionDigits: 1});
-        }
-
-        if ((type === 'GAUGE' || type === 'SINGLE_STAT') && chartInstances[w.uid] && latest !== null && latest !== undefined) {
-            const numericVal = Number(latest);
-            const maxVal = 100;
-            const fillVal = Math.min(Math.max(numericVal, 0), maxVal);
-            chartInstances[w.uid].data.datasets[0].data = [fillVal, maxVal - fillVal];
-            chartInstances[w.uid].update('quiet');
-        }
     }
 
     function destroyChart(uid) {
