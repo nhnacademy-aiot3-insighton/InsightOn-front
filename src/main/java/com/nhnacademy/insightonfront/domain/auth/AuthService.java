@@ -4,9 +4,12 @@ import com.nhnacademy.insightonfront.adapter.admin.AdminClient;
 import com.nhnacademy.insightonfront.adapter.auth.auth.AuthClient;
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.LoginResult;
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.UserLoginResponse;
+import com.nhnacademy.insightonfront.adapter.auth.signup.SignupClient;
 import com.nhnacademy.insightonfront.adapter.core.group.GroupClient;
 import com.nhnacademy.insightonfront.auth.AccessTokenContext;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.EmailVerifyConfirmRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.EmailVerifyRequest;
 import com.nhnacademy.insightonfront.domain.signup.dto.FindEmailRequest;
 import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetConfirmRequest;
 import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetRequest;
@@ -30,12 +33,33 @@ public class AuthService {
 
     private final AuthClient authClient;
     private final AdminClient adminClient;
+    private final SignupClient signupClient;
     private final GroupClient groupClient;
     private final ObjectMapper objectMapper;
 
     /** 로그인 처리: auth 호출 → 토큰에서 정보 추출 → groupId 조회까지 수행. */
     public LoginResult login(String email, String password) {
         ResponseEntity<UserLoginResponse> response = authClient.login(new UserLoginRequest(email, password));
+        return buildUserLoginResult(response);
+    }
+
+    /** 재활성화 인증 코드 발송 요청. 성공/실패(쿨다운·잠금)는 FeignException 으로 전파된다. */
+    public void requestReactivateEmailVerify(String email) {
+        authClient.reactivateRequest(new EmailVerifyRequest(email));
+    }
+
+    /**
+     * 재활성화 인증 코드 확인 → auth 가 계정을 복구하고 로그인 응답(/login 과 동일 규약)을 돌려준다.
+     * 이후 처리는 일반 로그인과 완전히 동일.
+     */
+    public LoginResult reactivateConfirm(String email, String code) {
+        ResponseEntity<UserLoginResponse> response =
+                authClient.reactivateConfirm(new EmailVerifyConfirmRequest(email, code));
+        return buildUserLoginResult(response);
+    }
+
+    /** 일반 회원 로그인 응답(accessToken 바디 + refreshToken 쿠키)을 LoginResult 로 변환. */
+    private LoginResult buildUserLoginResult(ResponseEntity<UserLoginResponse> response) {
         UserLoginResponse body = requireBody(response.getBody());
 
         if (body.isPendingRestore()) {
