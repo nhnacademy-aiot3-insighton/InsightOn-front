@@ -3,6 +3,8 @@ package com.nhnacademy.insightonfront.adapter.auth.auth;
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.TokenRefreshResponse;
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.UserLoginResponse;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.EmailVerifyConfirmRequest;
+import com.nhnacademy.insightonfront.domain.signup.dto.EmailVerifyRequest;
 import com.nhnacademy.insightonfront.domain.signup.dto.FindEmailRequest;
 import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetConfirmRequest;
 import com.nhnacademy.insightonfront.domain.signup.dto.PasswordResetRequest;
@@ -54,4 +56,13 @@ public interface AuthClient {
     @PostMapping("/api/v1/auth/password/reset-confirm")
     ResponseEntity<Void> passwordResetConfirm(
             @RequestBody PasswordResetConfirmRequest passwordResetConfirmRequest);
+
+    // 탈퇴 계정 재활성화 — 인증 코드 발송
+    @PostMapping("/api/v1/auth/reactivate/email-verify-request")
+    ResponseEntity<Void> reactivateRequest(@RequestBody EmailVerifyRequest emailVerifyRequest);
+
+    // 탈퇴 계정 재활성화 — 인증 코드 확인 후 복구 + 로그인 (응답 규약은 /login 과 동일)
+    @PostMapping("/api/v1/auth/reactivate/email-verify-confirm")
+    ResponseEntity<UserLoginResponse> reactivateConfirm(
+            @RequestBody EmailVerifyConfirmRequest emailVerifyConfirmRequest);
 }
