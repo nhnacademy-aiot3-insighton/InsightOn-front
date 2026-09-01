@@ -46,7 +46,7 @@
         entries.forEach(function (e) { if (e.isIntersecting) show(); });
       }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
       io.observe(el);
-      var t = setTimeout(show, 1400);
+      var t = setTimeout(show, 900);
       return function () { io.disconnect(); clearTimeout(t); };
     }, []);
     var Tag = props.as || 'div';
@@ -55,20 +55,23 @@
       id=${props.id} style=${props.style}>${props.children}</${Tag}>`;
   }
 
-  /* ---- 스크롤 진행도 훅 (요소 기준 0..1) ---- */
-  function useScrollProgress(ref, spanVh) {
-    var st = useState(0);
+  /* ---- 스크롤 진행도 훅 (요소 기준 0..1)
+     trigger point = 요소 top - startVh*100vh, span 만큼 스크롤하는 동안 0→1 ---- */
+  function useScrollProgress(ref, spanVh, startVh) {
+    var st = useState(prefersReduce() ? 1 : 0);
     var p = st[0], setP = st[1];
     useEffect(function () {
-      if (prefersReduce()) { setP(0); return; }
+      if (prefersReduce()) { setP(1); return; }
       var raf = 0;
       function update() {
         raf = 0;
         var el = ref.current;
         if (!el) return;
+        var vh = window.innerHeight;
         var top = el.getBoundingClientRect().top + window.scrollY;
-        var span = window.innerHeight * (spanVh || 1.4);
-        setP(clamp((window.scrollY - top) / span, 0, 1));
+        var start = top - vh * (startVh != null ? startVh : 0);
+        var span = vh * (spanVh || 1.4);
+        setP(clamp((window.scrollY - start) / span, 0, 1));
       }
       function onScroll() { if (!raf) raf = requestAnimationFrame(update); }
       window.addEventListener('scroll', onScroll, { passive: true });
@@ -82,9 +85,46 @@
     return p;
   }
 
-  /* ---- 스크린샷 자리표시자 ---- */
+  /* ---- 스크린샷: 이미지 + 자리표시자 폴백 (파일 없으면 자리표시자 노출) ---- */
   function Shot(props) {
-    return html`<div class="lp-shot-ph" style=${props.style}>${props.children}</div>`;
+    return html`
+      <div class="lp-shot-ph" style=${props.style}>${props.children}</div>
+      ${props.src && html`<img class="lp-shot-img" src=${props.src} alt=${props.alt || ''}
+        loading="lazy" onError=${function (e) { e.target.remove(); }} />`}`;
+  }
+
+  /* ---- Apple mac-studio 식: 스크롤에 따라 단어가 blur→선명 + 페이드인 ---- */
+  function ScrollText(props) {
+    var ref = useRef(null);
+    useEffect(function () {
+      var el = ref.current;
+      if (!el || prefersReduce() || !('IntersectionObserver' in window)) return;
+      if (el.getBoundingClientRect().top < window.innerHeight * 1.15) return;
+      el.classList.add('lp-armed');
+      var done = false;
+      function show() { if (done) return; done = true; el.classList.add('is-in'); io.disconnect(); clearTimeout(t); }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) show(); });
+      }, { threshold: 0.2, rootMargin: '0px 0px -10% 0px' });
+      io.observe(el);
+      var t = setTimeout(show, 900);
+      return function () { io.disconnect(); clearTimeout(t); };
+    }, []);
+    var lines = props.lines || [String(props.children || '')];
+    var total = 0;
+    lines.forEach(function (l) { total += l.split(' ').filter(Boolean).length; });
+    var counter = { i: 0 };
+    var Tag = props.as || 'h2';
+    return html`<${Tag} ref=${ref} class=${'lp-scrolltext ' + (props.class || '')} style=${props.style}>
+      ${lines.map(function (line, li) {
+        return html`<span class="lp-st-line" key=${li}>${
+          line.split(' ').filter(Boolean).map(function (w, wi) {
+            var delay = (counter.i++ / Math.max(total - 1, 1)) * 0.5;
+            return html`<span class="lp-st-word" style=${{ transitionDelay: delay.toFixed(2) + 's' }} key=${wi}>${w + ' '}</span>`;
+          })
+        }</span>`;
+      })}
+    </${Tag}>`;
   }
 
   /* ================= NAV ================= */
@@ -113,7 +153,7 @@
   /* ================= HERO (핀-줌) ================= */
   function Hero() {
     var pinRef = useRef(null);
-    var p = useScrollProgress(pinRef, 1.6);
+    var p = useScrollProgress(pinRef, 0.8);
     var reduce = prefersReduce();
 
     var titleStyle = reduce ? {} : {
@@ -139,7 +179,9 @@
           <div class="lp-hero-glow" aria-hidden="true"></div>
 
           <div class="lp-hero-shot" style=${shotStyle}>
-            <${Shot}>실시간 IoT 관제 대시보드 스크린샷<br/>(센서 상태 · 공기질 · 에너지 그래프)</${Shot}>
+            <${Shot} src="/img/landing/hero-dashboard.jpg" alt="실시간 IoT 관제 대시보드">
+              실시간 IoT 관제 대시보드 스크린샷<br/>(센서 상태 · 공기질 · 에너지 그래프)
+            </${Shot}>
           </div>
 
           <div class="lp-hero-copy" style=${titleStyle}>
@@ -163,17 +205,18 @@
     return html`
       <section class="lp-section lp-intro">
         <${Reveal} as="p" class="lp-eyebrow">WHO IT'S FOR</${Reveal}>
-        <${Reveal} as="p" class="lp-lead">여러 층, 여러 회의실의 공기질과 에너지를<br/>하나의 화면에서 관리하고 싶은 팀에게 필요합니다.</${Reveal}>
+        <${ScrollText} as="p" class="lp-lead"
+          lines=${['여러 층, 여러 회의실의 공기질과 에너지를', '하나의 화면에서 관리하고 싶은 팀에게 필요합니다.']} />
       </section>`;
   }
 
   function Automation() {
     return html`
       <section class="lp-section" id="automation">
-        <${Reveal} class="lp-section-head">
-          <p class="lp-eyebrow">TWO-STAGE AUTOMATION</p>
-          <h2>관제부터 판단까지, 두 층위로 자동화합니다</h2>
-        </${Reveal}>
+        <div class="lp-section-head">
+          <${Reveal} as="p" class="lp-eyebrow">TWO-STAGE AUTOMATION</${Reveal}>
+          <${ScrollText} lines=${['관제부터 판단까지, 두 층위로 자동화합니다']} />
+        </div>
 
         <${Reveal} class="lp-two">
           <div class="lp-card">
@@ -219,9 +262,10 @@
       <section id="context" class="lp-context">
         <div class="lp-section lp-split">
           <div>
+            <${Reveal} as="p" class="lp-eyebrow">CONTEXTUAL JUDGMENT</${Reveal}>
+            <${ScrollText} class="lp-h2-sm"
+              lines=${['실내 데이터뿐 아니라', '날씨·미세먼지까지 결합합니다']} />
             <${Reveal}>
-              <p class="lp-eyebrow">CONTEXTUAL JUDGMENT</p>
-              <h2 style=${{ fontSize: 'clamp(26px,3.4vw,38px)' }}>실내 데이터뿐 아니라<br/>날씨·미세먼지까지 결합합니다</h2>
               <p class="lp-p" style=${{ fontSize: '16px', marginTop: '20px' }}>실시간 날씨·미세먼지 데이터를 실내 센서 값과 함께 해석해, 왜 이 조치가 필요한지를 자연어로 설명합니다.</p>
             </${Reveal}>
             <${Reveal} class="lp-quote">
@@ -230,7 +274,9 @@
             </${Reveal}>
           </div>
           <${Reveal} class="lp-shot-square">
-            <${Shot}>실내 센서 + 외부 날씨/미세먼지<br/>데이터를 결합한 판단 화면</${Shot}>
+            <${Shot} src="/img/landing/context-sensor.jpg" alt="실내 센서 + 외부 날씨·미세먼지 데이터 결합">
+              실내 센서 + 외부 날씨/미세먼지<br/>데이터를 결합한 판단 화면
+            </${Shot}>
           </${Reveal}>
         </div>
       </section>`;
@@ -239,10 +285,10 @@
   function Architecture() {
     return html`
       <section class="lp-section" id="platform" style=${{ paddingTop: '140px' }}>
-        <${Reveal} class="lp-section-head">
-          <p class="lp-eyebrow">ARCHITECTURE</p>
-          <h2>여러 고객사가 안전하게 함께 씁니다</h2>
-        </${Reveal}>
+        <div class="lp-section-head">
+          <${Reveal} as="p" class="lp-eyebrow">ARCHITECTURE</${Reveal}>
+          <${ScrollText} lines=${['여러 고객사가 안전하게 함께 씁니다']} />
+        </div>
 
         <${Reveal} class="lp-grid-2">
           <div class="lp-card">
@@ -285,7 +331,7 @@
     var s = S.state;
     return html`
       <section class="lp-cta" id="cta">
-        <${Reveal} as="h2">지금 InsightOn을 경험해보세요</${Reveal}>
+        <${ScrollText} lines=${['지금 InsightOn을 경험해보세요']} />
         <${Reveal} class="lp-cta-actions">
           ${s === 'GUEST' && html`<a href="/signup" class="lp-btn lp-btn-lg">무료로 시작하기</a>`}
           ${s === 'GUEST' && html`<a href="/login" class="lp-btn lp-btn-lg lp-btn-ghost">로그인</a>`}
