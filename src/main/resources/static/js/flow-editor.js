@@ -243,6 +243,28 @@
         return request;
     }
 
+    function loadLocationAttributes(locationId) {
+        const sensorIds = sensors
+            .filter((sensor) => Number(sensor.locationId) === locationId)
+            .map((sensor) => sensor.sensorId);
+        if (!sensorIds.length) {
+            return Promise.reject(new Error('이 위치에 등록된 센서가 없어요.'));
+        }
+        // 센서마다 실제로 지원하는 측정 항목만 모아서, 위치에 없는 항목(예: CO₂ 센서가 없는데 CO₂ 조건)을 고를 수 없게 한다.
+        return Promise.all(sensorIds.map((id) => loadSensorAttributes(id).catch(() => [])))
+            .then((attributeLists) => {
+                const merged = new Map();
+                attributeLists.flat().forEach((attribute) => {
+                    if (!merged.has(attribute.metricKey)) merged.set(attribute.metricKey, attribute);
+                });
+                const attributes = Array.from(merged.values());
+                if (!attributes.length) {
+                    throw new Error('이 위치의 센서에 등록된 측정 항목이 없어요.');
+                }
+                return attributes;
+            });
+    }
+
     function populateMetricSelect(select, attributes, selectedMetricKey) {
         select.replaceChildren();
         attributes.forEach((attribute) => {
@@ -252,7 +274,11 @@
             select.appendChild(createOption(attribute.metricKey, label));
         });
         if (selectedMetricKey && !attributes.some((attribute) => attribute.metricKey === selectedMetricKey)) {
-            select.appendChild(createOption(selectedMetricKey, `현재 설정: ${selectedMetricKey}`));
+            const known = locationMetrics.find((metric) => metric.metricKey === selectedMetricKey);
+            const label = known
+                ? `현재 설정: ${known.displayName} (이 위치에서 사용 불가)`
+                : `현재 설정: ${selectedMetricKey}`;
+            select.appendChild(createOption(selectedMetricKey, label));
         }
         if (selectedMetricKey) select.value = selectedMetricKey;
         select.disabled = false;
@@ -276,7 +302,7 @@
             return Promise.resolve();
         }
 
-        status.textContent = triggerType === 'SENSOR' ? '센서 측정 항목을 불러오는 중...' : '위치 전체의 공통 측정 항목을 사용합니다.';
+        status.textContent = triggerType === 'SCHEDULE' ? '위치 전체의 공통 측정 항목을 사용합니다.' : '측정 항목을 불러오는 중...';
 
         path.querySelectorAll('.condition-metric').forEach((select) => {
             if (!select.dataset.selectedMetricKey) select.dataset.selectedMetricKey = select.value;
@@ -284,9 +310,11 @@
             select.disabled = true;
         });
 
-        const attributesRequest = (triggerType === 'LOCATION' || triggerType === 'SCHEDULE')
-            ? Promise.resolve(locationMetrics)
-            : loadSensorAttributes(sensorId);
+        const attributesRequest = triggerType === 'LOCATION'
+            ? loadLocationAttributes(Number(locationSelect.value))
+            : triggerType === 'SCHEDULE'
+                ? Promise.resolve(locationMetrics)
+                : loadSensorAttributes(sensorId);
         return attributesRequest.then((attributes) => {
             if (path.dataset.metricRequestId !== requestId) return;
             path.querySelectorAll('.condition-row').forEach((row, index) => {
@@ -296,16 +324,17 @@
                 delete select.dataset.selectedMetricKey;
             });
             path.dataset.metricsReady = 'true';
-            status.textContent = triggerType === 'SENSOR'
-                ? `${attributes.length}개 측정 항목을 불러왔습니다.`
-                : '온도·습도·CO₂·조도 공통 항목을 사용합니다.';
+            status.textContent = triggerType === 'SCHEDULE'
+                ? '온도·습도·CO₂·조도 공통 항목을 사용합니다.'
+                : `${attributes.length}개 측정 항목을 불러왔습니다.`;
         }).catch((error) => {
             if (path.dataset.metricRequestId !== requestId) return;
             path.querySelectorAll('.condition-metric').forEach((select) => {
                 select.replaceChildren(createOption('', '측정 항목을 불러오지 못함'));
                 select.disabled = true;
             });
-            status.textContent = `${error.message} 센서를 다시 선택하면 재시도합니다.`;
+            const retryHint = triggerType === 'LOCATION' ? '위치를' : '센서를';
+            status.textContent = `${error.message} ${retryHint} 다시 선택하면 재시도합니다.`;
         });
     }
 
@@ -515,7 +544,30 @@
         path.querySelector('.path-trigger-sensor-field').style.display = type === 'SENSOR' ? '' : 'none';
         path.querySelector('.path-trigger-schedule-field').style.display = type === 'SCHEDULE' ? '' : 'none';
         if (type === 'SCHEDULE') updateScheduleSummary(path);
+
+        // 예약 시작(SCHEDULE)은 엔진 규칙상 동작 노드에 직접 연결해야 하므로 조건 노드를 숨긴다.
+        path.querySelector('.flow-node-filter').style.display = type === 'SCHEDULE' ? 'none' : '';
+        path.querySelectorAll('.flow-connector')[1].style.display = type === 'SCHEDULE' ? 'none' : '';
+
+        // 같은 이유로 동작도 기기 제어만 허용하고, 알림 보내기는 선택하지 못하게 막는다.
+        setActionTypeRestricted(path, type === 'SCHEDULE');
+
         refreshPathConditionMetrics(path);
+    }
+
+    function setActionTypeRestricted(path, restricted) {
+        const action = path.querySelector('.flow-action-item');
+        if (!action) return;
+        const select = action.querySelector('.action-type');
+        const alertOption = select.querySelector('option[value="ALERT"]');
+        if (restricted && alertOption) {
+            if (select.value === 'ALERT') select.value = 'ACTUATOR_CONTROL';
+            alertOption.remove();
+            updateActionTypeVisibility(action);
+        }
+        if (!restricted && !alertOption) {
+            select.insertBefore(createOption('ALERT', '알림 보내기'), select.firstChild);
+        }
     }
 
     function setSensorTriggerAdvanced(path, advanced) {
@@ -562,6 +614,8 @@
         refreshConditionList(path.querySelector('.path-condition-list'));
 
         addAction(path, data && data.action ? data.action : {nodeType: 'ALERT', configuration: {}});
+        // 동작 노드는 addAction 이후에야 존재하므로, 예약 시작 제약을 다시 적용한다.
+        setActionTypeRestricted(path, triggerType === 'SCHEDULE');
         return path;
     }
 
@@ -725,7 +779,10 @@
 
             let sourceKey = triggerKey;
             let sourcePort = 'out';
-            const conditionRows = Array.from(path.querySelectorAll('.condition-row'));
+            // SCHEDULE 트리거는 조건 노드를 숨겨서 못 만들게 하므로, 편집 모드에서 넘어온 잔여 행이 있어도 무시한다.
+            const conditionRows = triggerType === 'SCHEDULE'
+                ? []
+                : Array.from(path.querySelectorAll('.condition-row'));
             if (conditionRows.length && path.dataset.metricsReady !== 'true') {
                 return showError('측정 항목을 불러온 뒤 저장해주세요. 센서를 다시 선택하면 재시도합니다.');
             }
