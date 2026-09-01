@@ -75,7 +75,7 @@ public class AuthController {
             if (result.isPendingRestore()) {
                 log.info("[Auth] 탈퇴 복구 대기 계정 로그인 시도");
                 model.addAttribute("loginError",
-                        "탈퇴 후 복구 가능 기간 내 계정이에요. 아래에서 계정을 복구할 수 있어요.");
+                        "탈퇴 후 복구 가능 기간 내 계정이에요. 계정 복구 후 로그인할 수 있어요.");
                 model.addAttribute("pendingRestoreEmail", email);
                 return "login";
             }

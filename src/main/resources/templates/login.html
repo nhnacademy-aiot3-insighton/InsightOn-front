@@ -71,10 +71,6 @@
                 <i class="ti ti-alert-circle"></i>
                 <span th:text="${loginError}"></span>
             </div>
-            <a th:if="${pendingRestoreEmail}" class="btn-landing-primary w-100 justify-content-center mb-3"
-               th:href="@{/reactivate(email=${pendingRestoreEmail})}">
-                계정 복구하기<i class="ti ti-arrow-right"></i>
-            </a>
             <div class="auth-error" style="background:var(--success-tint); color:var(--success); border-color:rgba(47,125,92,0.25);" th:if="${param.registered != null}">
                 <i class="ti ti-check"></i>
                 <span>가입이 완료됐어요. 로그인해주세요.</span>
@@ -182,6 +178,29 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button>
                 <button type="button" id="btnResetPassword" class="btn btn-primary">재설정 링크 보내기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 탈퇴 후 복구 가능 기간 내 계정 — 로그인 시 자동으로 안내 팝업을 띄운다 -->
+<div class="modal fade" id="reactivateModal" tabindex="-1" aria-hidden="true"
+     th:if="${pendingRestoreEmail}" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">계정 복구 안내</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="auth-subtitle" style="margin-bottom: 0;">
+                    탈퇴 후 복구 가능 기간(7일) 내 계정이에요.<br>
+                    이메일 인증으로 계정을 복구하면 바로 로그인됩니다.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">나중에</button>
+                <a th:href="@{/reactivate(email=${pendingRestoreEmail})}" class="btn btn-primary">계정 복구하기</a>
             </div>
         </div>
     </div>
