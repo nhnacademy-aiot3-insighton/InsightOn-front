@@ -420,11 +420,8 @@
         return fallbackColors[index % fallbackColors.length];
     }
 
-    function createSmartChartScales(fields) {
-        const leftField = fields && fields.length ? fields[0] : '';
-        const rightField = fields && fields.length > 1 ? fields[1] : null;
-
-        const scales = {
+    function createSmartChartScales() {
+        return {
             x: {
                 ticks: {
                     font: {size: 10, weight: '500'},
@@ -436,8 +433,8 @@
                         if (!rawLabel || typeof rawLabel !== 'string') return rawLabel;
                         const parts = rawLabel.trim().split(' ');
                         if (parts.length === 2) {
-                            const dateStr = parts[0]; // e.g. "08-31"
-                            const timeStr = parts[1]; // e.g. "14:00"
+                            const dateStr = parts[0];
+                            const timeStr = parts[1];
                             const prevLabel = (index > 0 && ticks[index - 1]) ? this.getLabelForValue(ticks[index - 1].value) : null;
                             const prevDate = (prevLabel && typeof prevLabel === 'string') ? prevLabel.trim().split(' ')[0] : null;
                             if (index === 0 || dateStr !== prevDate) {
@@ -456,8 +453,8 @@
                 position: 'left',
                 grid: {color: cssVar('--line', '#e2e8f0')},
                 ticks: {
-                    font: {size: 10, weight: '600'},
-                    color: getFieldColor(leftField, 0),
+                    font: {size: 10, weight: '500'},
+                    color: cssVar('--ink-soft', '#64748b'),
                     callback: function (val) {
                         if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
                         if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
@@ -466,26 +463,6 @@
                 }
             }
         };
-
-        if (rightField) {
-            scales.y1 = {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                grid: {drawOnChartArea: false},
-                ticks: {
-                    font: {size: 10, weight: '600'},
-                    color: getFieldColor(rightField, 1),
-                    callback: function (val) {
-                        if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
-                        if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
-                        return Number(val).toLocaleString();
-                    }
-                }
-            };
-        }
-
-        return scales;
     }
 
     function initEmptyChart(w, el) {
@@ -528,12 +505,10 @@
                     labels: [],
                     datasets: fields.map((field, idx) => {
                         const color = getFieldColor(field, idx);
-                        const yAxisID = (fields.length > 1 && idx > 0) ? 'y1' : 'y';
                         return {
                             fieldKey: field,
                             label: metricLabelWithUnit(field),
                             data: [],
-                            yAxisID: yAxisID,
                             borderColor: color,
                             backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
                             borderWidth: (type === 'BAR') ? 1 : 1.5,
@@ -561,7 +536,7 @@
                             }
                         }
                     },
-                    scales: createSmartChartScales(fields)
+                    scales: createSmartChartScales()
                 }
             });
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
@@ -612,7 +587,10 @@
         if (!body) return;
 
         fetch(`${BASE_URL}/widgets/${w.widgetId}/chart-data`)
-            .then((r) => r.json())
+            .then((r) => {
+                if (!r.ok) throw new Error(`chart-data fetch failed with status ${r.status}`);
+                return r.json();
+            })
             .then((res) => {
                 const labels = res.timeLabels || [];
                 const datasets = res.datasets || [];
@@ -651,12 +629,10 @@
                             datasets: datasets.map((ds, i) => {
                                 const rawKey = ds.label;
                                 const color = getFieldColor(rawKey, i);
-                                const yAxisID = (datasets.length > 1 && i > 0) ? 'y1' : 'y';
                                 return {
                                     fieldKey: rawKey,
                                     label: metricLabelWithUnit(rawKey),
                                     data: ds.data,
-                                    yAxisID: yAxisID,
                                     borderColor: color,
                                     backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
                                     borderWidth: 1.5,
