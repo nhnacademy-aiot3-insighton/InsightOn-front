@@ -1,6 +1,5 @@
 package com.nhnacademy.insightonfront.domain.signup;
 
-import com.nhnacademy.insightonfront.adapter.auth.auth.dto.UserLoginResponse;
 import com.nhnacademy.insightonfront.adapter.auth.signup.SignupClient;
 import com.nhnacademy.insightonfront.adapter.auth.signup.dto.EmailAvailableResponse;
 import com.nhnacademy.insightonfront.adapter.auth.signup.dto.EmailVerifyConfirmResponse;
@@ -38,17 +37,5 @@ public class SignupService {
                                      String phoneNumber, String token) {
         return signupClient.doSignup(
                 new UserSignupRequest(email, password, userName, phoneNumber, token)).getBody();
-    }
-
-    public UserLoginResponse reactivate(String reactiveToken) {
-        return signupClient.userReactive(new ReactiveRequest(reactiveToken)).getBody();
-    }
-
-    public void requestReactivateEmailVerify(String email) {
-        signupClient.userReactivateRequest(new EmailVerifyRequest(email));
-    }
-
-    public UserLoginResponse confirmReactivateEmailVerify(String email, String code) {
-        return signupClient.userReactiveConfirm(new EmailVerifyConfirmRequest(email, code)).getBody();
     }
 }

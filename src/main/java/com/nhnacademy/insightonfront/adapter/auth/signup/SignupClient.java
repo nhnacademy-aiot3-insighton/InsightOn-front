@@ -1,6 +1,5 @@
 package com.nhnacademy.insightonfront.adapter.auth.signup;
 
-import com.nhnacademy.insightonfront.adapter.auth.auth.dto.UserLoginResponse;
 import com.nhnacademy.insightonfront.adapter.auth.signup.dto.*;
 import com.nhnacademy.insightonfront.domain.signup.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -35,17 +34,4 @@ public interface SignupClient {
     // 회원가입
     @PostMapping("/api/v1/auth/signup")
     ResponseEntity<UserSignupResponse> doSignup(@RequestBody UserSignupRequest userSignupRequest);
-
-    // 계정 재활성화 요청
-    @PostMapping("/api/v1/auth/reactive")
-    ResponseEntity<UserLoginResponse> userReactive(@RequestBody ReactiveRequest request);
-
-    // 재활성화 이메일 인증 요청
-    @PostMapping("/api/v1/auth/reactivate/email-verify-request")
-    ResponseEntity<Void> userReactivateRequest(@RequestBody EmailVerifyRequest emailVerifyRequest);
-
-    // 재활성화 이메일 인증 확인
-    @PostMapping("/api/v1/auth/reactivate/email-verify-confirm")
-    ResponseEntity<UserLoginResponse> userReactiveConfirm(
-            @RequestBody EmailVerifyConfirmRequest emailVerifyConfirmRequest);
 }
