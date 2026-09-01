@@ -1,273 +1,203 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>InsightOn — 빌딩 IoT 통합 관제</title>
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <title>InsightOn — 멀티테넌트 오피스 IoT 관제 · AI 자동 제어</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
     <script th:src="@{/js/theme.js}"></script>
-    <link th:href="@{/css/app.css}" rel="stylesheet">
+    <link th:href="@{/css/landing.css}" rel="stylesheet">
 </head>
-<body class="landing-page" th:with="state=${authState != null ? authState : 'GUEST'}">
+<body class="landing-redesign" th:with="state=${authState != null ? authState : 'GUEST'}">
+<div class="lp">
 
-<header class="landing-header">
-    <a th:href="@{/}" class="brand">
-        <i class="ti ti-chart-line"></i>InsightOn
-    </a>
-    <nav class="landing-nav">
-        <a href="#features">기능</a>
-        <a href="#how-it-works">작동 방식</a>
+    <!-- ================= NAV ================= -->
+    <nav class="lp-nav">
+        <div class="lp-nav-left">
+            <a th:href="@{/}" class="lp-brand">
+                <span class="lp-mark" aria-hidden="true"></span>
+                InsightOn
+            </a>
+            <div class="lp-nav-links">
+                <a href="#automation">Automation</a>
+                <a href="#context">Context AI</a>
+                <a href="#platform">Architecture</a>
+            </div>
+        </div>
+        <div class="lp-nav-right">
+            <th:block th:if="${state == 'GUEST'}">
+                <a th:href="@{/login}">로그인</a>
+                <a th:href="@{/signup}" class="lp-btn">무료로 시작하기</a>
+            </th:block>
+            <th:block th:if="${state != 'GUEST'}">
+                <a th:href="@{/mypage}" th:if="${userName != null}" th:text="|${userName}님|">사용자님</a>
+                <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="lp-btn">그룹 생성 신청</a>
+                <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="lp-btn">대시보드로</a>
+            </th:block>
+        </div>
     </nav>
-    <div class="landing-header-actions">
-        <!-- 미로그인: 로그인 / 회원가입 -->
-        <th:block th:if="${state == 'GUEST'}">
-            <a th:href="@{/login}" class="btn-landing-secondary">로그인</a>
-            <a th:href="@{/signup}" class="btn-landing-primary">회원가입</a>
-        </th:block>
 
-        <!-- 로그인 상태: 이름 + 로그아웃 -->
-        <th:block th:if="${state != 'GUEST'}">
-            <a th:href="@{/mypage}" class="landing-greeting" th:if="${userName != null}"
-               th:text="|${userName}님|"></a>
-
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="btn-landing-primary">
-                <i class="ti ti-building-plus"></i>그룹 생성 신청하기
-            </a>
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/join}" class="btn-landing-secondary">
-                <i class="ti ti-ticket"></i>초대 코드로 가입
-            </a>
-            <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">
-                <i class="ti ti-layout-dashboard"></i>대시보드로 이동
-            </a>
-
-            <!-- 로그아웃 -->
-            <form th:action="@{/logout}" method="post" style="display:inline;">
-                <button type="submit" class="btn-landing-secondary">로그아웃</button>
-            </form>
-        </th:block>
-    </div>
-</header>
-
-<section class="landing-section landing-hero">
-    <div>
-        <span class="landing-eyebrow"><i class="ti ti-bolt"></i>신호 기반 관제</span>
-        <h1>데이터로 공간을,<br><span class="grad">신호로 편안함을</span></h1>
-        <p>센서와 액추에이터를 하나로 모으고, 규칙과 AI 기반 자동화로 공간을 관제하는 InsightOn이 새로운 기준을 만듭니다.</p>
-        <div class="landing-hero-actions">
-            <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="btn-landing-primary">무료로 시작하기<i class="ti ti-arrow-right"></i></a>
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="btn-landing-primary">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/join}" class="btn-landing-secondary">초대 코드로 가입하기</a>
-            <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">대시보드로 이동<i class="ti ti-arrow-right"></i></a>
-            <a href="#how-it-works" class="btn-landing-secondary">작동 방식 보기</a>
+    <!-- ================= HERO ================= -->
+    <header class="lp-hero">
+        <div class="lp-hero-copy lp-reveal">
+            <p class="lp-eyebrow">멀티테넌트 오피스 IoT 관제 · AI 자동 제어</p>
+            <h1>센서 데이터에서 판단까지,<br>사람 없이 이어집니다</h1>
+            <p class="lp-hero-sub">규칙 기반 자동화와 AI 자동 제어가, 사람이 개입하지 않아도 최적 상태를 유지하는 오피스를 만듭니다.</p>
         </div>
-        <div class="tag-row">
-            <span class="tag-pill">온도</span>
-            <span class="tag-pill">습도</span>
-            <span class="tag-pill">CO2</span>
-            <span class="tag-pill">플로우</span>
-            <span class="tag-pill">AI</span>
+
+        <figure class="lp-hero-shot lp-reveal" style="margin:0; margin-top:56px;">
+            <div class="lp-shot-ph" style="aspect-ratio:16/9;">
+                실시간 IoT 관제 대시보드 스크린샷<br>(센서 상태 · 공기질 · 에너지 그래프)
+            </div>
+        </figure>
+
+        <div class="lp-hero-callout lp-reveal">
+            <p class="lp-eyebrow">실시간 관제</p>
+            <p>센서 상태 · 공기질 · 에너지 데이터를 한 화면에서 확인합니다.</p>
         </div>
-    </div>
 
-    <!-- Pure Global 브랜드 아트: 도면화된 빌딩 일러스트 (장식용, 실제 데이터 아님) -->
-    <div class="hero-art" aria-hidden="true">
-        <div class="callout c1">온도 <span class="val">23.4°C</span></div>
-        <div class="callout c2">습도 <span class="val">48%</span></div>
-        <div class="callout c3">CO2 <span class="val">612ppm</span></div>
-        <div class="callout c4">플로우 <span class="val">가동 중</span></div>
-        <div class="callout c5">노드 <span class="val">#0342</span></div>
+        <div class="lp-scroll-cue" aria-hidden="true">SCROLL ↓</div>
+    </header>
 
-        <svg width="240" height="240" viewBox="0 0 220 220" fill="none" style="position:absolute;bottom:40px;">
-            <polygon points="110,190 190,150 110,110 30,150" fill="none" stroke="rgba(108,75,240,.3)" stroke-width="1" stroke-dasharray="2 3"/>
-            <g stroke="rgba(108,75,240,.65)" stroke-width="1.3" fill="rgba(108,75,240,.05)">
-                <polygon points="70,150 110,170 150,150 110,130"/>
-                <polygon points="70,150 70,160 110,180 110,170"/>
-                <polygon points="150,150 150,160 110,180 110,170"/>
-                <polygon points="70,112 110,132 150,112 110,92"/>
-                <polygon points="70,112 70,122 110,142 110,132"/>
-                <polygon points="150,112 150,122 110,142 110,132"/>
-            </g>
-            <circle cx="110" cy="150" r="3" fill="#12b76a"/>
-            <circle cx="110" cy="112" r="3.5" fill="#e08a2f"/>
-            <circle cx="110" cy="112" r="8" fill="#e08a2f" opacity=".2"/>
-            <text x="8" y="16" font-family="IBM Plex Mono, monospace" font-size="9" fill="rgba(108,75,240,.5)">FIG. 01 — LIVE STRUCTURE</text>
-        </svg>
-        <div class="pedestal"></div>
-    </div>
-</section>
+    <!-- ================= WHO IT'S FOR ================= -->
+    <section class="lp-section lp-intro">
+        <p class="lp-eyebrow lp-reveal">WHO IT'S FOR</p>
+        <p class="lp-lead lp-reveal">여러 층, 여러 회의실의 공기질과 에너지를<br>하나의 화면에서 관리하고 싶은 팀에게 필요합니다.</p>
+    </section>
 
-<!-- 예시 수치입니다 — 실제 운영 지표로 교체해 주세요 -->
-<div class="ticker">
-    <span>노드 수 <b>1,204</b></span>
-    <span>평균 대응 시간 <b>4분</b></span>
-    <span>시스템 <span class="ok">정상 가동</span></span>
-    <span>플로우 규칙 <b>3,800+</b></span>
-    <span>AI 제안 <b>작동 중</b></span>
+    <!-- ================= AUTOMATION ================= -->
+    <section class="lp-section" id="automation">
+        <div class="lp-section-head lp-reveal">
+            <p class="lp-eyebrow">TWO-STAGE AUTOMATION</p>
+            <h2>관제부터 판단까지, 두 층위로 자동화합니다</h2>
+        </div>
+
+        <div class="lp-two lp-reveal">
+            <div class="lp-card">
+                <div class="lp-card-icon sq"><span></span></div>
+                <h3>규칙 기반 자동화</h3>
+                <p class="lp-p">사람이 정한 명시적 규칙에 따라 동작합니다. 노코드로 조건과 액션을 구성해, 예측 가능한 상황을 즉시 처리합니다.</p>
+            </div>
+            <div class="lp-plus" aria-hidden="true">+</div>
+            <div class="lp-card">
+                <div class="lp-card-icon circ"><span></span></div>
+                <h3>AI 자동 제어</h3>
+                <p class="lp-p">LLM이 상황을 스스로 해석해 선제적으로 판단합니다. 규칙으로 정의되지 않은 상황에서도 최적의 조치를 제안하고 실행합니다.</p>
+            </div>
+        </div>
+
+        <div class="lp-flow lp-reveal">
+            <div class="lp-flow-cols">
+                <div class="lp-flow-col">
+                    <div class="lp-flow-caption">센서 인입</div>
+                    <div class="lp-chip">온도 센서</div>
+                    <div class="lp-chip">재실 센서</div>
+                    <div class="lp-chip">실내 공기질</div>
+                </div>
+                <div class="lp-flow-col">
+                    <div class="lp-flow-caption">조건 평가</div>
+                    <div class="lp-chip">규칙 엔진</div>
+                    <div class="lp-chip dim">AI 컨텍스트 판단</div>
+                    <div class="lp-chip dim">날씨·미세먼지 결합</div>
+                </div>
+                <div class="lp-flow-col">
+                    <div class="lp-flow-caption">액션 실행</div>
+                    <div class="lp-chip out">냉방 강도 조정</div>
+                    <div class="lp-chip out">환기량 증대</div>
+                    <div class="lp-chip out">공기청정 ON</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= CONTEXT AI ================= -->
+    <section id="context" style="background: var(--lp-bg-alt);">
+        <div class="lp-section lp-split" style="padding-bottom: 120px;">
+            <div>
+                <div class="lp-reveal">
+                    <p class="lp-eyebrow">CONTEXTUAL JUDGMENT</p>
+                    <h2 style="font-size: clamp(26px,3.4vw,38px);">실내 데이터뿐 아니라<br>날씨·미세먼지까지 결합합니다</h2>
+                    <p class="lp-p" style="font-size:16px; margin-top:20px;">실시간 날씨·미세먼지 데이터를 실내 센서 값과 함께 해석해, 왜 이 조치가 필요한지를 자연어로 설명합니다.</p>
+                </div>
+                <div class="lp-quote lp-reveal">
+                    <p class="lp-eyebrow">AI 판단 예시</p>
+                    <p>"외부 미세먼지 농도가 '나쁨' 수준으로 예보되어, 3층 사무공간 환기를 중단하고 공기청정 모드로 전환합니다."</p>
+                </div>
+            </div>
+            <div class="lp-shot-square lp-reveal">
+                <div class="lp-shot-ph">실내 센서 + 외부 날씨/미세먼지<br>데이터를 결합한 판단 화면</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ARCHITECTURE ================= -->
+    <section class="lp-section" id="platform" style="padding-top: 140px;">
+        <div class="lp-section-head lp-reveal">
+            <p class="lp-eyebrow">ARCHITECTURE</p>
+            <h2>여러 고객사가 안전하게 함께 씁니다</h2>
+        </div>
+
+        <div class="lp-grid-2 lp-reveal">
+            <div class="lp-card">
+                <h3>멀티테넌트 격리</h3>
+                <p class="lp-p" style="margin-bottom:28px;">고객사별 데이터와 인프라가 완전히 분리되어, 한 회사의 장애·트래픽 폭증이 다른 회사에 영향을 주지 않습니다.</p>
+                <div class="lp-tenants">
+                    <div class="lp-tenant on"><b>테넌트 A</b><span>격리된 환경</span></div>
+                    <div class="lp-tenant"><b>테넌트 B</b><span>격리된 환경</span></div>
+                    <div class="lp-tenant"><b>테넌트 C</b><span>격리된 환경</span></div>
+                </div>
+            </div>
+            <div class="lp-card">
+                <h3>규칙 엔진 이중화</h3>
+                <p class="lp-p" style="margin-bottom:28px;">Rule Engine은 고정 2인스턴스 active-active로 운영되어, 한 인스턴스 장애 시에도 자동화 처리가 끊기지 않습니다.</p>
+                <div class="lp-ha">
+                    <div class="lp-ha-node">ACTIVE</div>
+                    <div class="lp-ha-swap" aria-hidden="true">⇄</div>
+                    <div class="lp-ha-node">ACTIVE</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lp-pipeline lp-reveal">
+            <div>
+                <h3>초저지연 실시간성</h3>
+                <p class="lp-p" style="max-width:420px;">센서 패킷 인입부터 화면 반영까지 초저지연으로 처리되어, 현장 상태가 지연 없이 화면에 나타납니다.</p>
+            </div>
+            <div class="lp-pipe-track">
+                <div class="lp-pipe-node"><i></i><span>센서 인입</span></div>
+                <div class="lp-pipe-line"></div>
+                <div class="lp-pipe-node"><i></i><span>규칙 처리 · 40ms</span></div>
+                <div class="lp-pipe-line"></div>
+                <div class="lp-pipe-node"><i></i><span>화면 반영</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= CTA ================= -->
+    <section class="lp-cta" id="cta">
+        <h2 class="lp-reveal">지금 InsightOn을 경험해보세요</h2>
+        <div class="lp-cta-actions lp-reveal">
+            <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="lp-btn lp-btn-lg">무료로 시작하기</a>
+            <a th:if="${state == 'GUEST'}" th:href="@{/login}" class="lp-btn lp-btn-lg lp-btn-ghost">로그인</a>
+            <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="lp-btn lp-btn-lg">그룹 생성 신청하기</a>
+            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/join}" class="lp-btn lp-btn-lg lp-btn-ghost">초대 코드로 가입</a>
+            <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="lp-btn lp-btn-lg">대시보드로 이동</a>
+        </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="lp-footer">
+        <span class="lp-brand">
+            <span class="lp-mark" aria-hidden="true"></span>
+            InsightOn
+        </span>
+        <span>© 2026 InsightOn · 멀티테넌트 오피스 IoT 관제</span>
+    </footer>
+
 </div>
-
-<section class="landing-section" id="features">
-    <div class="landing-section-head">
-        <div class="landing-section-eyebrow">핵심 솔루션</div>
-        <h2>핵심 기능</h2>
-        <p>InsightOn 관제를 움직이는 여섯 가지 핵심 기능입니다.</p>
-    </div>
-    <div class="feature-grid">
-        <div class="feature-card blueprint-frame">
-            <span class="tick-bl"></span><span class="tick-br"></span>
-            <span class="feature-icon"><i class="ti ti-layout-dashboard"></i></span>
-            <div class="feature-num">01</div>
-            <h3>위젯 대시보드</h3>
-            <p>위치별로 그래프·게이지·현재값 위젯을 자유롭게 배치하는 실시간 모니터링.</p>
-            <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
-        </div>
-        <div class="feature-card blueprint-frame">
-            <span class="tick-bl"></span><span class="tick-br"></span>
-            <span class="feature-icon"><i class="ti ti-git-branch"></i></span>
-            <div class="feature-num">02</div>
-            <h3>Flow 자동화</h3>
-            <p>조건과 동작만 정하면 나머지는 알아서 반응하는 코드 없는 자동화.</p>
-            <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
-        </div>
-        <div class="feature-card blueprint-frame">
-            <span class="tick-bl"></span><span class="tick-br"></span>
-            <span class="feature-icon"><i class="ti ti-bulb"></i></span>
-            <div class="feature-num">03</div>
-            <h3>AI 제안</h3>
-            <p>패턴을 분석해 놓치기 쉬운 최적화 포인트를 먼저 제안하는 인텔리전스.</p>
-            <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
-        </div>
-        <div class="feature-card blueprint-frame">
-            <span class="tick-bl"></span><span class="tick-br"></span>
-            <span class="feature-icon"><i class="ti ti-adjustments"></i></span>
-            <div class="feature-num">04</div>
-            <h3>액추에이터 원격 제어</h3>
-            <p>에어컨·공기청정기·환풍기를 화면에서 바로 켜고 끄고, 모드와 온도를 조정하세요.</p>
-            <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
-        </div>
-        <div class="feature-card blueprint-frame">
-            <span class="tick-bl"></span><span class="tick-br"></span>
-            <span class="feature-icon"><i class="ti ti-alert-triangle"></i></span>
-            <div class="feature-num">05</div>
-            <h3>엔진 알람</h3>
-            <p>이상 징후를 즉시 감지해 심각도별로 분류된 알람을 보내드립니다.</p>
-            <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
-        </div>
-        <div class="feature-card blueprint-frame">
-            <span class="tick-bl"></span><span class="tick-br"></span>
-            <span class="feature-icon"><i class="ti ti-file-text"></i></span>
-            <div class="feature-num">06</div>
-            <h3>자동 리포트</h3>
-            <p>일별·주별 운영 리포트를 자동으로 만들어 한눈에 흐름을 파악할 수 있어요.</p>
-            <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
-        </div>
-    </div>
-</section>
-
-<div class="impact-panel blueprint-frame">
-    <span class="tick-bl"></span><span class="tick-br"></span>
-    <div>
-        <span class="landing-section-eyebrow">멀티 로케이션 관제</span>
-        <h2>층과 구역을 가리지 않고,<br><span class="grad">건물 전체를 하나의 화면으로</span></h2>
-        <p>그룹 안에 위치를 원하는 만큼 등록하고, 각 위치의 센서·액추에이터 상태를 하나의 대시보드에서 오가며 확인하세요.</p>
-        <a href="#features" class="btn-white-round">기능 보러 가기<i class="ti ti-arrow-right"></i></a>
-    </div>
-    <div class="impact-art" aria-hidden="true">
-        <svg width="100%" height="260" viewBox="0 0 500 260" fill="none">
-            <rect width="500" height="260" fill="#1f1044"/>
-            <g stroke="rgba(63,140,240,.5)" stroke-width="1">
-                <line x1="60" y1="220" x2="60" y2="120"/><line x1="120" y1="220" x2="120" y2="80"/>
-                <line x1="180" y1="220" x2="180" y2="150"/><line x1="240" y1="220" x2="240" y2="60"/>
-                <line x1="300" y1="220" x2="300" y2="110"/><line x1="360" y1="220" x2="360" y2="90"/>
-                <line x1="420" y1="220" x2="420" y2="140"/>
-            </g>
-            <circle cx="240" cy="60" r="4" fill="#3f8cf0"/>
-            <circle cx="360" cy="90" r="4" fill="#6c4bf0"/>
-            <path d="M240,60 Q330,20 420,140" stroke="rgba(108,75,240,.5)" stroke-width="1" fill="none" stroke-dasharray="3 3"/>
-            <path d="M60,120 Q150,40 360,90" stroke="rgba(63,140,240,.4)" stroke-width="1" fill="none" stroke-dasharray="3 3"/>
-        </svg>
-    </div>
-</div>
-
-<section class="tech-section">
-    <div>
-        <span class="landing-section-eyebrow">실시간 반영</span>
-        <h2>센서 데이터가 대시보드에<br>그대로 이어집니다.</h2>
-        <p>실제 대시보드에서 보이는 것과 같은 위젯 구성입니다 — 그래프·게이지·현재값을 위치별로 배치해 그대로 확인하세요.</p>
-        <a href="#how-it-works" class="link-arrow"><i class="ti ti-arrow-right"></i>작동 방식 더 알아보기</a>
-    </div>
-    <div class="collage">
-        <div class="panel blueprint-frame">
-            <span class="tick-bl"></span><span class="tick-br"></span>
-            <div class="panel-head"><i class="ti ti-devices"></i>실시간 위젯</div>
-            <div class="krow"><span class="ic" style="background:linear-gradient(135deg,#e08a2f,#e0653f);"><i class="ti ti-temperature"></i></span><span class="label">온습도 센서</span><b>23.4°C</b></div>
-            <div class="krow"><span class="ic" style="background:linear-gradient(135deg,#2f8f79,#3fb896);"><i class="ti ti-molecule"></i></span><span class="label">CO2</span><b>612 ppm</b></div>
-            <div class="krow"><span class="ic" style="background:linear-gradient(135deg,#6c4bf0,#3f8cf0);"><i class="ti ti-adjustments"></i></span><span class="label">고온 시 냉방 가동</span><b>ACTIVE</b></div>
-        </div>
-        <div class="side">
-            <div class="stat-tile"><div class="sv">99.9%</div><div class="sl">서비스 가동률</div></div>
-            <div class="icon-tile"><span class="ic-circle"><i class="ti ti-shield-check"></i></span><span>암호화 저장</span></div>
-        </div>
-    </div>
-</section>
-
-<section class="landing-section" id="how-it-works">
-    <div class="landing-section-head">
-        <div class="landing-section-eyebrow">HOW IT WORKS</div>
-        <h2>세 단계면 충분해요</h2>
-    </div>
-    <div class="landing-steps">
-        <div class="landing-step">
-            <h3>게이트웨이 연결</h3>
-            <p>그룹에 게이트웨이 한 대를 등록해 센서·액추에이터와 통신을 시작하세요.</p>
-        </div>
-        <div class="landing-step">
-            <h3>위치·센서 등록</h3>
-            <p>건물의 위치를 나누고, 각 위치에 센서와 액추에이터를 배치하세요.</p>
-        </div>
-        <div class="landing-step">
-            <h3>Flow로 자동화</h3>
-            <p>조건과 동작만 정하면 나머지는 InsightOn이 알아서 반응합니다.</p>
-        </div>
-    </div>
-</section>
-
-<section class="landing-section">
-    <div class="landing-cta blueprint-frame">
-        <span class="tick-bl"></span><span class="tick-br"></span>
-        <div class="txt">
-            <span class="cta-tag">지금 시작하기</span>
-            <h2>지금 바로 시작하세요</h2>
-            <p>가입은 무료이며, 그룹 생성은 관리자 승인 후 바로 이용할 수 있어요.</p>
-        </div>
-        <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="btn-landing-primary">무료로 시작하기<i class="ti ti-arrow-right"></i></a>
-        <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="btn-landing-primary">대시보드로 이동<i class="ti ti-arrow-right"></i></a>
-        <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="btn-landing-primary">그룹 생성 신청하기<i class="ti ti-arrow-right"></i></a>
-    </div>
-</section>
-
-<footer class="site-footer">
-    <div>
-        <div class="fbrand">InsightOn</div>
-        <p>센서·액추에이터·게이트웨이를 한 곳에서 관제하는<br>빌딩 IoT 통합 관제 서비스입니다.</p>
-    </div>
-    <div>
-        <h4>SITEMAP</h4>
-        <a href="#features">기능</a>
-        <a href="#how-it-works">작동 방식</a>
-    </div>
-    <div>
-        <h4>CONTACT</h4>
-        <!-- 실제 지원 연락처로 교체해 주세요 -->
-        <p>support@insighton.io</p>
-    </div>
-</footer>
-<div class="footer-bottom">
-    <span>© InsightOn — AIOT 빌딩 통합 관제</span>
-</div>
-
-<script th:src="@{/js/group-registration.js}"></script>
+<script th:src="@{/js/landing.js}"></script>
 </body>
 </html>
