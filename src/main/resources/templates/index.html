@@ -11,193 +11,30 @@
     <script th:src="@{/js/theme.js}"></script>
     <link th:href="@{/css/landing.css}" rel="stylesheet">
 </head>
-<body class="landing-redesign" th:with="state=${authState != null ? authState : 'GUEST'}">
-<div class="lp">
+<body class="landing-redesign">
 
-    <!-- ================= NAV ================= -->
-    <nav class="lp-nav">
-        <div class="lp-nav-left">
-            <a th:href="@{/}" class="lp-brand">
-                <span class="lp-mark" aria-hidden="true"></span>
-                InsightOn
-            </a>
-            <div class="lp-nav-links">
-                <a href="#automation">Automation</a>
-                <a href="#context">Context AI</a>
-                <a href="#platform">Architecture</a>
-            </div>
+<div id="lp-root">
+    <!-- React(CDN)가 이 안에 마운트. JS 비활성 시 최소 안내 -->
+    <noscript>
+        <div style="padding:80px 24px;text-align:center;font-family:sans-serif;">
+            InsightOn — 멀티테넌트 오피스 IoT 관제 · AI 자동 제어.
+            이 페이지를 보려면 JavaScript를 켜주세요.
         </div>
-        <div class="lp-nav-right">
-            <th:block th:if="${state == 'GUEST'}">
-                <a th:href="@{/login}">로그인</a>
-                <a th:href="@{/signup}" class="lp-btn">무료로 시작하기</a>
-            </th:block>
-            <th:block th:if="${state != 'GUEST'}">
-                <a th:href="@{/mypage}" th:if="${userName != null}" th:text="|${userName}님|">사용자님</a>
-                <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="lp-btn">그룹 생성 신청</a>
-                <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="lp-btn">대시보드로</a>
-            </th:block>
-        </div>
-    </nav>
-
-    <!-- ================= HERO ================= -->
-    <header class="lp-hero">
-        <div class="lp-hero-copy lp-reveal">
-            <p class="lp-eyebrow">멀티테넌트 오피스 IoT 관제 · AI 자동 제어</p>
-            <h1>센서 데이터에서 판단까지,<br>사람 없이 이어집니다</h1>
-            <p class="lp-hero-sub">규칙 기반 자동화와 AI 자동 제어가, 사람이 개입하지 않아도 최적 상태를 유지하는 오피스를 만듭니다.</p>
-        </div>
-
-        <figure class="lp-hero-shot lp-reveal" style="margin:0; margin-top:56px;">
-            <div class="lp-shot-ph" style="aspect-ratio:16/9;">
-                실시간 IoT 관제 대시보드 스크린샷<br>(센서 상태 · 공기질 · 에너지 그래프)
-            </div>
-        </figure>
-
-        <div class="lp-hero-callout lp-reveal">
-            <p class="lp-eyebrow">실시간 관제</p>
-            <p>센서 상태 · 공기질 · 에너지 데이터를 한 화면에서 확인합니다.</p>
-        </div>
-
-        <div class="lp-scroll-cue" aria-hidden="true">SCROLL ↓</div>
-    </header>
-
-    <!-- ================= WHO IT'S FOR ================= -->
-    <section class="lp-section lp-intro">
-        <p class="lp-eyebrow lp-reveal">WHO IT'S FOR</p>
-        <p class="lp-lead lp-reveal">여러 층, 여러 회의실의 공기질과 에너지를<br>하나의 화면에서 관리하고 싶은 팀에게 필요합니다.</p>
-    </section>
-
-    <!-- ================= AUTOMATION ================= -->
-    <section class="lp-section" id="automation">
-        <div class="lp-section-head lp-reveal">
-            <p class="lp-eyebrow">TWO-STAGE AUTOMATION</p>
-            <h2>관제부터 판단까지, 두 층위로 자동화합니다</h2>
-        </div>
-
-        <div class="lp-two lp-reveal">
-            <div class="lp-card">
-                <div class="lp-card-icon sq"><span></span></div>
-                <h3>규칙 기반 자동화</h3>
-                <p class="lp-p">사람이 정한 명시적 규칙에 따라 동작합니다. 노코드로 조건과 액션을 구성해, 예측 가능한 상황을 즉시 처리합니다.</p>
-            </div>
-            <div class="lp-plus" aria-hidden="true">+</div>
-            <div class="lp-card">
-                <div class="lp-card-icon circ"><span></span></div>
-                <h3>AI 자동 제어</h3>
-                <p class="lp-p">LLM이 상황을 스스로 해석해 선제적으로 판단합니다. 규칙으로 정의되지 않은 상황에서도 최적의 조치를 제안하고 실행합니다.</p>
-            </div>
-        </div>
-
-        <div class="lp-flow lp-reveal">
-            <div class="lp-flow-cols">
-                <div class="lp-flow-col">
-                    <div class="lp-flow-caption">센서 인입</div>
-                    <div class="lp-chip">온도 센서</div>
-                    <div class="lp-chip">재실 센서</div>
-                    <div class="lp-chip">실내 공기질</div>
-                </div>
-                <div class="lp-flow-col">
-                    <div class="lp-flow-caption">조건 평가</div>
-                    <div class="lp-chip">규칙 엔진</div>
-                    <div class="lp-chip dim">AI 컨텍스트 판단</div>
-                    <div class="lp-chip dim">날씨·미세먼지 결합</div>
-                </div>
-                <div class="lp-flow-col">
-                    <div class="lp-flow-caption">액션 실행</div>
-                    <div class="lp-chip out">냉방 강도 조정</div>
-                    <div class="lp-chip out">환기량 증대</div>
-                    <div class="lp-chip out">공기청정 ON</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ================= CONTEXT AI ================= -->
-    <section id="context" style="background: var(--lp-bg-alt);">
-        <div class="lp-section lp-split" style="padding-bottom: 120px;">
-            <div>
-                <div class="lp-reveal">
-                    <p class="lp-eyebrow">CONTEXTUAL JUDGMENT</p>
-                    <h2 style="font-size: clamp(26px,3.4vw,38px);">실내 데이터뿐 아니라<br>날씨·미세먼지까지 결합합니다</h2>
-                    <p class="lp-p" style="font-size:16px; margin-top:20px;">실시간 날씨·미세먼지 데이터를 실내 센서 값과 함께 해석해, 왜 이 조치가 필요한지를 자연어로 설명합니다.</p>
-                </div>
-                <div class="lp-quote lp-reveal">
-                    <p class="lp-eyebrow">AI 판단 예시</p>
-                    <p>"외부 미세먼지 농도가 '나쁨' 수준으로 예보되어, 3층 사무공간 환기를 중단하고 공기청정 모드로 전환합니다."</p>
-                </div>
-            </div>
-            <div class="lp-shot-square lp-reveal">
-                <div class="lp-shot-ph">실내 센서 + 외부 날씨/미세먼지<br>데이터를 결합한 판단 화면</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ================= ARCHITECTURE ================= -->
-    <section class="lp-section" id="platform" style="padding-top: 140px;">
-        <div class="lp-section-head lp-reveal">
-            <p class="lp-eyebrow">ARCHITECTURE</p>
-            <h2>여러 고객사가 안전하게 함께 씁니다</h2>
-        </div>
-
-        <div class="lp-grid-2 lp-reveal">
-            <div class="lp-card">
-                <h3>멀티테넌트 격리</h3>
-                <p class="lp-p" style="margin-bottom:28px;">고객사별 데이터와 인프라가 완전히 분리되어, 한 회사의 장애·트래픽 폭증이 다른 회사에 영향을 주지 않습니다.</p>
-                <div class="lp-tenants">
-                    <div class="lp-tenant on"><b>테넌트 A</b><span>격리된 환경</span></div>
-                    <div class="lp-tenant"><b>테넌트 B</b><span>격리된 환경</span></div>
-                    <div class="lp-tenant"><b>테넌트 C</b><span>격리된 환경</span></div>
-                </div>
-            </div>
-            <div class="lp-card">
-                <h3>규칙 엔진 이중화</h3>
-                <p class="lp-p" style="margin-bottom:28px;">Rule Engine은 고정 2인스턴스 active-active로 운영되어, 한 인스턴스 장애 시에도 자동화 처리가 끊기지 않습니다.</p>
-                <div class="lp-ha">
-                    <div class="lp-ha-node">ACTIVE</div>
-                    <div class="lp-ha-swap" aria-hidden="true">⇄</div>
-                    <div class="lp-ha-node">ACTIVE</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="lp-pipeline lp-reveal">
-            <div>
-                <h3>초저지연 실시간성</h3>
-                <p class="lp-p" style="max-width:420px;">센서 패킷 인입부터 화면 반영까지 초저지연으로 처리되어, 현장 상태가 지연 없이 화면에 나타납니다.</p>
-            </div>
-            <div class="lp-pipe-track">
-                <div class="lp-pipe-node"><i></i><span>센서 인입</span></div>
-                <div class="lp-pipe-line"></div>
-                <div class="lp-pipe-node"><i></i><span>규칙 처리 · 40ms</span></div>
-                <div class="lp-pipe-line"></div>
-                <div class="lp-pipe-node"><i></i><span>화면 반영</span></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ================= CTA ================= -->
-    <section class="lp-cta" id="cta">
-        <h2 class="lp-reveal">지금 InsightOn을 경험해보세요</h2>
-        <div class="lp-cta-actions lp-reveal">
-            <a th:if="${state == 'GUEST'}" th:href="@{/signup}" class="lp-btn lp-btn-lg">무료로 시작하기</a>
-            <a th:if="${state == 'GUEST'}" th:href="@{/login}" class="lp-btn lp-btn-lg lp-btn-ghost">로그인</a>
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/group-registration}" class="lp-btn lp-btn-lg">그룹 생성 신청하기</a>
-            <a th:if="${state == 'NO_GROUP'}" th:href="@{/my-group/join}" class="lp-btn lp-btn-lg lp-btn-ghost">초대 코드로 가입</a>
-            <a th:if="${state == 'HAS_GROUP'}" th:href="@{/my-group}" class="lp-btn lp-btn-lg">대시보드로 이동</a>
-        </div>
-    </section>
-
-    <!-- ================= FOOTER ================= -->
-    <footer class="lp-footer">
-        <span class="lp-brand">
-            <span class="lp-mark" aria-hidden="true"></span>
-            InsightOn
-        </span>
-        <span>© 2026 InsightOn · 멀티테넌트 오피스 IoT 관제</span>
-    </footer>
-
+    </noscript>
 </div>
+
+<!-- 서버 세션 상태를 React로 전달 (Spring Boot + Thymeleaf 유지) -->
+<script th:inline="javascript">
+    window.__LP_STATE__ = {
+        state: /*[[${authState != null ? authState : 'GUEST'}]]*/ 'GUEST',
+        userName: /*[[${userName}]]*/ null
+    };
+</script>
+
+<!-- React 18 (CDN, 무빌드) -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.js" crossorigin></script>
 <script th:src="@{/js/landing.js}"></script>
 </body>
 </html>
