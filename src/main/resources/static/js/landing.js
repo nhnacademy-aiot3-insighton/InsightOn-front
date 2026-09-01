@@ -23,31 +23,64 @@
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
 
-  /* ---- 스크롤 진입 시 blur-up 리빌 ----
-     기본은 "보이는 상태". 화면 아래에 있는 요소만 armed(숨김) → 진입 시 표시.
-     IntersectionObserver가 안 먹는 환경 대비 타임아웃 폴백 포함. */
+  /* ---- 뷰포트 진입 감지: IntersectionObserver + 스크롤 폴백.
+     블라인드 타임아웃 없음 → 실제로 화면에 들어올 때만 콜백. ---- */
+  var _watch = [];
+  var _watchBound = false;
+  function _checkWatch() {
+    var vh = window.innerHeight;
+    for (var i = _watch.length - 1; i >= 0; i--) {
+      var w = _watch[i];
+      var r = w.el.getBoundingClientRect();
+      if (r.top < vh * 0.9 && r.bottom > 0) {
+        w.cb();
+        if (w.io) w.io.disconnect();
+        _watch.splice(i, 1);
+      }
+    }
+  }
+  function onEnterView(el, cb) {
+    var w = { el: el, cb: cb, io: null };
+    _watch.push(w);
+    if ('IntersectionObserver' in window) {
+      w.io = new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          if (e.isIntersecting) {
+            cb();
+            w.io.disconnect();
+            var k = _watch.indexOf(w);
+            if (k > -1) _watch.splice(k, 1);
+          }
+        });
+      }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+      w.io.observe(el);
+    }
+    if (!_watchBound) {
+      _watchBound = true;
+      var raf = 0;
+      var onScroll = function () {
+        if (!raf) raf = requestAnimationFrame(function () { raf = 0; _checkWatch(); });
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll);
+    }
+    requestAnimationFrame(_checkWatch);
+    return function () {
+      if (w.io) w.io.disconnect();
+      var k = _watch.indexOf(w);
+      if (k > -1) _watch.splice(k, 1);
+    };
+  }
+
+  /* ---- 화면 아래 요소만 armed(숨김) → 진입 시 blur-up. JS 미동작 시엔 그냥 보임. ---- */
   function Reveal(props) {
     var ref = useRef(null);
     useEffect(function () {
       var el = ref.current;
-      if (!el || prefersReduce() || !('IntersectionObserver' in window)) return;
-      var rect = el.getBoundingClientRect();
-      if (rect.top < window.innerHeight * 0.85) return; // 이미 보이면 그대로 둠
+      if (!el || prefersReduce()) return;
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.9) return;
       el.classList.add('lp-armed');
-      var done = false;
-      function show() {
-        if (done) return;
-        done = true;
-        el.classList.add('is-in');
-        io.disconnect();
-        clearTimeout(t);
-      }
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) { if (e.isIntersecting) show(); });
-      }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
-      io.observe(el);
-      var t = setTimeout(show, 900);
-      return function () { io.disconnect(); clearTimeout(t); };
+      return onEnterView(el, function () { el.classList.add('is-in'); });
     }, []);
     var Tag = props.as || 'div';
     return html`<${Tag} ref=${ref}
@@ -98,17 +131,10 @@
     var ref = useRef(null);
     useEffect(function () {
       var el = ref.current;
-      if (!el || prefersReduce() || !('IntersectionObserver' in window)) return;
-      if (el.getBoundingClientRect().top < window.innerHeight * 1.15) return;
+      if (!el || prefersReduce()) return;
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.92) return;
       el.classList.add('lp-armed');
-      var done = false;
-      function show() { if (done) return; done = true; el.classList.add('is-in'); io.disconnect(); clearTimeout(t); }
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) { if (e.isIntersecting) show(); });
-      }, { threshold: 0.2, rootMargin: '0px 0px -10% 0px' });
-      io.observe(el);
-      var t = setTimeout(show, 900);
-      return function () { io.disconnect(); clearTimeout(t); };
+      return onEnterView(el, function () { el.classList.add('is-in'); });
     }, []);
     var lines = props.lines || [String(props.children || '')];
     var total = 0;
