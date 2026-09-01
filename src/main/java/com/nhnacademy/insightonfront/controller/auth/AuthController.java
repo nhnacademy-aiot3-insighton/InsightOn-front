@@ -18,9 +18,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -53,6 +55,16 @@ public class AuthController {
     private final AuthService authService;
     private final SignupService signupService;
     private final MypageService mypageService;
+
+    /**
+     * 소셜 로그인 authorize 요청을 보낼 auth(게이트웨이) 베이스 URL.
+     * prod 는 빈 값 — 같은 오리진의 {@code /api/v1/auth/**} 를 ingress 가 게이트웨이로 보낸다.
+     * dev 는 프론트(8400)와 auth(8000)가 다른 오리진이라 절대 URL 이 필요하다.
+     */
+    @Value("${oauth.auth-base-url:}")
+    private String oauthAuthBaseUrl;
+
+    private static final Set<String> OAUTH_PROVIDERS = Set.of("google", "github");
 
     // ================================================================
     // 로그인
@@ -190,6 +202,40 @@ public class AuthController {
         session.setAttribute("hasPassword", false);
         session.setAttribute("linkedProviders", new ArrayList<>(List.of("GITHUB")));
         return "redirect:/";
+    }
+
+    // ================================================================
+    // 소셜 로그인 — authorize·code교환·토큰발급은 전부 auth 가 한다.
+    //   /oauth/authorize/{provider} : auth 의 authorize 엔드포인트로 넘겨주는 얇은 리다이렉트
+    //     (prod 는 같은 오리진 /api/... 로, dev 는 auth 절대 URL 로)
+    //   /oauth/complete : auth 가 토큰 쿠키를 심고 302 시켜 보낸 뒤, groupId 등 나머지 쿠키를 채움
+    //     (groupId 는 core 의 숫자 ID 라 auth 가 못 주고 프론트가 GroupClient 로 조회)
+    // ================================================================
+
+    @GetMapping("/oauth/authorize/{provider}")
+    public String oauthAuthorize(@PathVariable String provider) {
+        if (!OAUTH_PROVIDERS.contains(provider)) {
+            return "redirect:/login?oauthError=1";
+        }
+        return "redirect:" + oauthAuthBaseUrl + "/api/v1/auth/oauth/authorize/" + provider;
+    }
+
+    @GetMapping("/oauth/complete")
+    public String oauthComplete(@CookieValue(value = "accessToken", required = false) String accessToken,
+                                @CookieValue(value = "refreshToken", required = false) String refreshToken,
+                                HttpServletRequest servletRequest,
+                                HttpServletResponse servletResponse) {
+        if (accessToken == null || accessToken.isBlank()) {
+            return "redirect:/login?oauthError=1";
+        }
+        try {
+            LoginResult result = authService.hydrateFromAccessToken(accessToken, refreshToken);
+            writeLoginCookies(result, servletRequest.isSecure(), servletResponse);
+            return "redirect:/";
+        } catch (RuntimeException e) {
+            log.warn("[Auth] 소셜 로그인 완료 처리 실패", e);
+            return "redirect:/login?oauthError=1";
+        }
     }
 
     // ================================================================
