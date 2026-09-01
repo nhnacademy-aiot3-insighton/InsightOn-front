@@ -25,14 +25,19 @@ public class HomeController {
             return "index";
         }
 
+        // groupId는 로그인 시점에 GroupMember 조회로 쿠키에 캐싱해둔 값 — 신청 이력이 아니라
+        // 실제 소속 여부로 판단한다. 이미 그룹에 속한 사용자는 랜딩을 거치지 않고 바로 대시보드로.
+        if (groupId != null) {
+            return "redirect:/my-group";
+        }
+
         // 이름 쿠키는 URL 인코딩돼 있으니 디코드
         String userName = (userNameEncoded == null) ? null
                 : URLDecoder.decode(userNameEncoded, StandardCharsets.UTF_8);
         model.addAttribute("userName", userName);
 
-        // groupId는 로그인 시점에 GroupMember 조회로 쿠키에 캐싱해둔 값 — 신청 이력이 아니라
-        // 실제 소속 여부로 판단한다.
-        model.addAttribute("authState", groupId != null ? "HAS_GROUP" : "NO_GROUP");
+        // 그룹 미가입 로그인 사용자 — 랜딩에서 그룹 생성/초대 코드 입력을 안내한다.
+        model.addAttribute("authState", "NO_GROUP");
         return "index";
     }
 }
