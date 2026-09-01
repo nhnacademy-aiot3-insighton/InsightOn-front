@@ -96,6 +96,9 @@ body.landing-redesign {
 body.landing-redesign ::selection { background: var(--lp-selection); }
 .lp a { color: var(--lp-accent); text-decoration: none; }
 .lp a:hover { color: var(--lp-accent-hover); }
+/* .lp a 규칙이 버튼 글자색까지 파랗게 덮어서 파란 배경 위 파란 글씨(안 보임)가 되던 문제 */
+.lp a.lp-btn, .lp a.lp-btn:hover { color: var(--lp-accent-on); }
+.lp a.lp-btn-ghost, .lp a.lp-btn-ghost:hover { color: var(--lp-accent); }
 .lp img { max-width: 100%; display: block; }
 
 .lp-eyebrow {
@@ -127,8 +130,11 @@ body.landing-redesign ::selection { background: var(--lp-selection); }
 .lp-brand .lp-mark {
   width: 22px; height: 22px; border-radius: 6px;
   background: var(--lp-accent);
-  object-fit: contain;
+  overflow: hidden;
+  display: inline-flex;
+  flex-shrink: 0;
 }
+.lp-brand .lp-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .lp-nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; color: var(--lp-text-3); }
 .lp-nav-links a { color: inherit; }
 .lp-nav-right { display: flex; align-items: center; gap: 20px; font-size: 14px; color: var(--lp-text-3); }
