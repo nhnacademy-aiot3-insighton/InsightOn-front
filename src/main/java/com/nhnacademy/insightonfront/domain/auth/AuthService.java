@@ -43,6 +43,17 @@ public class AuthService {
         return buildUserLoginResult(response);
     }
 
+    /**
+     * 소셜 로그인 완료 처리: authorize·code교환·토큰발급은 auth 가 끝냈고 accessToken/refreshToken
+     * 쿠키도 auth 가 심었다. 그 accessToken 으로 나머지 로그인 정보(userId/userName/groupId)만 채운다.
+     */
+    public LoginResult hydrateFromAccessToken(String accessToken, String refreshToken) {
+        Long userId = extractUserId(accessToken);
+        String userName = extractUserName(accessToken);
+        Long groupId = resolveGroupId(accessToken);
+        return LoginResult.success(userId, userName, groupId, accessToken, refreshToken);
+    }
+
     /** 재활성화 인증 코드 발송 요청. 성공/실패(쿨다운·잠금)는 FeignException 으로 전파된다. */
     public void requestReactivateEmailVerify(String email) {
         authClient.reactivateRequest(new EmailVerifyRequest(email));
