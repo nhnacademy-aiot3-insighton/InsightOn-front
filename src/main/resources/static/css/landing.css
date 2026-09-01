@@ -158,27 +158,48 @@ body.landing-redesign ::selection { background: var(--lp-selection); }
 }
 .lp-btn-ghost:hover { background: var(--lp-accent-weak); color: var(--lp-accent); }
 
-/* ---------- HERO ---------- */
-.lp-hero {
+/* ---------- HERO (핀-줌: JS가 스크롤 진행도로 인라인 스타일 스크럽) ---------- */
+.lp-hero-pin {
   position: relative;
-  min-height: 100vh;
+  height: 260vh;          /* 이 구간을 스크롤하는 동안 스테이지가 고정 + 줌 */
+}
+.lp-hero-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  padding: 120px 24px 80px;
   text-align: center;
 }
-.lp-hero::before {
-  content: "";
+.lp-hero-glow {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse 60% 50% at 50% 30%, var(--lp-glow), var(--lp-bg) 70%);
   pointer-events: none;
 }
-.lp-hero-copy { position: relative; z-index: 2; max-width: 900px; margin: 0 auto; }
-.lp-hero h1 {
+.lp-hero-shot {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border: 1px solid var(--lp-border);
+  box-shadow: 0 40px 120px var(--lp-shadow-2);
+  background: var(--lp-bg-elev);
+  transform-origin: center center;
+  will-change: transform;
+}
+.lp-hero-shot .lp-shot-ph { border: none; }
+.lp-hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+  will-change: transform, opacity;
+}
+.lp-hero-copy h1 {
   font-size: clamp(32px, 4.6vw, 58px);
   line-height: 1.15;
   font-weight: 700;
@@ -192,40 +213,39 @@ body.landing-redesign ::selection { background: var(--lp-selection); }
   line-height: 1.6;
   margin: 0;
 }
-.lp-hero-shot {
-  position: relative;
-  z-index: 1;
-  width: min(76vw, 920px);
-  margin: 56px auto 0;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 40px 120px var(--lp-shadow-2);
-  border: 1px solid var(--lp-border);
-  background: var(--lp-bg-elev);
-}
 .lp-hero-callout {
-  position: relative;
+  position: absolute;
+  left: 40px;
+  bottom: 56px;
   z-index: 3;
   max-width: 340px;
-  margin: -64px 0 0 24px;
+  text-align: left;
   background: var(--lp-bg-elev);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--lp-border-2);
   border-radius: 16px;
   padding: 20px 22px;
-  text-align: left;
 }
 .lp-hero-callout .lp-eyebrow { font-size: 11px; margin-bottom: 8px; }
 .lp-hero-callout p { margin: 0; font-size: 14px; line-height: 1.65; color: var(--lp-text-2); }
 .lp-scroll-cue {
   position: absolute;
   bottom: 32px; left: 0; right: 0;
+  z-index: 3;
   text-align: center;
   font-family: var(--lp-mono);
   font-size: 12px;
   letter-spacing: 0.1em;
   color: var(--lp-text-4);
+}
+
+/* 모션 최소화 / JS 미동작 시 — 스테이지가 그냥 한 화면으로 보이게 */
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-pin { height: auto; }
+  .lp-hero-stage { position: static; height: auto; min-height: 100vh; flex-direction: column; gap: 40px; padding: 140px 24px 80px; }
+  .lp-hero-shot { position: relative; inset: auto; width: min(90vw, 900px); aspect-ratio: 16/9; border-radius: 20px; transform: none !important; }
+  .lp-hero-callout { position: static; margin: 0 auto; }
 }
 
 /* ---------- generic section ---------- */
@@ -320,6 +340,8 @@ body.landing-redesign ::selection { background: var(--lp-selection); }
 .lp-chip.out { border-color: var(--lp-accent); color: var(--lp-accent); }
 
 /* ---------- CONTEXT AI ---------- */
+.lp-context { background: var(--lp-bg-alt); }
+.lp-context .lp-split { padding-bottom: 120px; }
 .lp-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -448,18 +470,22 @@ body.landing-redesign ::selection { background: var(--lp-selection); }
 }
 .lp-footer .lp-brand { font-size: 14px; color: var(--lp-text-3); }
 
-/* ---------- scroll reveal (landing.js) ---------- */
+/* ---------- scroll reveal (landing.js) ----------
+   기본은 보이는 상태. landing.js 가 화면 아래 요소에만 .lp-armed 를 붙여 숨겼다가
+   뷰포트 진입 시 .is-in 으로 표시한다. JS/IO 실패해도 콘텐츠는 보인다. */
 .lp-reveal {
+  transition: opacity 0.7s ease, transform 0.7s ease, filter 0.7s ease;
+}
+.lp-reveal.lp-armed {
   opacity: 0;
   transform: translateY(24px);
   filter: blur(6px);
-  transition: opacity 0.7s ease, transform 0.7s ease, filter 0.7s ease;
 }
-.lp-reveal.is-in { opacity: 1; transform: none; filter: none; }
+.lp-reveal.lp-armed.is-in { opacity: 1; transform: none; filter: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-reveal { opacity: 1; transform: none; filter: none; transition: none; }
-  body.landing-redesign * { scroll-behavior: auto !important; }
+  .lp-reveal,
+  .lp-reveal.lp-armed { opacity: 1; transform: none; filter: none; transition: none; }
 }
 
 /* ---------- responsive ---------- */
