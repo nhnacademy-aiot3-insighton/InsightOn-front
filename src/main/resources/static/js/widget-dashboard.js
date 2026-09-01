@@ -142,14 +142,6 @@
             }
 
             // 데이터 개수가 많아지면 좌우 스크롤 폭 확장
-            adjustChartScroll(w, chart.data.labels.length);
-
-            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 동적 갱신
-            const allDataPoints = chart.data.datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
-            const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
-            const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
-            syncYAxis(w, minVal, maxVal);
-
             chart.update('quiet');
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
             const el = contentEl(w.uid);
@@ -330,6 +322,10 @@
             if (w.widgetId && !w.configDirty) {
                 // 초기 로드(페이지 리로드) 시에만 여기서 InfluxDB 조회
                 fetchAndRenderData(w, el);
+            }
+            const sensorId = sensorIdByEui[w.widgetConfig.sensorEui];
+            if (sensorId) {
+                subscribeWidgetSse(w, sensorId);
             }
             return;
         }
