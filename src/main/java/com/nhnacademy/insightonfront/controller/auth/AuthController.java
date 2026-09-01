@@ -75,52 +75,12 @@ public class AuthController {
             if (result.isPendingRestore()) {
                 log.info("[Auth] 탈퇴 복구 대기 계정 로그인 시도");
                 model.addAttribute("loginError",
-                        "탈퇴 후 복구 가능 기간 내 계정이에요. 계정을 복구한 뒤 다시 로그인해 주세요.");
+                        "탈퇴 후 복구 가능 기간 내 계정이에요. 아래에서 계정을 복구할 수 있어요.");
+                model.addAttribute("pendingRestoreEmail", email);
                 return "login";
             }
 
-            boolean secure = servletRequest.isSecure();
-
-            servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                    ResponseCookie.from("accessToken", result.accessToken())
-                            .httpOnly(true).secure(secure).path("/").sameSite("Lax")
-                            .maxAge(Duration.ofMinutes(15))
-                            .build().toString());
-
-            servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                    ResponseCookie.from("refreshToken", result.refreshToken())
-                            .httpOnly(true).secure(secure).path("/").sameSite("Lax")
-                            .maxAge(Duration.ofDays(15))
-                            .build().toString());
-
-            if (result.userId() != null) {
-                servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                        ResponseCookie.from("userId", result.userId().toString())
-                                .httpOnly(true).secure(secure).path("/").sameSite("Lax")
-                                .maxAge(Duration.ofDays(15))
-                                .build().toString());
-            }
-
-            if (result.userName() != null) {
-                servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                        ResponseCookie.from("userName",
-                                        URLEncoder.encode(result.userName(), StandardCharsets.UTF_8))
-                                .httpOnly(true)
-                                .secure(secure)
-                                .path("/")
-                                .sameSite("Lax")
-                                .maxAge(Duration.ofDays(15))
-                                .build().toString());
-            }
-
-            if (result.groupId() != null) {
-                servletResponse.addHeader(HttpHeaders.SET_COOKIE,
-                        ResponseCookie.from("groupId", result.groupId().toString())
-                                .httpOnly(true).secure(secure).path("/").sameSite("Lax")
-                                .maxAge(Duration.ofDays(15))
-                                .build().toString());
-            }
-
+            writeLoginCookies(result, servletRequest.isSecure(), servletResponse);
             return "redirect:/";
 
         } catch (FeignException e) {
@@ -161,6 +121,46 @@ public class AuthController {
         expireCookie(servletResponse, "groupId", secure);
 
         return "redirect:/";
+    }
+
+    /** 로그인/재활성화 성공 시 공통 쿠키 세팅 (accessToken/refreshToken + userId/userName/groupId). */
+    private void writeLoginCookies(LoginResult result, boolean secure, HttpServletResponse response) {
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                ResponseCookie.from("accessToken", result.accessToken())
+                        .httpOnly(true).secure(secure).path("/").sameSite("Lax")
+                        .maxAge(Duration.ofMinutes(15))
+                        .build().toString());
+
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                ResponseCookie.from("refreshToken", result.refreshToken())
+                        .httpOnly(true).secure(secure).path("/").sameSite("Lax")
+                        .maxAge(Duration.ofDays(15))
+                        .build().toString());
+
+        if (result.userId() != null) {
+            response.addHeader(HttpHeaders.SET_COOKIE,
+                    ResponseCookie.from("userId", result.userId().toString())
+                            .httpOnly(true).secure(secure).path("/").sameSite("Lax")
+                            .maxAge(Duration.ofDays(15))
+                            .build().toString());
+        }
+
+        if (result.userName() != null) {
+            response.addHeader(HttpHeaders.SET_COOKIE,
+                    ResponseCookie.from("userName",
+                                    URLEncoder.encode(result.userName(), StandardCharsets.UTF_8))
+                            .httpOnly(true).secure(secure).path("/").sameSite("Lax")
+                            .maxAge(Duration.ofDays(15))
+                            .build().toString());
+        }
+
+        if (result.groupId() != null) {
+            response.addHeader(HttpHeaders.SET_COOKIE,
+                    ResponseCookie.from("groupId", result.groupId().toString())
+                            .httpOnly(true).secure(secure).path("/").sameSite("Lax")
+                            .maxAge(Duration.ofDays(15))
+                            .build().toString());
+        }
     }
 
     private void expireCookie(HttpServletResponse response, String name, boolean secure) {
@@ -313,6 +313,68 @@ public class AuthController {
             model.addAttribute("resetError", "링크가 만료됐거나 유효하지 않아요. 재설정 링크를 다시 요청해주세요.");
             return "reset-password";
         }
+    }
+
+    // ================================================================
+    // 탈퇴 계정 재활성화(복구) — AuthService를 통해 auth로 위임
+    //   이메일 인증 코드 → 복구 + 즉시 로그인 (응답 규약은 /login 과 동일)
+    // ================================================================
+
+    @GetMapping("/reactivate")
+    public String reactivateForm(@RequestParam(required = false) String email, Model model) {
+        model.addAttribute("email", email);
+        return "reactivate";
+    }
+
+    /**
+     * 재활성화 인증 코드 발송. 계정 존재 여부는 노출하지 않고, 쿨다운/재전송 초과만 4xx로 구분한다.
+     */
+    @PostMapping("/reactivate/send-code")
+    @ResponseBody
+    public ResponseEntity<Void> sendReactivateCode(@RequestBody EmailVerifyRequest request) {
+        try {
+            authService.requestReactivateEmailVerify(request.email());
+            return ResponseEntity.noContent().build();
+        } catch (FeignException e) {
+            log.warn("[Auth] 재활성화 코드 발송 실패: status={}", e.status());
+            int status = e.status();               // 429 쿨다운 / 423 재전송 초과 잠금 / 그 외
+            return ResponseEntity.status(status >= 400 && status < 500 ? status : 502).build();
+        }
+    }
+
+    /**
+     * 재활성화 인증 코드 확인 → 성공 시 계정 복구 + 로그인 쿠키 세팅 후 홈으로.
+     */
+    @PostMapping("/reactivate/confirm")
+    public String reactivateConfirm(@RequestParam String email,
+                                    @RequestParam String code,
+                                    HttpServletRequest servletRequest,
+                                    HttpServletResponse servletResponse,
+                                    Model model) {
+        try {
+            LoginResult result = authService.reactivateConfirm(email, code);
+            writeLoginCookies(result, servletRequest.isSecure(), servletResponse);
+            return "redirect:/";
+        } catch (FeignException e) {
+            log.warn("[Auth] 재활성화 확인 실패: status={}", e.status());
+            model.addAttribute("email", email);
+            model.addAttribute("reactivateError", reactivateErrorMessage(e.status()));
+            return "reactivate";
+        } catch (RuntimeException e) {
+            log.warn("[Auth] 재활성화 확인 중 예외", e);
+            model.addAttribute("email", email);
+            model.addAttribute("reactivateError", "복구 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.");
+            return "reactivate";
+        }
+    }
+
+    private String reactivateErrorMessage(int status) {
+        return switch (status) {
+            case 400 -> "인증 코드가 올바르지 않거나 만료됐어요.";
+            case 423 -> "인증 시도가 초과되어 잠시 잠겼어요. 잠시 후 다시 시도해주세요.";
+            case 404, 409 -> "복구할 수 있는 계정을 찾지 못했어요.";
+            default -> "복구에 실패했어요. 잠시 후 다시 시도해주세요.";
+        };
     }
 
     // ================================================================

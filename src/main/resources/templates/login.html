@@ -71,6 +71,10 @@
                 <i class="ti ti-alert-circle"></i>
                 <span th:text="${loginError}"></span>
             </div>
+            <a th:if="${pendingRestoreEmail}" class="btn-landing-primary w-100 justify-content-center mb-3"
+               th:href="@{/reactivate(email=${pendingRestoreEmail})}">
+                계정 복구하기<i class="ti ti-arrow-right"></i>
+            </a>
             <div class="auth-error" style="background:var(--success-tint); color:var(--success); border-color:rgba(47,125,92,0.25);" th:if="${param.registered != null}">
                 <i class="ti ti-check"></i>
                 <span>가입이 완료됐어요. 로그인해주세요.</span>
