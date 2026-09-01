@@ -5,9 +5,22 @@
 <div th:fragment="sidebar" class="app-sidebar d-flex flex-column">
     <p class="sidebar-label">위치</p>
     <div class="location-links">
-        <a th:each="location : ${sidebarLocations}"
-           th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}"
-           class="location-link" th:text="${location.locationName()}"></a>
+        <th:block th:each="location : ${sidebarLocations}"
+                  th:with="isActiveLoc=${locationId != null and location.locationId() == locationId}">
+            <a th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}"
+               class="location-link" th:classappend="${isActiveLoc} ? ' active'"
+               th:text="${location.locationName()}"></a>
+            <!-- 사이드바에서 위치를 고르면 그 위치 아래에 바로가기가 펼쳐진다 -->
+            <div class="location-sublinks" th:if="${isActiveLoc}">
+                <a th:href="@{/my-group/location/{id}/dashboard(id=${locationId})}" class="location-sublink"><i class="ti ti-layout-dashboard"></i>대시보드</a>
+                <a th:href="@{/my-group/reports(locationId=${locationId})}" class="location-sublink"><i class="ti ti-file-text"></i>리포트</a>
+                <a th:href="@{/my-group/engine-alerts(locationId=${locationId})}" class="location-sublink"><i class="ti ti-alert-triangle"></i>엔진 알람</a>
+                <a th:href="@{/my-group/suggestions(locationId=${locationId})}" class="location-sublink"><i class="ti ti-bulb"></i>AI 제안</a>
+                <a th:href="@{/my-group/sensors(locationId=${locationId})}" class="location-sublink"><i class="ti ti-cpu"></i>센서</a>
+                <a th:href="@{/locations/{id}/actuators(id=${locationId})}" class="location-sublink"><i class="ti ti-adjustments"></i>액추에이터</a>
+                <a th:href="@{/my-group/flows(locationId=${locationId})}" class="location-sublink"><i class="ti ti-git-branch"></i>Flow</a>
+            </div>
+        </th:block>
     </div>
     <a th:href="@{/my-group/location/list?openModal=true}" class="add-location-link" id="sidebarAddLocationBtn" th:if="${isManager == null or isManager}">
         <i class="ti ti-plus"></i>위치 추가
@@ -24,7 +37,7 @@
 </div>
 
 <header th:fragment="groupHeader" class="app-header d-flex align-items-center px-4 gap-4">
-    <a th:href="@{/}" class="brand text-decoration-none d-flex align-items-center gap-2">
+    <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <i class="ti ti-chart-line"></i>
         InsightOn <span class="text-muted-group">· 우리회사</span>
     </a>
@@ -82,7 +95,8 @@
 </header>
 
 <header th:fragment="locationHeader(locationName, locationId, autoControlMode)" class="app-header d-flex align-items-center px-4 gap-4">
-    <a th:href="@{/}" class="brand text-decoration-none d-flex align-items-center gap-2">
+    <!-- 로고(우리회사) 클릭 → 그룹 메인 대시보드로 -->
+    <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <i class="ti ti-chart-line"></i>
         우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
         <span th:text="${locationName}">위치명</span>
