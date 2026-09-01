@@ -105,6 +105,14 @@
     }
 
     // ================================================================
+    // 2-1) 탈퇴 복구 가능 계정 안내 팝업 — 렌더되어 있으면 자동으로 띄운다
+    // ================================================================
+    const reactivateModalEl = document.getElementById("reactivateModal");
+    if (reactivateModalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(reactivateModalEl).show();
+    }
+
+    // ================================================================
     // 3) 비밀번호 재설정 요청 모달
     //    POST /reset-password/request  { email }  ->  204 No Content
     //    (성공/실패와 무관하게 "메일을 보냈다"고 안내 — 계정 존재 여부 노출 방지)
