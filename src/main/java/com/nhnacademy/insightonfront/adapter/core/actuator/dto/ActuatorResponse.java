@@ -10,6 +10,8 @@ public record ActuatorResponse(
         ActuatorType actuatorType,
         Map<String, Object> currentState,
         OffsetDateTime stateUpdatedAt,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        ControlProvider controlProvider, // null이면 미연결(UNBOUND) - 제어 요청이 거절됨
+        String externalDeviceId
 ) {
 }
