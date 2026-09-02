@@ -2375,317 +2375,357 @@ button:focus-visible,
 }
 
 /* =====================================================================
-   Login — split screen. The right side is the form, familiar and fast
-   on purpose (nobody wants novelty when entering a password). The left
-   side is the one place this page gets to be a little bit product: a
-   skyline built from the same panel language as the dashboard, with the
-   dashboard's own live-status dots (not stock art) standing in for the
-   sensors this product actually watches.
+   Login / Signup — Apple 레퍼런스(DESIGN.md) 톤: 중앙 단일 컬럼 카드.
+   좌측 장식 패널(.auth-visual)은 이 톤에서 사용하지 않고 전면 숨김.
+   클래스명·마크업은 그대로 두고 여기서만 재도색하므로
+   login.html / signup.html 자체는 수정하지 않는다.
    ===================================================================== */
 
 .auth-split {
+  --auth-accent: #0071e3;          /* DESIGN.md Primary Action */
+  --auth-accent-hover: #0077ed;
+  --auth-link: #0066cc;            /* DESIGN.md Link (light surface) */
+  --auth-fog: #f5f5f7;             /* DESIGN.md Fog Canvas */
+  --auth-hair: rgba(0, 0, 0, 0.1);
+  --auth-focus: rgba(0, 113, 227, 0.26);
   min-height: 100vh;
   display: flex;
-}
-
-.auth-visual {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(160deg, #ffffff 0%, #faf6fe 55%, #f3ebfa 100%);
-  color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--sp-4);
-  padding: 48px;
-}
-
-.auth-visual-brand {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--ink);
-  font-weight: 800;
-  font-size: 17px;
-  text-decoration: none;
-}
-
-.auth-visual-brand i {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary), var(--primary2));
-  color: #fff;
-  font-size: 13px;
+  padding: 56px 20px 64px;
+  background: var(--auth-fog);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+               "Pretendard Variable", Pretendard, var(--font-sans);
+  letter-spacing: -0.022em;
 }
 
-.auth-visual-copy {
-  position: relative;
-  z-index: 2;
-  max-width: 360px;
+:root[data-theme="dark"] .auth-split {
+  --auth-accent: #2997ff;
+  --auth-accent-hover: #2997ff;
+  --auth-link: #2997ff;            /* DESIGN.md Link on Dark */
+  --auth-fog: #000000;
+  --auth-hair: rgba(255, 255, 255, 0.14);
+  --auth-focus: rgba(41, 151, 255, 0.34);
 }
 
-.auth-visual-copy p {
-  color: var(--ink);
-  font-size: 22px;
-  line-height: 1.5;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.auth-visual-copy span {
-  color: var(--ink-soft);
-  font-size: 13px;
-  font-family: var(--font-mono);
-}
-
-.sensor-dot {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 0 4px rgba(108, 75, 240, 0.2);
-  animation: led-pulse 2.4s ease-in-out infinite;
-  z-index: 2;
-}
-
-.sensor-dot.success { background: #3ecf8e; box-shadow: 0 0 0 4px rgba(62, 207, 142, 0.2); }
-.sensor-dot.warning { background: var(--amber, #e08a2f); box-shadow: 0 0 0 4px rgba(224, 138, 47, 0.2); }
-
-@media (prefers-reduced-motion: reduce) {
-  .sensor-dot { animation: none; }
-}
-
-/* ---------- auth-side building illustration (decorative, same language as the hero) ---------- */
-.auth-visual-art {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 260px;
-}
-
-.auth-visual-art svg { animation: figFloat 4.5s ease-in-out infinite; }
-
-.auth-visual-art .callout.c1 { top: 8%; left: 4%; }
-.auth-visual-art .callout.c2 { top: 8%; right: 2%; left: auto; flex-direction: row-reverse; }
-.auth-visual-art .callout.c3 { top: auto; bottom: 30%; left: 0; }
-.auth-visual-art .callout.c4 { top: auto; bottom: 30%; right: -2%; left: auto; flex-direction: row-reverse; }
+/* 좌측 장식 패널은 Apple 톤에서 사용하지 않음 */
+.auth-visual { display: none !important; }
 
 .auth-form-panel {
-  flex: 1;
+  flex: 1 1 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  padding: 48px;
+  background: transparent;
+  padding: 0;
 }
 
 .auth-form-wrap {
   width: 100%;
-  max-width: 380px;
+  max-width: 416px;
+  background: var(--surface);
+  border: 1px solid var(--auth-hair);
+  border-radius: 18px;
+  padding: 40px 36px 36px;
 }
 
 .auth-form-wrap h1 {
-  font-size: 24px;
-  font-weight: 800;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, Pretendard, var(--font-sans);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.007em;
   margin: 0 0 8px;
+  color: var(--ink);
 }
 
 .auth-form-panel .auth-subtitle {
-  font-size: 13.5px;
-  margin-bottom: 28px;
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+  line-height: 1.5;
 }
 
-.auth-form-panel .auth-footer-note a {
-  color: var(--primary);
-}
-
-.oauth-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-
-.btn-google {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  width: 100%;
-  padding: var(--sp-3) var(--sp-4);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--fs-body);
-  font-weight: 500;
-}
-
-.btn-google:hover {
-  background: var(--surface-alt);
-  border-color: var(--line-strong);
-}
-
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  margin: var(--sp-6) 0;
-  color: var(--ink-faint);
-  font-size: var(--fs-meta);
-}
-
-.auth-divider::before,
-.auth-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-/* only shown when .auth-visual (which carries the brand mark on desktop) is hidden */
+/* 브랜드 마크: Apple 톤에서는 항상 카드 상단에 노출 */
 .auth-form-brand {
-  display: none;
+  display: inline-flex;
   align-items: center;
-  gap: var(--sp-2);
+  gap: 9px;
   font-weight: 600;
+  font-size: 15px;
   color: var(--ink);
   text-decoration: none;
-  margin-bottom: var(--sp-6);
+  margin-bottom: 22px;
 }
 
 .auth-form-brand i {
-  width: var(--icon-md);
-  height: var(--icon-md);
-  border-radius: var(--radius);
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--primary);
+  background: var(--auth-accent);
   color: #fff;
-  font-size: var(--icon-sm);
+  font-size: 14px;
 }
 
-@media (max-width: 900px) {
-  .auth-visual {
-    display: none;
-  }
-  .auth-form-panel {
-    flex: 1 1 100%;
-  }
-  .auth-form-brand {
-    display: flex;
-  }
-}
-
-/* =====================================================================
-   Auth utility widgets — password visibility, email verification, and
-   the mypage settings list. Reuses settings-card/settings-field/
-   status-badge from the rest of the app rather than inventing new
-   components, so an account page never feels like a different product.
-   ===================================================================== */
+/* ---------- inputs ---------- */
+.auth-form-panel .settings-field { margin-bottom: 16px; }
 
 .auth-form-panel .settings-field label {
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 700;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-soft);
   text-transform: none;
   letter-spacing: normal;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
+  display: block;
 }
 
-.auth-form-panel .settings-field .form-control {
-  border-radius: 10px;
-  padding: 11px 13px;
-  font-size: 13.5px;
+.auth-form-panel .settings-field .form-control,
+.auth-form-panel .verify-row .form-control {
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 17px;
+  letter-spacing: -0.022em;
+  color: var(--ink);
+  background: var(--surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.auth-form-panel .verify-row .btn-outline-secondary {
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 700;
+.auth-form-panel .form-control::placeholder { color: var(--ink-faint); opacity: 0.75; }
+
+.auth-form-panel .form-control:focus {
+  border-color: var(--auth-accent);
+  box-shadow: 0 0 0 4px var(--auth-focus);
+  outline: none;
 }
 
-.password-field {
-  position: relative;
-}
-
-.password-field input {
-  padding-right: 40px;
-}
+/* 비밀번호 표시 토글 (login.js / signup.js: .password-toggle, i.ti-eye/ti-eye-off) */
+.password-field { position: relative; }
+.password-field input { padding-right: 44px; }
 
 .password-toggle {
   position: absolute;
   top: 50%;
-  right: var(--sp-2);
+  right: 8px;
   transform: translateY(-50%);
   border: none;
   background: transparent;
   color: var(--ink-faint);
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
 }
 
-.password-toggle:hover {
-  color: var(--ink);
-  background: var(--surface-alt);
-}
+.password-toggle:hover { color: var(--ink); background: var(--surface-alt); }
 
-.verify-row {
-  display: flex;
-  gap: var(--sp-2);
-}
+/* 이메일 인증 행: 입력 + 보조 버튼 */
+.auth-form-panel .verify-row { display: flex; gap: 8px; }
+.auth-form-panel .verify-row input { flex: 1; min-width: 0; }
 
-.verify-row input {
-  flex: 1;
-}
-
-.verify-row .btn-outline-secondary {
+.auth-form-panel .verify-row .btn-outline-secondary {
   flex-shrink: 0;
   white-space: nowrap;
+  height: 46px;
+  border-radius: 12px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--auth-link);
+  border: 1px solid var(--line-strong);
+  background: transparent;
 }
 
-.verify-status {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  font-size: var(--fs-meta);
-  color: var(--ink-faint);
-  margin-top: var(--sp-2);
-  min-height: 1.2em;
+.auth-form-panel .verify-row .btn-outline-secondary:hover {
+  border-color: var(--auth-link);
+  background: var(--surface-alt);
+  color: var(--auth-link);
 }
 
-.verify-status.success { color: var(--success); }
-.verify-status.danger { color: var(--danger); }
-.verify-status.warning { color: var(--warning); }
-
-.verify-status.is-error { color: var(--danger); animation: hint-shake 0.4s ease; }
-.verify-status.is-success { color: var(--success); }
-
+/* 힌트 (signup.js: .is-error / .is-success 토글, data-default 보관) */
 .field-hint {
-  font-size: var(--fs-meta);
+  font-size: 12.5px;
   color: var(--ink-faint);
-  margin-top: var(--sp-1);
+  margin-top: 6px;
+  line-height: 1.5;
 }
 
 .field-hint.danger { color: var(--danger); }
 .field-hint.success { color: var(--success); }
 .field-hint.is-error { color: var(--danger); animation: hint-shake 0.4s ease; }
 .field-hint.is-success { color: var(--success); }
+
+.verify-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+  min-height: 1.2em;
+}
+
+.verify-status.success { color: var(--success); }
+.verify-status.danger { color: var(--danger); }
+.verify-status.warning { color: var(--warning); }
+.verify-status.is-error { color: var(--danger); animation: hint-shake 0.4s ease; }
+.verify-status.is-success { color: var(--success); }
+
+/* 우측 정렬 링크 행 (비밀번호를 잊으셨나요?) */
+.auth-form-panel .d-flex.justify-content-end { margin: -4px 0 18px; }
+
+/* ---------- primary submit (재사용: .btn-landing-primary) ---------- */
+.auth-form-wrap .btn-landing-primary {
+  width: 100%;
+  justify-content: center;
+  height: 46px;
+  border-radius: 980px;
+  background: var(--auth-accent);
+  border: none;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  box-shadow: none;
+}
+
+.auth-form-wrap .btn-landing-primary:hover { background: var(--auth-accent-hover); box-shadow: none; }
+.auth-form-wrap .btn-landing-primary:disabled { opacity: 0.42; }
+.auth-form-wrap .btn-landing-primary i { display: none; }   /* Apple 버튼엔 화살표 아이콘 없음 */
+
+/* ---------- 인라인 링크형 버튼 (모달 트리거) ---------- */
+.btn-link-quiet {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--auth-link, var(--ink-soft));   /* fallback: .auth-split 밖(flow 에디터 등)에서는 기존 색 */
+  text-decoration: none;
+}
+
+.btn-link-quiet:hover { text-decoration: underline; color: var(--auth-link, var(--ink)); }
+
+/* ---------- OAuth ---------- */
+.auth-form-panel .oauth-list { display: flex; flex-direction: column; gap: 10px; }
+.auth-form-panel .oauth-list form { margin: 0; }
+
+.auth-form-panel .btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 980px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.auth-form-panel .btn-google:hover { background: var(--surface-alt); border-color: var(--line-strong); }
+
+/* ---------- divider ---------- */
+.auth-form-panel .auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.auth-form-panel .auth-divider::before,
+.auth-form-panel .auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--auth-hair);
+}
+
+/* ---------- error / success alert (th:if 블록) ---------- */
+.auth-form-panel .auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--danger-tint);
+  color: var(--danger);
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+/* ---------- footer note ---------- */
+.auth-form-panel .auth-footer-note {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+.auth-form-panel .auth-footer-note:first-of-type { margin-top: 22px; }
+
+.auth-form-panel .auth-footer-note a,
+.auth-form-panel .auth-footer-note .btn-link-quiet {
+  color: var(--auth-link);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.auth-form-panel .auth-footer-note a:hover,
+.auth-form-panel .auth-footer-note .btn-link-quiet:hover { text-decoration: underline; }
+
+/* ---------- 모달(이메일 찾기 / 비번 재설정 / 계정 복구) Apple 톤 ---------- */
+#findIdModal .modal-content,
+#resetPasswordModal .modal-content,
+#reactivateModal .modal-content {
+  border: 1px solid var(--auth-hair);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+#findIdModal .modal-header,
+#resetPasswordModal .modal-header,
+#reactivateModal .modal-header { border-bottom: 1px solid var(--line); }
+
+#findIdModal .modal-footer,
+#resetPasswordModal .modal-footer,
+#reactivateModal .modal-footer { border-top: 1px solid var(--line); gap: 8px; }
+
+#findIdModal .modal-footer .btn,
+#resetPasswordModal .modal-footer .btn,
+#reactivateModal .modal-footer .btn {
+  border-radius: 980px;
+  font-weight: 400;
+  padding: 8px 18px;
+}
+
+#findIdModal .modal-footer .btn-primary,
+#resetPasswordModal .modal-footer .btn-primary,
+#reactivateModal .modal-footer .btn-primary { background: #0071e3; border-color: #0071e3; }
+
+@media (max-width: 480px) {
+  .auth-split { padding: 40px 16px; }
+  .auth-form-wrap { padding: 32px 22px 28px; }
+}
 
 @keyframes hint-shake {
   0%, 100% { transform: translateX(0); }
