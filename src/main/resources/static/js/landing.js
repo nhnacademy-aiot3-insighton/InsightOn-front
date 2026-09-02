@@ -159,7 +159,7 @@
     return html`
       <nav class="lp-nav">
         <div class="lp-nav-left">
-          <a href="/" class="lp-brand"><span class="lp-mark" aria-hidden="true"><img src="/img/logo.png" alt="" onError=${function (e) { e.target.remove(); }} /></span>InsightOn</a>
+          <a href="/" class="lp-brand"><span class="lp-mark" aria-hidden="true"></span>InsightOn</a>
           <div class="lp-nav-links">
             <a href="#automation">Automation</a>
             <a href="#context">Context AI</a>
@@ -371,7 +371,7 @@
   function Footer() {
     return html`
       <footer class="lp-footer">
-        <span class="lp-brand"><span class="lp-mark" aria-hidden="true"><img src="/img/logo.png" alt="" onError=${function (e) { e.target.remove(); }} /></span>InsightOn</span>
+        <span class="lp-brand"><span class="lp-mark" aria-hidden="true"></span>InsightOn</span>
         <span>© 2026 InsightOn · 멀티테넌트 오피스 IoT 관제</span>
       </footer>`;
   }
