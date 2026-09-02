@@ -6,8 +6,9 @@
   --sidebar-width: 240px;
   --header-height: 68px;
 
-  --font-sans: "Pretendard", "IBM Plex Sans", "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
-  --font-mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  /* 랜딩과 동일 계열: macOS 는 SF Pro, 그 외는 Pretendard(모든 내부 템플릿 head 에서 로드됨) */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SFMono-Regular", monospace;
 
   /* type scale — 3 tiers only */
   --fs-meta: 0.75rem;   /* 12px: captions, labels, timestamps */
@@ -27,40 +28,40 @@
   --sp-6: 24px;
   --sp-8: 32px;
 
-  /* Pure Global rounded corners, adopted app-wide (previously a deliberate sharp 2px "blueprint" look) */
-  --radius: 10px;
+  /* 랜딩과 동일: Apple 계열 라운드 */
+  --radius: 12px;
 
-  /* blueprint paper surfaces — cool, cyanotype-adjacent, never pure white/black */
-  --paper: #eef1f6;
+  /* Apple 표면 — 중성 회색(블루프린트 블루 제거), 랜딩 landing.css 와 동일 팔레트 */
+  --paper: #f5f5f7;           /* 페이지 바탕 (Fog Canvas) */
   --surface: #ffffff;
-  --surface-alt: #f4f7fa;
-  --line: #ccd5e0;
-  --line-strong: #a9b8c9;
-  --ink: #16232f;
-  --ink-soft: #56697d;
-  --ink-faint: #97a5b5;
+  --surface-alt: #f5f5f7;
+  --line: rgba(0, 0, 0, 0.10);
+  --line-strong: rgba(0, 0, 0, 0.18);
+  --ink: #1d1d1f;
+  --ink-soft: #6e6e73;
+  --ink-faint: #86868b;
 
-  /* blueprint ink — the one drafting-pen accent */
-  --primary: #6c4bf0;
-  --primary-tint: rgba(108, 75, 240, 0.08);
-  --primary2: #3f8cf0;
-  --card-shadow: 0 6px 20px rgba(20, 30, 70, 0.06);
+  /* Apple 액센트 (#0071e3) — 랜딩 --lp-accent 과 동일 */
+  --primary: #0071e3;
+  --primary-tint: rgba(0, 113, 227, 0.10);
+  --primary2: #2997ff;
+  --primary-rgb: 0, 113, 227;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 10px 30px rgba(0, 0, 0, 0.04);
 
-  /* Pure Global surfaces — glass cards/widgets used app-wide */
   --bg-top: #ffffff;
-  --bg-bottom: #faf6fe;
-  --glass: rgba(255, 255, 255, 0.65);
+  --bg-bottom: #f5f5f7;
+  --glass: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.9);
-  --radius-soft: 16px;
+  --radius-soft: 18px;
 
-  /* revision-mark colors — status only, never decorative */
-  --success: #2f7d5c;
-  --success-tint: rgba(47, 125, 92, 0.10);
-  --warning: #b8752a;
-  --warning-tint: rgba(184, 117, 42, 0.10);
+  /* 상태색 — 채도 낮춰 Apple 톤 */
+  --success: #1d7a44;
+  --success-tint: rgba(29, 122, 68, 0.10);
+  --warning: #b25000;
+  --warning-tint: rgba(178, 80, 0, 0.10);
   --amber: #e08a2f;
-  --danger: #b8392f;
-  --danger-tint: rgba(184, 57, 47, 0.10);
+  --danger: #b3261e;
+  --danger-tint: rgba(179, 38, 30, 0.10);
 }
 
 /* ============================================================
@@ -71,38 +72,40 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --paper: #0e1320;
-  --surface: #161d2b;
-  --surface-alt: #1e2637;
-  --line: #2c3648;
-  --line-strong: #3e4a60;
-  --ink: #e7ebf3;
-  --ink-soft: #9fabbd;
-  --ink-faint: #6d7a8d;
+  /* 다크 톤 — 순수 검정(#000)이 너무 새까맣다는 의견 반영해 한 단계 올림 */
+  --paper: #1a1a1c;
+  --surface: #242426;
+  --surface-alt: #2f2f31;
+  --line: rgba(255, 255, 255, 0.15);
+  --line-strong: rgba(255, 255, 255, 0.26);
+  --ink: #f5f5f7;
+  --ink-soft: #a1a1a6;
+  --ink-faint: #7c7c82;
 
-  --primary: #8f74f5;
-  --primary-tint: rgba(143, 116, 245, 0.16);
-  --primary2: #5b9df6;
-  --card-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --primary: #2997ff;
+  --primary-tint: rgba(41, 151, 255, 0.18);
+  --primary2: #0071e3;
+  --primary-rgb: 41, 151, 255;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 
-  --bg-top: #141b29;
-  --bg-bottom: #0e1320;
-  --glass: rgba(22, 29, 43, 0.70);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --bg-top: #242426;
+  --bg-bottom: #1a1a1c;
+  --glass: rgba(38, 38, 41, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.10);
 
-  --success: #43c98f;
-  --success-tint: rgba(67, 201, 143, 0.16);
-  --warning: #d99a4a;
-  --warning-tint: rgba(217, 154, 74, 0.16);
+  --success: #4ade80;
+  --success-tint: rgba(74, 222, 128, 0.16);
+  --warning: #f5a623;
+  --warning-tint: rgba(245, 166, 35, 0.16);
   --amber: #eaa457;
-  --danger: #e86b60;
-  --danger-tint: rgba(232, 107, 96, 0.16);
+  --danger: #ff6b6b;
+  --danger-tint: rgba(255, 107, 107, 0.16);
 
   /* 시맨틱 토큰을 참조하지 않는 부트스트랩 원시값들 */
-  --bs-primary: #8f74f5;
-  --bs-primary-rgb: 143, 116, 245;
-  --bs-primary-bg-subtle: rgba(143, 116, 245, 0.18);
-  --bs-primary-border-subtle: rgba(143, 116, 245, 0.40);
+  --bs-primary: #2997ff;
+  --bs-primary-rgb: 41, 151, 255;
+  --bs-primary-bg-subtle: rgba(41, 151, 255, 0.18);
+  --bs-primary-border-subtle: rgba(41, 151, 255, 0.40);
   --bs-body-bg: var(--paper);
   --bs-secondary-bg: var(--surface-alt);
   --bs-tertiary-bg: var(--surface-alt);
@@ -112,7 +115,7 @@
 /* 토큰만으로 안 되는 하드코딩 색 소수 지점 보정 (다크에서만) */
 :root[data-theme="dark"] .app-header,
 :root[data-theme="dark"] .landing-header {
-  background: rgba(14, 19, 32, 0.80);
+  background: rgba(26, 26, 28, 0.72);
 }
 :root[data-theme="dark"] .app-nav .nav-link:hover:not(.active),
 :root[data-theme="dark"] .app-sidebar .location-link:hover {
@@ -135,17 +138,17 @@
 
 :root {
   /* keep Bootstrap's own components (dropdown, buttons, form controls) on our surfaces */
-  --bs-border-radius: 10px;
+  --bs-border-radius: 12px;
   --bs-border-radius-sm: 8px;
-  --bs-border-radius-lg: 14px;
+  --bs-border-radius-lg: 16px;
 
   --bs-body-bg: var(--paper);
   --bs-body-color: var(--ink);
 
-  --bs-primary: #6c4bf0;
-  --bs-primary-rgb: 108, 75, 240;
-  --bs-primary-bg-subtle: rgba(108, 75, 240, 0.08);
-  --bs-primary-border-subtle: rgba(108, 75, 240, 0.25);
+  --bs-primary: #0071e3;
+  --bs-primary-rgb: 0, 113, 227;
+  --bs-primary-bg-subtle: rgba(0, 113, 227, 0.10);
+  --bs-primary-border-subtle: rgba(0, 113, 227, 0.28);
 
   --bs-secondary-color: var(--ink-soft);
   --bs-border-color: var(--line);
@@ -173,6 +176,9 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: var(--fs-body);
+  letter-spacing: -0.014em;           /* 랜딩과 동일한 Apple 특유의 조인 자간 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Pure Global landing page — gradient completes within a fixed band near the top
@@ -202,7 +208,9 @@ button:focus-visible,
 .form-control,
 .form-select {
   background-color: var(--surface);
-  border-color: var(--line);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 0.55rem 0.8rem;
   color: var(--ink);
 }
 
@@ -211,8 +219,10 @@ button:focus-visible,
   background-color: var(--surface);
   color: var(--ink);
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-tint);
+  box-shadow: 0 0 0 4px var(--primary-tint);
 }
+
+.form-control::placeholder { color: var(--ink-faint); opacity: 1; }
 
 .form-control:disabled,
 .form-control[readonly] {
@@ -235,13 +245,13 @@ button:focus-visible,
 .btn-primary {
   --bs-btn-bg: var(--primary);
   --bs-btn-border-color: var(--primary);
-  --bs-btn-hover-bg: var(--ink);
-  --bs-btn-hover-border-color: var(--ink);
-  --bs-btn-active-bg: var(--ink);
-  --bs-btn-active-border-color: var(--ink);
+  --bs-btn-hover-bg: var(--primary2);
+  --bs-btn-hover-border-color: var(--primary2);
+  --bs-btn-active-bg: var(--primary2);
+  --bs-btn-active-border-color: var(--primary2);
   --bs-btn-disabled-bg: var(--line-strong);
   --bs-btn-disabled-border-color: var(--line-strong);
-  --bs-btn-focus-shadow-rgb: 108, 75, 240;
+  --bs-btn-focus-shadow-rgb: 0, 113, 227;
 }
 
 /* ---------- status dot — reused wherever a live/status state is shown ---------- */
@@ -314,7 +324,7 @@ button:focus-visible,
 }
 
 .app-nav .nav-link:hover:not(.active) {
-  background: rgba(20, 30, 70, 0.04);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .app-nav .nav-link.active {
@@ -538,12 +548,45 @@ button:focus-visible,
 
 .app-sidebar .location-link:hover {
   color: var(--ink);
-  background: rgba(20, 30, 70, 0.04);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .app-sidebar .location-link.active {
   background: var(--primary-tint);
   color: var(--primary);
+  font-weight: 600;
+  border-left-color: var(--primary);
+}
+
+/* 사이드바 — 선택된 위치 아래에 펼쳐지는 바로가기 */
+.app-sidebar .location-sublinks {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 8px var(--sp-4);
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+.app-sidebar .location-sublink {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px 10px;
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  text-decoration: none;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.app-sidebar .location-sublink i { font-size: var(--icon-sm); flex-shrink: 0; }
+.app-sidebar .location-sublink:hover {
+  color: var(--primary);
+  background: var(--primary-tint);
+}
+/* 현재 보고 있는 화면의 바로가기 (layout.html :: sidebar 의 스크립트가 부여) */
+.app-sidebar .location-sublink.active {
+  color: var(--primary);
+  background: var(--primary-tint);
   font-weight: 600;
 }
 
@@ -964,7 +1007,7 @@ button:focus-visible,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 24px rgba(108, 75, 240, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 113, 227, 0.35);
   z-index: 1045;
 }
 
@@ -1782,7 +1825,7 @@ button:focus-visible,
   flex-basis: 100%;
   margin-top: var(--sp-2);
   padding-top: 24px;
-  border-top: 1px solid rgba(20, 30, 70, 0.08);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
   text-align: center;
 }
 
@@ -1945,8 +1988,8 @@ button:focus-visible,
   width: 220px;
   height: 26px;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(108, 75, 240, 0.5), transparent 70%);
-  box-shadow: 0 0 60px 10px rgba(108, 75, 240, 0.2);
+  background: radial-gradient(ellipse at center, rgba(0, 113, 227, 0.5), transparent 70%);
+  box-shadow: 0 0 60px 10px rgba(0, 113, 227, 0.2);
   margin-bottom: var(--sp-1);
   position: relative;
   z-index: 1;
@@ -2096,7 +2139,7 @@ button:focus-visible,
   position: absolute;
   top: -30px; left: -30px; right: -30px; bottom: -30px;
   background:
-    radial-gradient(ellipse at 25% 15%, rgba(108, 75, 240, 0.16), transparent 55%),
+    radial-gradient(ellipse at 25% 15%, rgba(0, 113, 227, 0.16), transparent 55%),
     radial-gradient(ellipse at 85% 85%, rgba(63, 140, 240, 0.15), transparent 55%);
   z-index: -1;
   border-radius: 40px;
@@ -2128,7 +2171,7 @@ button:focus-visible,
   gap: 11px;
   font-size: 13px;
   padding: var(--sp-2) 0;
-  border-bottom: 1px solid rgba(20, 30, 70, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   color: var(--ink-soft);
 }
 .collage .krow:last-child { border-bottom: none; }
@@ -2375,317 +2418,359 @@ button:focus-visible,
 }
 
 /* =====================================================================
-   Login — split screen. The right side is the form, familiar and fast
-   on purpose (nobody wants novelty when entering a password). The left
-   side is the one place this page gets to be a little bit product: a
-   skyline built from the same panel language as the dashboard, with the
-   dashboard's own live-status dots (not stock art) standing in for the
-   sensors this product actually watches.
+   Login / Signup — Apple 레퍼런스(DESIGN.md) 톤: 중앙 단일 컬럼 카드.
+   좌측 장식 패널(.auth-visual)은 이 톤에서 사용하지 않고 전면 숨김.
+   클래스명·마크업은 그대로 두고 여기서만 재도색하므로
+   login.html / signup.html 자체는 수정하지 않는다.
    ===================================================================== */
 
 .auth-split {
+  --auth-accent: #0071e3;          /* DESIGN.md Primary Action */
+  --auth-accent-hover: #0077ed;
+  --auth-link: #0066cc;            /* DESIGN.md Link (light surface) */
+  --auth-fog: #f5f5f7;             /* DESIGN.md Fog Canvas */
+  --auth-hair: rgba(0, 0, 0, 0.1);
+  --auth-focus: rgba(0, 113, 227, 0.26);
   min-height: 100vh;
   display: flex;
-}
-
-.auth-visual {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(160deg, #ffffff 0%, #faf6fe 55%, #f3ebfa 100%);
-  color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--sp-4);
-  padding: 48px;
-}
-
-.auth-visual-brand {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--ink);
-  font-weight: 800;
-  font-size: 17px;
-  text-decoration: none;
-}
-
-.auth-visual-brand i {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary), var(--primary2));
-  color: #fff;
-  font-size: 13px;
+  padding: 56px 20px 64px;
+  background: var(--auth-fog);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+               "Pretendard Variable", Pretendard, var(--font-sans);
+  letter-spacing: -0.022em;
 }
 
-.auth-visual-copy {
-  position: relative;
-  z-index: 2;
-  max-width: 360px;
+:root[data-theme="dark"] .auth-split {
+  --auth-accent: #2997ff;
+  --auth-accent-hover: #2997ff;
+  --auth-link: #2997ff;            /* DESIGN.md Link on Dark */
+  --auth-fog: #000000;
+  --auth-hair: rgba(255, 255, 255, 0.14);
+  --auth-focus: rgba(41, 151, 255, 0.34);
 }
 
-.auth-visual-copy p {
-  color: var(--ink);
-  font-size: 22px;
-  line-height: 1.5;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.auth-visual-copy span {
-  color: var(--ink-soft);
-  font-size: 13px;
-  font-family: var(--font-mono);
-}
-
-.sensor-dot {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 0 4px rgba(108, 75, 240, 0.2);
-  animation: led-pulse 2.4s ease-in-out infinite;
-  z-index: 2;
-}
-
-.sensor-dot.success { background: #3ecf8e; box-shadow: 0 0 0 4px rgba(62, 207, 142, 0.2); }
-.sensor-dot.warning { background: var(--amber, #e08a2f); box-shadow: 0 0 0 4px rgba(224, 138, 47, 0.2); }
-
-@media (prefers-reduced-motion: reduce) {
-  .sensor-dot { animation: none; }
-}
-
-/* ---------- auth-side building illustration (decorative, same language as the hero) ---------- */
-.auth-visual-art {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 260px;
-}
-
-.auth-visual-art svg { animation: figFloat 4.5s ease-in-out infinite; }
-
-.auth-visual-art .callout.c1 { top: 8%; left: 4%; }
-.auth-visual-art .callout.c2 { top: 8%; right: 2%; left: auto; flex-direction: row-reverse; }
-.auth-visual-art .callout.c3 { top: auto; bottom: 30%; left: 0; }
-.auth-visual-art .callout.c4 { top: auto; bottom: 30%; right: -2%; left: auto; flex-direction: row-reverse; }
+/* 좌측 장식 패널은 Apple 톤에서 사용하지 않음 */
+.auth-visual { display: none !important; }
 
 .auth-form-panel {
-  flex: 1;
+  flex: 1 1 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  padding: 48px;
+  background: transparent;
+  padding: 0;
 }
 
 .auth-form-wrap {
   width: 100%;
-  max-width: 380px;
+  max-width: 416px;
+  background: var(--surface);
+  border: 1px solid var(--auth-hair);
+  border-radius: 18px;
+  padding: 40px 36px 36px;
 }
 
 .auth-form-wrap h1 {
-  font-size: 24px;
-  font-weight: 800;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, Pretendard, var(--font-sans);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.007em;
   margin: 0 0 8px;
+  color: var(--ink);
 }
 
 .auth-form-panel .auth-subtitle {
-  font-size: 13.5px;
-  margin-bottom: 28px;
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+  line-height: 1.5;
 }
 
-.auth-form-panel .auth-footer-note a {
-  color: var(--primary);
-}
-
-.oauth-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-
-.btn-google {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  width: 100%;
-  padding: var(--sp-3) var(--sp-4);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--fs-body);
-  font-weight: 500;
-}
-
-.btn-google:hover {
-  background: var(--surface-alt);
-  border-color: var(--line-strong);
-}
-
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  margin: var(--sp-6) 0;
-  color: var(--ink-faint);
-  font-size: var(--fs-meta);
-}
-
-.auth-divider::before,
-.auth-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-/* only shown when .auth-visual (which carries the brand mark on desktop) is hidden */
+/* 브랜드 마크: Apple 톤에서는 항상 카드 상단에 노출 */
 .auth-form-brand {
-  display: none;
+  display: inline-flex;
   align-items: center;
-  gap: var(--sp-2);
+  gap: 9px;
   font-weight: 600;
+  font-size: 15px;
   color: var(--ink);
   text-decoration: none;
-  margin-bottom: var(--sp-6);
+  margin-bottom: 22px;
 }
 
 .auth-form-brand i {
-  width: var(--icon-md);
-  height: var(--icon-md);
-  border-radius: var(--radius);
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--primary);
+  background: var(--auth-accent);
   color: #fff;
-  font-size: var(--icon-sm);
+  font-size: 14px;
 }
 
-@media (max-width: 900px) {
-  .auth-visual {
-    display: none;
-  }
-  .auth-form-panel {
-    flex: 1 1 100%;
-  }
-  .auth-form-brand {
-    display: flex;
-  }
-}
-
-/* =====================================================================
-   Auth utility widgets — password visibility, email verification, and
-   the mypage settings list. Reuses settings-card/settings-field/
-   status-badge from the rest of the app rather than inventing new
-   components, so an account page never feels like a different product.
-   ===================================================================== */
+/* ---------- inputs ---------- */
+.auth-form-panel .settings-field { margin-bottom: 16px; }
 
 .auth-form-panel .settings-field label {
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 700;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-soft);
   text-transform: none;
   letter-spacing: normal;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
+  display: block;
 }
 
-.auth-form-panel .settings-field .form-control {
-  border-radius: 10px;
-  padding: 11px 13px;
-  font-size: 13.5px;
+.auth-form-panel .settings-field .form-control,
+.auth-form-panel .verify-row .form-control {
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 17px;
+  letter-spacing: -0.022em;
+  color: var(--ink);
+  background: var(--surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.auth-form-panel .verify-row .btn-outline-secondary {
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 700;
+.auth-form-panel .form-control::placeholder { color: var(--ink-faint); opacity: 0.75; }
+
+.auth-form-panel .form-control:focus {
+  border-color: var(--auth-accent);
+  box-shadow: 0 0 0 4px var(--auth-focus);
+  outline: none;
 }
 
-.password-field {
-  position: relative;
-}
-
-.password-field input {
-  padding-right: 40px;
-}
+/* 비밀번호 표시 토글 (login.js / signup.js: .password-toggle, i.ti-eye/ti-eye-off) */
+.password-field { position: relative; }
+.password-field input { padding-right: 44px; }
 
 .password-toggle {
   position: absolute;
   top: 50%;
-  right: var(--sp-2);
+  right: 8px;
   transform: translateY(-50%);
   border: none;
   background: transparent;
   color: var(--ink-faint);
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
 }
 
-.password-toggle:hover {
-  color: var(--ink);
-  background: var(--surface-alt);
-}
+.password-toggle:hover { color: var(--ink); background: var(--surface-alt); }
 
-.verify-row {
-  display: flex;
-  gap: var(--sp-2);
-}
+/* 이메일 인증 행: 입력 + 보조 버튼 */
+.auth-form-panel .verify-row { display: flex; gap: 8px; }
+.auth-form-panel .verify-row input { flex: 1; min-width: 0; }
 
-.verify-row input {
-  flex: 1;
-}
-
-.verify-row .btn-outline-secondary {
+.auth-form-panel .verify-row .btn-outline-secondary {
   flex-shrink: 0;
   white-space: nowrap;
+  height: 46px;
+  border-radius: 12px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--auth-link);
+  border: 1px solid var(--line-strong);
+  background: transparent;
 }
 
-.verify-status {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  font-size: var(--fs-meta);
-  color: var(--ink-faint);
-  margin-top: var(--sp-2);
-  min-height: 1.2em;
+.auth-form-panel .verify-row .btn-outline-secondary:hover {
+  border-color: var(--auth-link);
+  background: var(--surface-alt);
+  color: var(--auth-link);
 }
 
-.verify-status.success { color: var(--success); }
-.verify-status.danger { color: var(--danger); }
-.verify-status.warning { color: var(--warning); }
-
-.verify-status.is-error { color: var(--danger); animation: hint-shake 0.4s ease; }
-.verify-status.is-success { color: var(--success); }
-
+/* 힌트 (signup.js: .is-error / .is-success 토글, data-default 보관) */
 .field-hint {
-  font-size: var(--fs-meta);
+  font-size: 12.5px;
   color: var(--ink-faint);
-  margin-top: var(--sp-1);
+  margin-top: 6px;
+  line-height: 1.5;
 }
 
 .field-hint.danger { color: var(--danger); }
 .field-hint.success { color: var(--success); }
 .field-hint.is-error { color: var(--danger); animation: hint-shake 0.4s ease; }
 .field-hint.is-success { color: var(--success); }
+
+.verify-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+  min-height: 1.2em;
+}
+
+.verify-status.success { color: var(--success); }
+.verify-status.danger { color: var(--danger); }
+.verify-status.warning { color: var(--warning); }
+.verify-status.is-error { color: var(--danger); animation: hint-shake 0.4s ease; }
+.verify-status.is-success { color: var(--success); }
+
+/* 우측 정렬 링크 행 (비밀번호를 잊으셨나요?) */
+.auth-form-panel .d-flex.justify-content-end { margin: -4px 0 18px; }
+
+/* ---------- primary submit (재사용: .btn-landing-primary) ---------- */
+.auth-form-wrap .btn-landing-primary {
+  width: 100%;
+  justify-content: center;
+  height: 46px;
+  border-radius: 980px;
+  background: var(--auth-accent);
+  border: none;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  box-shadow: none;
+}
+
+.auth-form-wrap .btn-landing-primary:hover { background: var(--auth-accent-hover); box-shadow: none; }
+.auth-form-wrap .btn-landing-primary:disabled { opacity: 0.42; }
+.auth-form-wrap .btn-landing-primary i { display: none; }   /* Apple 버튼엔 화살표 아이콘 없음 */
+
+/* ---------- 인라인 링크형 버튼 (모달 트리거) ---------- */
+.btn-link-quiet {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--auth-link, var(--ink-soft));   /* fallback: .auth-split 밖(flow 에디터 등)에서는 기존 색 */
+  text-decoration: none;
+}
+
+.btn-link-quiet:hover { text-decoration: underline; color: var(--auth-link, var(--ink)); }
+
+/* ---------- OAuth (로그인/회원가입 + 마이페이지 '연동된 계정' 공통) ---------- */
+.oauth-list { display: flex; flex-direction: column; gap: 10px; }
+.oauth-list form { margin: 0; }
+
+.oauth-list .btn-google,
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 980px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.oauth-list .btn-google:hover,
+.btn-google:hover { background: var(--surface-alt); border-color: var(--line-strong); color: var(--ink); }
+
+/* ---------- divider ---------- */
+.auth-form-panel .auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.auth-form-panel .auth-divider::before,
+.auth-form-panel .auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--auth-hair);
+}
+
+/* ---------- error / success alert (th:if 블록) ---------- */
+.auth-form-panel .auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--danger-tint);
+  color: var(--danger);
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+/* ---------- footer note ---------- */
+.auth-form-panel .auth-footer-note {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+.auth-form-panel .auth-footer-note:first-of-type { margin-top: 22px; }
+
+.auth-form-panel .auth-footer-note a,
+.auth-form-panel .auth-footer-note .btn-link-quiet {
+  color: var(--auth-link);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.auth-form-panel .auth-footer-note a:hover,
+.auth-form-panel .auth-footer-note .btn-link-quiet:hover { text-decoration: underline; }
+
+/* ---------- 모달(이메일 찾기 / 비번 재설정 / 계정 복구) Apple 톤 ---------- */
+#findIdModal .modal-content,
+#resetPasswordModal .modal-content,
+#reactivateModal .modal-content {
+  border: 1px solid var(--auth-hair);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+#findIdModal .modal-header,
+#resetPasswordModal .modal-header,
+#reactivateModal .modal-header { border-bottom: 1px solid var(--line); }
+
+#findIdModal .modal-footer,
+#resetPasswordModal .modal-footer,
+#reactivateModal .modal-footer { border-top: 1px solid var(--line); gap: 8px; }
+
+#findIdModal .modal-footer .btn,
+#resetPasswordModal .modal-footer .btn,
+#reactivateModal .modal-footer .btn {
+  border-radius: 980px;
+  font-weight: 400;
+  padding: 8px 18px;
+}
+
+#findIdModal .modal-footer .btn-primary,
+#resetPasswordModal .modal-footer .btn-primary,
+#reactivateModal .modal-footer .btn-primary { background: #0071e3; border-color: #0071e3; }
+
+@media (max-width: 480px) {
+  .auth-split { padding: 40px 16px; }
+  .auth-form-wrap { padding: 32px 22px 28px; }
+}
 
 @keyframes hint-shake {
   0%, 100% { transform: translateX(0); }
@@ -2921,7 +3006,7 @@ button:focus-visible,
   align-items: center;
   gap: var(--sp-3);
   background: var(--primary-tint);
-  border: 1px solid rgba(108, 75, 240, 0.2);
+  border: 1px solid rgba(0, 113, 227, 0.2);
   border-radius: var(--radius);
   padding: var(--sp-4);
   color: var(--ink-soft);
