@@ -25,6 +25,18 @@
     <a th:href="@{/my-group/location/list?openModal=true}" class="add-location-link" id="sidebarAddLocationBtn" th:if="${isManager == null or isManager}">
         <i class="ti ti-plus"></i>위치 추가
     </a>
+    <!-- 현재 보고 있는 화면에 해당하는 사이드바 바로가기에 음영(active) 표시 -->
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        document.querySelectorAll('.app-sidebar .location-sublink').forEach(function (a) {
+          var base = (a.getAttribute('href') || '').split('?')[0];
+          if (base && (path === base || path.indexOf(base + '/') === 0)) {
+            a.classList.add('active');
+          }
+        });
+      })();
+    </script>
 </div>
 
 <div th:fragment="manageSidebar(activeSection)" class="app-sidebar d-flex flex-column">
@@ -42,7 +54,6 @@
         InsightOn <span class="text-muted-group">· 우리회사</span>
     </a>
     <nav class="app-nav d-flex gap-2">
-        <a th:href="@{/}" class="nav-link"><i class="ti ti-home"></i> 홈</a>
         <a th:href="@{/my-group/reports}" class="nav-link">리포트</a>
         <a th:href="@{/my-group/engine-alerts}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions}" class="nav-link">제안</a>
@@ -106,7 +117,6 @@
     <span th:if="${autoControlMode != null}" class="status-badge neutral" style="margin-top:0; white-space:nowrap;"
           th:text="${autoControlMode.name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
     <nav class="app-nav d-flex gap-2">
-        <a th:href="@{/}" class="nav-link"><i class="ti ti-home"></i> 홈</a>
         <a th:href="@{/my-group/reports(locationId=${locationId})}" class="nav-link active">리포트</a>
         <a th:href="@{/my-group/engine-alerts(locationId=${locationId})}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions(locationId=${locationId})}" class="nav-link">제안</a>

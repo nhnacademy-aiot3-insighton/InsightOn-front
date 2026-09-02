@@ -62,48 +62,7 @@
                 </p>
             </section>
         </div>
-
-        <div class="dashboard-shortcuts">
-            <p class="section-label">바로가기</p>
-            <div class="row g-2">
-                <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/my-group/reports(locationId=${locationId})}">
-                        <span class="shortcut-icon"><i class="ti ti-file-text"></i></span>
-                        <div class="shortcut-label">리포트</div>
-                    </a>
-                </div>
-                <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/my-group/engine-alerts(locationId=${locationId})}">
-                        <span class="shortcut-icon"><i class="ti ti-alert-triangle"></i></span>
-                        <div class="shortcut-label">엔진 알람</div>
-                    </a>
-                </div>
-                <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/my-group/suggestions(locationId=${locationId})}">
-                        <span class="shortcut-icon"><i class="ti ti-bulb"></i></span>
-                        <div class="shortcut-label">AI 제안</div>
-                    </a>
-                </div>
-                <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/locations/{id}/actuators(id=${locationId})}">
-                        <span class="shortcut-icon"><i class="ti ti-adjustments"></i></span>
-                        <div class="shortcut-label">액추에이터</div>
-                    </a>
-                </div>
-                <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/my-group/sensors(locationId=${locationId})}">
-                        <span class="shortcut-icon"><i class="ti ti-cpu"></i></span>
-                        <div class="shortcut-label">센서</div>
-                    </a>
-                </div>
-                <div class="col-4 col-md-2">
-                    <a class="shortcut-card" th:href="@{/my-group/flows(locationId=${locationId})}">
-                        <span class="shortcut-icon"><i class="ti ti-git-branch"></i></span>
-                        <div class="shortcut-label">Flow</div>
-                    </a>
-                </div>
-            </div>
-        </div>
+        <!-- 하단 바로가기는 사이드바(선택된 위치 아래 펼침)로 이동해 여기서는 제거 -->
     </main>
 </div>
 
