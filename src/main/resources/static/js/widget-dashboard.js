@@ -894,14 +894,33 @@
 
     if (btnSaveLayout) {
         btnSaveLayout.addEventListener('click', () => {
-        const payload = state.map((w) => ({
-            widgetId: w.widgetId,
-            xPos: w.xPos,
-            yPos: w.yPos,
-            width: w.width,
-            height: w.height,
-            widgetConfig: {...w.widgetConfig, groupId: GROUP_ID, locationId: LOCATION_ID}
-        }));
+            // 미설정 위젯(센서/메트릭 미선택) 검증
+            const unconfiguredWidget = state.find((w) =>
+                !w.widgetConfig || !w.widgetConfig.sensorEui || !w.widgetConfig.fields || w.widgetConfig.fields.length === 0
+            );
+
+            if (unconfiguredWidget) {
+                alert('설정되지 않은 위젯이 있습니다.\n위젯 카드의 ⚙️(설정) 버튼을 눌러 센서와 메트릭 항목을 선택한 후 저장해 주세요.');
+                const el = contentEl(unconfiguredWidget.uid);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const card = el.querySelector('.grid-widget');
+                    if (card) {
+                        card.classList.add('border-danger', 'shadow-lg');
+                        setTimeout(() => card.classList.remove('border-danger', 'shadow-lg'), 3000);
+                    }
+                }
+                return;
+            }
+
+            const payload = state.map((w) => ({
+                widgetId: w.widgetId,
+                xPos: w.xPos,
+                yPos: w.yPos,
+                width: w.width,
+                height: w.height,
+                widgetConfig: {...w.widgetConfig, groupId: GROUP_ID, locationId: LOCATION_ID}
+            }));
 
         saveStatusEl.style.display = 'flex';
         saveStatusEl.textContent = '저장 중...';
