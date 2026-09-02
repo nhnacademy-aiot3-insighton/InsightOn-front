@@ -66,6 +66,26 @@ function renderMarkdown(bubble, rawText) {
     }
 }
 
+/** 페이지 로드 시 이전 대화 이력을 불러와 채팅창에 미리 채워둔다. 실패해도 빈 채팅창으로 그냥 시작. */
+async function loadChatHistory() {
+    let response;
+    try {
+        response = await fetch('/my-group/chat');
+    } catch (e) {
+        return;
+    }
+    if (!response.ok) return;
+
+    const history = await response.json();
+    history.forEach((entry) => {
+        if (entry.role === 'USER') {
+            appendChatBubble(entry.content, 'user');
+        } else {
+            renderMarkdown(appendChatBubble('', 'bot'), entry.content);
+        }
+    });
+}
+
 async function streamChatReply(message) {
     const locationId = chatPanel ? chatPanel.dataset.locationId : '';
     const bubble = appendChatBubble('', 'bot');
@@ -114,6 +134,10 @@ async function streamChatReply(message) {
     if (!received) {
         bubble.textContent = '응답이 없어요. 잠시 후 다시 시도해주세요.';
     }
+}
+
+if (chatMessages) {
+    loadChatHistory();
 }
 
 if (chatForm) {
