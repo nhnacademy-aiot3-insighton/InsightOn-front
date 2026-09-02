@@ -93,7 +93,9 @@ public class AuthController {
             }
 
             writeLoginCookies(result, servletRequest.isSecure(), servletResponse);
-            return "redirect:/";
+            // 이미 그룹에 속한 사용자는 인증 직후 랜딩을 거치지 않고 바로 대시보드로.
+            // (그룹 미가입자는 "/" 랜딩에서 그룹 생성/초대 코드 입력을 안내)
+            return result.groupId() != null ? "redirect:/my-group" : "redirect:/";
 
         } catch (FeignException e) {
             log.warn("[Auth] 로그인 처리 중 FeignException: status={}", e.status(), e);
@@ -231,7 +233,9 @@ public class AuthController {
         try {
             LoginResult result = authService.hydrateFromAccessToken(accessToken, refreshToken);
             writeLoginCookies(result, servletRequest.isSecure(), servletResponse);
-            return "redirect:/";
+            // 이미 그룹에 속한 사용자는 인증 직후 랜딩을 거치지 않고 바로 대시보드로.
+            // (그룹 미가입자는 "/" 랜딩에서 그룹 생성/초대 코드 입력을 안내)
+            return result.groupId() != null ? "redirect:/my-group" : "redirect:/";
         } catch (RuntimeException e) {
             log.warn("[Auth] 소셜 로그인 완료 처리 실패", e);
             return "redirect:/login?oauthError=1";
@@ -400,7 +404,9 @@ public class AuthController {
         try {
             LoginResult result = authService.reactivateConfirm(email, code);
             writeLoginCookies(result, servletRequest.isSecure(), servletResponse);
-            return "redirect:/";
+            // 이미 그룹에 속한 사용자는 인증 직후 랜딩을 거치지 않고 바로 대시보드로.
+            // (그룹 미가입자는 "/" 랜딩에서 그룹 생성/초대 코드 입력을 안내)
+            return result.groupId() != null ? "redirect:/my-group" : "redirect:/";
         } catch (FeignException e) {
             log.warn("[Auth] 재활성화 확인 실패: status={}", e.status());
             model.addAttribute("email", email);
