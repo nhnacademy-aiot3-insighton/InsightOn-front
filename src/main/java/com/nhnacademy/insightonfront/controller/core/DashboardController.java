@@ -8,8 +8,6 @@ import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
 import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
 import com.nhnacademy.insightonfront.adapter.core.sensor.SensorClient;
 import com.nhnacademy.insightonfront.adapter.core.sensor.dto.SensorResponse;
-import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,6 +20,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+
+import feign.FeignException;
+import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 
 
 @Controller
@@ -116,7 +118,7 @@ public class DashboardController {
         }
     }
 
-    @GetMapping({"/my-group/location/{location-id}/dashboard/widgets/{widget-id}/chart-data"})
+    @GetMapping("/groups/location/{location-id}/dashboard/widgets/{widget-id}/chart-data")
     @ResponseBody
     public ResponseEntity<ChartDataResponse> getWidgetChartData(
             @CookieValue(value = "groupId", required = false) Long groupId,
