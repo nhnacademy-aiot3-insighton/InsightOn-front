@@ -163,6 +163,8 @@ body.landing-redesign ::selection { background: var(--lp-selection); }
   border: 1px solid var(--lp-accent-border);
 }
 .lp-btn-ghost:hover { background: var(--lp-accent-weak); color: var(--lp-accent); }
+/* nav 우측 로그아웃: <form> 이 flex 행에 그대로 참여하도록 */
+.lp-logout { display: contents; }
 
 /* ---------- HERO (핀-줌: JS가 스크롤 진행도로 인라인 스타일 스크럽) ---------- */
 .lp-hero-pin {
