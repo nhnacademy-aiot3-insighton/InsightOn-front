@@ -2,16 +2,42 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<div th:fragment="sidebar" class="app-sidebar d-flex flex-column">
+<div th:fragment="sidebar" class="app-sidebar d-flex flex-column"
+     th:with="curLocId=${locationId != null ? locationId : (param.locationId != null ? param.locationId[0] : null)}">
     <p class="sidebar-label">위치</p>
     <div class="location-links">
-        <a th:each="location : ${sidebarLocations}"
-           th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}"
-           class="location-link" th:text="${location.locationName()}"></a>
+        <th:block th:each="location : ${sidebarLocations}"
+                  th:with="isActiveLoc=${curLocId != null and location.locationId().toString() == curLocId.toString()}">
+            <a th:href="@{/my-group/location/{id}/dashboard(id=${location.locationId()})}"
+               class="location-link" th:classappend="${isActiveLoc} ? ' active'"
+               th:text="${location.locationName()}"></a>
+            <!-- 사이드바에서 위치를 고르면 그 위치 아래에 바로가기가 펼쳐진다 -->
+            <div class="location-sublinks" th:if="${isActiveLoc}">
+                <a th:href="@{/my-group/location/{id}/dashboard(id=${curLocId})}" class="location-sublink"><i class="ti ti-layout-dashboard"></i>대시보드</a>
+                <a th:href="@{/my-group/reports(locationId=${curLocId})}" class="location-sublink"><i class="ti ti-file-text"></i>리포트</a>
+                <a th:href="@{/my-group/engine-alerts(locationId=${curLocId})}" class="location-sublink"><i class="ti ti-alert-triangle"></i>엔진 알람</a>
+                <a th:href="@{/my-group/suggestions(locationId=${curLocId})}" class="location-sublink"><i class="ti ti-bulb"></i>AI 제안</a>
+                <a th:href="@{/my-group/sensors(locationId=${curLocId})}" class="location-sublink"><i class="ti ti-cpu"></i>센서</a>
+                <a th:href="@{/locations/{id}/actuators(id=${curLocId})}" class="location-sublink"><i class="ti ti-adjustments"></i>액추에이터</a>
+                <a th:href="@{/my-group/flows(locationId=${curLocId})}" class="location-sublink"><i class="ti ti-git-branch"></i>Flow</a>
+            </div>
+        </th:block>
     </div>
     <a th:href="@{/my-group/location/list?openModal=true}" class="add-location-link" id="sidebarAddLocationBtn" th:if="${isManager == null or isManager}">
         <i class="ti ti-plus"></i>위치 추가
     </a>
+    <!-- 현재 보고 있는 화면에 해당하는 사이드바 바로가기에 음영(active) 표시 -->
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        document.querySelectorAll('.app-sidebar .location-sublink').forEach(function (a) {
+          var base = (a.getAttribute('href') || '').split('?')[0];
+          if (base && (path === base || path.indexOf(base + '/') === 0)) {
+            a.classList.add('active');
+          }
+        });
+      })();
+    </script>
 </div>
 
 <div th:fragment="manageSidebar(activeSection)" class="app-sidebar d-flex flex-column">
@@ -24,16 +50,17 @@
 </div>
 
 <header th:fragment="groupHeader" class="app-header d-flex align-items-center px-4 gap-4">
-    <a th:href="@{/}" class="brand text-decoration-none d-flex align-items-center gap-2">
+    <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <i class="ti ti-chart-line"></i>
         InsightOn <span class="text-muted-group">· 우리회사</span>
     </a>
     <nav class="app-nav d-flex gap-2">
-        <a th:href="@{/}" class="nav-link"><i class="ti ti-home"></i> 홈</a>
         <a th:href="@{/my-group/reports}" class="nav-link">리포트</a>
         <a th:href="@{/my-group/engine-alerts}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions}" class="nav-link">제안</a>
         <a th:href="@{/my-group/sensors}" class="nav-link">센서</a>
+        <!-- 액추에이터는 위치별 화면이라, 그룹 홈에서는 위치 목록을 거쳐 이동 -->
+        <a th:href="@{/my-group/location/list}" class="nav-link">액추에이터</a>
         <a th:href="@{/my-group/flows}" class="nav-link">Flow</a>
     </nav>
     <div class="flex-grow-1"></div>
@@ -78,11 +105,24 @@
             </li>
         </ul>
     </div>
+    <!-- 현재 화면에 해당하는 헤더 네비 항목에 active 표시 -->
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        document.querySelectorAll('.app-header .app-nav .nav-link').forEach(function (a) {
+          var base = (a.getAttribute('href') || '').split('?')[0];
+          if (base && base !== '/' && (path === base || path.indexOf(base + '/') === 0)) {
+            a.classList.add('active');
+          }
+        });
+      })();
+    </script>
     <script th:src="@{/js/notification.js}"></script>
 </header>
 
 <header th:fragment="locationHeader(locationName, locationId, autoControlMode)" class="app-header d-flex align-items-center px-4 gap-4">
-    <a th:href="@{/}" class="brand text-decoration-none d-flex align-items-center gap-2">
+    <!-- 로고(우리회사) 클릭 → 그룹 메인 대시보드로 -->
+    <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <i class="ti ti-chart-line"></i>
         우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
         <span th:text="${locationName}">위치명</span>
@@ -90,8 +130,7 @@
     <span th:if="${autoControlMode != null}" class="status-badge neutral" style="margin-top:0; white-space:nowrap;"
           th:text="${autoControlMode.name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
     <nav class="app-nav d-flex gap-2">
-        <a th:href="@{/}" class="nav-link"><i class="ti ti-home"></i> 홈</a>
-        <a th:href="@{/my-group/reports(locationId=${locationId})}" class="nav-link active">리포트</a>
+        <a th:href="@{/my-group/reports(locationId=${locationId})}" class="nav-link">리포트</a>
         <a th:href="@{/my-group/engine-alerts(locationId=${locationId})}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions(locationId=${locationId})}" class="nav-link">제안</a>
         <a th:href="@{/my-group/sensors(locationId=${locationId})}" class="nav-link">센서</a>
@@ -133,6 +172,18 @@
             </li>
         </ul>
     </div>
+    <!-- 현재 화면에 해당하는 헤더 네비 항목에 active 표시 -->
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        document.querySelectorAll('.app-header .app-nav .nav-link').forEach(function (a) {
+          var base = (a.getAttribute('href') || '').split('?')[0];
+          if (base && base !== '/' && (path === base || path.indexOf(base + '/') === 0)) {
+            a.classList.add('active');
+          }
+        });
+      })();
+    </script>
     <script th:src="@{/js/notification.js}"></script>
 </header>
 
