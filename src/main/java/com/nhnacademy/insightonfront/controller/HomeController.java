@@ -25,19 +25,17 @@ public class HomeController {
             return "index";
         }
 
-        // groupId는 로그인 시점에 GroupMember 조회로 쿠키에 캐싱해둔 값 — 신청 이력이 아니라
-        // 실제 소속 여부로 판단한다. 이미 그룹에 속한 사용자는 랜딩을 거치지 않고 바로 대시보드로.
-        if (groupId != null) {
-            return "redirect:/my-group";
-        }
-
         // 이름 쿠키는 URL 인코딩돼 있으니 디코드
         String userName = (userNameEncoded == null) ? null
                 : URLDecoder.decode(userNameEncoded, StandardCharsets.UTF_8);
         model.addAttribute("userName", userName);
 
-        // 그룹 미가입 로그인 사용자 — 랜딩에서 그룹 생성/초대 코드 입력을 안내한다.
-        model.addAttribute("authState", "NO_GROUP");
+        // groupId 는 로그인 시점에 GroupMember 조회로 쿠키에 캐싱해둔 실제 소속 여부.
+        // "/" 는 강제 리다이렉트하지 않고 항상 랜딩을 렌더한다(사용자가 언제든 사이트를
+        // 둘러볼 수 있어야 하고, /my-group 이 일시적으로 죽어도 갇히지 않도록).
+        // 그룹 보유자는 랜딩 CTA 가 "대시보드로 이동"으로 바뀌고,
+        // 로그인 직후 대시보드로 보내는 건 AuthController.login 이 담당한다.
+        model.addAttribute("authState", groupId != null ? "HAS_GROUP" : "NO_GROUP");
         return "index";
     }
 }
