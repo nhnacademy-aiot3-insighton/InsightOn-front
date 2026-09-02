@@ -434,13 +434,15 @@ public class AuthController {
     // ================================================================
 
     @GetMapping("/mypage")
-    public String myPage(Model model) {
+    public String myPage(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
         MyInfoResponse info = mypageService.findMyInfo();
         model.addAttribute("email", info.email());
         model.addAttribute("name", info.userName());
         model.addAttribute("phone", info.phoneNumber());
         model.addAttribute("groupName", info.groupName());
         model.addAttribute("oauths", mypageService.findMyOauths());
+        // 헤더 로고 클릭 시: 그룹 보유자는 대시보드로, 그 외에는 랜딩으로
+        model.addAttribute("groupId", groupId);
         return "mypage";
     }
 
@@ -449,11 +451,12 @@ public class AuthController {
     // ================================================================
 
     @GetMapping("/mypage/edit")
-    public String myPageEditForm(Model model) {
+    public String myPageEditForm(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
         MyInfoResponse info = mypageService.findMyInfo();
         model.addAttribute("email", info.email());
         model.addAttribute("name", info.userName());
         model.addAttribute("phone", info.phoneNumber());
+        model.addAttribute("groupId", groupId);
         return "mypage/edit";
     }
 
@@ -477,7 +480,8 @@ public class AuthController {
     // ================================================================
 
     @GetMapping("/mypage/password")
-    public String passwordResetForm() {
+    public String passwordResetForm(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
+        model.addAttribute("groupId", groupId);
         return "mypage/password";
     }
 
