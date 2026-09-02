@@ -118,7 +118,7 @@ public class DashboardController {
         }
     }
 
-    @GetMapping("/groups/location/{location-id}/dashboard/widgets/{widget-id}/chart-data")
+    @GetMapping({"/my-group/location/{location-id}/dashboard/widgets/{widget-id}/chart-data", "/groups/location/{location-id}/dashboard/widgets/{widget-id}/chart-data"})
     @ResponseBody
     public ResponseEntity<ChartDataResponse> getWidgetChartData(
             @CookieValue(value = "groupId", required = false) Long groupId,
