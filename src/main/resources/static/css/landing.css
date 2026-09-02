@@ -35,9 +35,10 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --lp-bg: #000000;
-    --lp-bg-elev: #1d1d1f;
-    --lp-bg-alt: #060606;
+    /* 다크 톤 상향 — 순수 검정이 과하다는 피드백 반영 */
+    --lp-bg: #1a1a1c;
+    --lp-bg-elev: #242426;
+    --lp-bg-alt: #161618;
     --lp-text: #f5f5f7;
     --lp-text-2: #e8e8ed;
     --lp-text-3: #a1a1a6;
@@ -48,19 +49,19 @@
     --lp-accent-weak: rgba(41, 151, 255, 0.16);
     --lp-accent-border: rgba(41, 151, 255, 0.34);
     --lp-neutral-weak: rgba(255, 255, 255, 0.06);
-    --lp-border: rgba(255, 255, 255, 0.08);
-    --lp-border-2: rgba(255, 255, 255, 0.14);
+    --lp-border: rgba(255, 255, 255, 0.10);
+    --lp-border-2: rgba(255, 255, 255, 0.16);
     --lp-glow: rgba(41, 151, 255, 0.42);
-    --lp-nav-bg: rgba(0, 0, 0, 0.72);
+    --lp-nav-bg: rgba(26, 26, 28, 0.72);
     --lp-shadow: rgba(0, 0, 0, 0.5);
     --lp-shadow-2: rgba(0, 0, 0, 0.7);
     --lp-selection: rgba(41, 151, 255, 0.32);
   }
 }
 :root[data-theme="dark"] {
-  --lp-bg: #000000;
-  --lp-bg-elev: #1d1d1f;
-  --lp-bg-alt: #060606;
+  --lp-bg: #1a1a1c;
+  --lp-bg-elev: #242426;
+  --lp-bg-alt: #161618;
   --lp-text: #f5f5f7;
   --lp-text-2: #e8e8ed;
   --lp-text-3: #a1a1a6;
@@ -71,10 +72,10 @@
   --lp-accent-weak: rgba(41, 151, 255, 0.16);
   --lp-accent-border: rgba(41, 151, 255, 0.34);
   --lp-neutral-weak: rgba(255, 255, 255, 0.06);
-  --lp-border: rgba(255, 255, 255, 0.08);
-  --lp-border-2: rgba(255, 255, 255, 0.14);
+  --lp-border: rgba(255, 255, 255, 0.10);
+  --lp-border-2: rgba(255, 255, 255, 0.16);
   --lp-glow: rgba(41, 151, 255, 0.42);
-  --lp-nav-bg: rgba(0, 0, 0, 0.72);
+  --lp-nav-bg: rgba(26, 26, 28, 0.72);
   --lp-shadow: rgba(0, 0, 0, 0.5);
   --lp-shadow-2: rgba(0, 0, 0, 0.7);
   --lp-selection: rgba(41, 151, 255, 0.32);
@@ -163,8 +164,21 @@ body.landing-redesign ::selection { background: var(--lp-selection); }
   border: 1px solid var(--lp-accent-border);
 }
 .lp-btn-ghost:hover { background: var(--lp-accent-weak); color: var(--lp-accent); }
-/* nav 우측 로그아웃: <form> 이 flex 행에 그대로 참여하도록 */
+/* nav 우측 로그아웃: <form> 이 flex 행에 그대로 참여하도록 + 버튼이 아닌 밑줄 텍스트 링크 */
 .lp-logout { display: contents; }
+.lp-textlink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--lp-text-4);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lp-textlink:hover { color: var(--lp-text-2); }
 
 /* ---------- HERO (핀-줌: JS가 스크롤 진행도로 인라인 스타일 스크럽) ---------- */
 .lp-hero-pin {

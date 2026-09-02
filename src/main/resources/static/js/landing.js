@@ -171,9 +171,9 @@
           ${isGuest && html`<a href="/signup" class="lp-btn">무료로 시작하기</a>`}
           ${!isGuest && S.userName && html`<a href="/mypage">${S.userName}님</a>`}
           ${!isGuest && S.state === 'NO_GROUP' && html`
+            <form method="post" action="/logout" class="lp-logout"><button type="submit" class="lp-textlink">로그아웃</button></form>
             <a href="/my-group/join" class="lp-btn lp-btn-ghost">초대 코드로 가입</a>
-            <a href="/group-registration" class="lp-btn">그룹 생성 신청</a>
-            <form method="post" action="/logout" class="lp-logout"><button type="submit" class="lp-btn lp-btn-ghost">로그아웃</button></form>`}
+            <a href="/group-registration" class="lp-btn">그룹 생성 신청</a>`}
           ${!isGuest && S.state === 'HAS_GROUP' && html`<a href="/my-group" class="lp-btn">대시보드로</a>`}
         </div>
       </nav>`;
