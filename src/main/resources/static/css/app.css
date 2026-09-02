@@ -207,7 +207,9 @@ button:focus-visible,
 .form-control,
 .form-select {
   background-color: var(--surface);
-  border-color: var(--line);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 0.55rem 0.8rem;
   color: var(--ink);
 }
 
@@ -216,8 +218,10 @@ button:focus-visible,
   background-color: var(--surface);
   color: var(--ink);
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-tint);
+  box-shadow: 0 0 0 4px var(--primary-tint);
 }
+
+.form-control::placeholder { color: var(--ink-faint); opacity: 1; }
 
 .form-control:disabled,
 .form-control[readonly] {
@@ -240,10 +244,10 @@ button:focus-visible,
 .btn-primary {
   --bs-btn-bg: var(--primary);
   --bs-btn-border-color: var(--primary);
-  --bs-btn-hover-bg: var(--ink);
-  --bs-btn-hover-border-color: var(--ink);
-  --bs-btn-active-bg: var(--ink);
-  --bs-btn-active-border-color: var(--ink);
+  --bs-btn-hover-bg: var(--primary2);
+  --bs-btn-hover-border-color: var(--primary2);
+  --bs-btn-active-bg: var(--primary2);
+  --bs-btn-active-border-color: var(--primary2);
   --bs-btn-disabled-bg: var(--line-strong);
   --bs-btn-disabled-border-color: var(--line-strong);
   --bs-btn-focus-shadow-rgb: 0, 113, 227;
@@ -577,6 +581,12 @@ button:focus-visible,
 .app-sidebar .location-sublink:hover {
   color: var(--primary);
   background: var(--primary-tint);
+}
+/* 현재 보고 있는 화면의 바로가기 (layout.html :: sidebar 의 스크립트가 부여) */
+.app-sidebar .location-sublink.active {
+  color: var(--primary);
+  background: var(--primary-tint);
+  font-weight: 600;
 }
 
 .app-sidebar .add-location-link {
@@ -2649,28 +2659,30 @@ button:focus-visible,
 
 .btn-link-quiet:hover { text-decoration: underline; color: var(--auth-link, var(--ink)); }
 
-/* ---------- OAuth ---------- */
-.auth-form-panel .oauth-list { display: flex; flex-direction: column; gap: 10px; }
-.auth-form-panel .oauth-list form { margin: 0; }
+/* ---------- OAuth (로그인/회원가입 + 마이페이지 '연동된 계정' 공통) ---------- */
+.oauth-list { display: flex; flex-direction: column; gap: 10px; }
+.oauth-list form { margin: 0; }
 
-.auth-form-panel .btn-google {
+.oauth-list .btn-google,
+.btn-google {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  height: 46px;
+  min-height: 44px;
   padding: 0 18px;
   border: 1px solid var(--line-strong);
   border-radius: 980px;
   background: var(--surface);
   color: var(--ink);
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 400;
 }
 
-.auth-form-panel .btn-google:hover { background: var(--surface-alt); border-color: var(--line-strong); }
+.oauth-list .btn-google:hover,
+.btn-google:hover { background: var(--surface-alt); border-color: var(--line-strong); color: var(--ink); }
 
 /* ---------- divider ---------- */
 .auth-form-panel .auth-divider {
