@@ -104,6 +104,18 @@
             </li>
         </ul>
     </div>
+    <!-- 현재 화면에 해당하는 헤더 네비 항목에 active 표시 -->
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        document.querySelectorAll('.app-header .app-nav .nav-link').forEach(function (a) {
+          var base = (a.getAttribute('href') || '').split('?')[0];
+          if (base && base !== '/' && (path === base || path.indexOf(base + '/') === 0)) {
+            a.classList.add('active');
+          }
+        });
+      })();
+    </script>
     <script th:src="@{/js/notification.js}"></script>
 </header>
 
@@ -117,7 +129,7 @@
     <span th:if="${autoControlMode != null}" class="status-badge neutral" style="margin-top:0; white-space:nowrap;"
           th:text="${autoControlMode.name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
     <nav class="app-nav d-flex gap-2">
-        <a th:href="@{/my-group/reports(locationId=${locationId})}" class="nav-link active">리포트</a>
+        <a th:href="@{/my-group/reports(locationId=${locationId})}" class="nav-link">리포트</a>
         <a th:href="@{/my-group/engine-alerts(locationId=${locationId})}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions(locationId=${locationId})}" class="nav-link">제안</a>
         <a th:href="@{/my-group/sensors(locationId=${locationId})}" class="nav-link">센서</a>
@@ -159,6 +171,18 @@
             </li>
         </ul>
     </div>
+    <!-- 현재 화면에 해당하는 헤더 네비 항목에 active 표시 -->
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        document.querySelectorAll('.app-header .app-nav .nav-link').forEach(function (a) {
+          var base = (a.getAttribute('href') || '').split('?')[0];
+          if (base && base !== '/' && (path === base || path.indexOf(base + '/') === 0)) {
+            a.classList.add('active');
+          }
+        });
+      })();
+    </script>
     <script th:src="@{/js/notification.js}"></script>
 </header>
 
