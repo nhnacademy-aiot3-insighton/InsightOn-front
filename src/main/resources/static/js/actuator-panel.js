@@ -27,12 +27,11 @@
         const toggle = card.querySelector('.cmd-toggle');
         if (toggle) state[toggle.dataset.command] = toggle.checked ? 'ON' : 'OFF';
 
-        // 모드 - 활성 칩이 있을 때만
-        const chipGroup = card.querySelector('.chip-select');
-        if (chipGroup) {
+        // SELECT 칩(모드/바람방향) - 카드에 여러 그룹이 있을 수 있어 각 그룹의 활성 칩을 모두 담는다
+        card.querySelectorAll('.chip-select').forEach((chipGroup) => {
             const active = chipGroup.querySelector('.cmd-chip.active');
             if (active) state[chipGroup.dataset.command] = active.dataset.value;
-        }
+        });
 
         // 온도 에어컨만 있는 위젯
         const stepper = card.querySelector('.temp-stepper');
@@ -186,12 +185,14 @@
         }
 
         box.querySelectorAll('.type-bulk-mode').forEach((btn) => {
+            // 이 버튼이 속한 그룹(mode / windDirection) — 카드에서도 같은 그룹을 골라야 한다
+            const command = btn.closest('.chip-select').dataset.command;
             btn.addEventListener('click', () => {
                 // 모드를 고르면 전원도 자동으로 켜짐 — 박스 자체의 전원 토글 표시도 같이 맞춤
                 if (typeBulkPower) typeBulkPower.checked = true;
                 syncPowerDim(box);
                 cardsOfType().forEach((card) => {
-                    const chipGroup = card.querySelector('.chip-select');
+                    const chipGroup = card.querySelector('.chip-select[data-command="' + command + '"]');
                     const toggle = card.querySelector('.cmd-toggle');
                     if (chipGroup) {
                         chipGroup.querySelectorAll('.cmd-chip').forEach((c) => c.classList.remove('active'));
