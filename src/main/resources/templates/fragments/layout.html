@@ -129,7 +129,7 @@
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <!-- 로고 심볼: static/img/logo-mark.svg 를 넣으면 자동 적용, 없으면 ti-chart-line 로 폴백 -->
         <span class="brand-mark">
-            <img src="/img/logo-mark.svg" alt="InsightOn" onerror="this.remove()">
+            <img src="/img/logo-mark.svg" alt="InsightOn" onerror="if(this.dataset.step==null){this.dataset.step='1';this.src='/img/logo-mark.png';}else if(this.dataset.step=='1'){this.dataset.step='2';this.src='/img/logo-mark.jpg';}else{this.remove();}">
             <i class="ti ti-chart-line" aria-hidden="true"></i>
         </span>
         InsightOn <span class="text-muted-group">· 우리회사</span>
@@ -185,7 +185,7 @@
     <!-- 로고(우리회사) 클릭 → 그룹 메인 대시보드로 -->
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <span class="brand-mark">
-            <img src="/img/logo-mark.svg" alt="InsightOn" onerror="this.remove()">
+            <img src="/img/logo-mark.svg" alt="InsightOn" onerror="if(this.dataset.step==null){this.dataset.step='1';this.src='/img/logo-mark.png';}else if(this.dataset.step=='1'){this.dataset.step='2';this.src='/img/logo-mark.jpg';}else{this.remove();}">
             <i class="ti ti-chart-line" aria-hidden="true"></i>
         </span>
         우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
