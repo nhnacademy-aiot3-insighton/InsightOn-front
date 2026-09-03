@@ -258,6 +258,10 @@
 
         const {sensorName, fields} = widgetTitle(w);
 
+        // 카드 상단 액센트 바 색 — 첫 메트릭 색(온도=레드, 습도=민트 …). 미설정이면 primary
+        const firstField = (w.widgetConfig.fields || [])[0];
+        const accent = firstField ? getFieldColor(firstField, 0) : 'var(--primary)';
+
         const cursorStyle = CAN_MANAGE ? 'cursor: move;' : '';
         const dragIcon = CAN_MANAGE ? '<i class="ti ti-drag-drop text-muted fs-3" title="드래그하여 위젯 이동"></i>' : '';
         const controlsHtml = CAN_MANAGE ? `
@@ -268,7 +272,7 @@
         ` : '';
 
         item.innerHTML = `
-            <div class="card grid-widget h-100 border shadow-sm rounded-3">
+            <div class="card grid-widget h-100 border shadow-sm rounded-3" style="--w-accent: ${accent};">
                 <div class="card-header grid-widget-header px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="${cursorStyle}">
                     <div class="grid-widget-label d-flex align-items-center gap-2 text-truncate" style="max-width: ${CAN_MANAGE ? 'calc(100% - 95px)' : '100%'};">
                         ${dragIcon}
@@ -308,6 +312,15 @@
             span.textContent = `${sensorName} · ${fields}`;
             span.title = `${sensorName} · ${fields}`;
         }
+        updateAccent(w);
+    }
+
+    // 카드 상단 액센트 바를 현재 첫 메트릭 색으로 갱신 (설정 변경 후)
+    function updateAccent(w) {
+        const el = contentEl(w.uid);
+        if (!el) return;
+        const f = (w.widgetConfig.fields || [])[0];
+        el.style.setProperty('--w-accent', f ? getFieldColor(f, 0) : 'var(--primary)');
     }
 
     function updateDim(w) {
@@ -772,6 +785,37 @@
             });
     }
 
+
+    const AGG_OPTIONS_BY_RANGE = {
+        '-1h': [
+            {value: '1m', label: '1분'},
+            {value: '15m', label: '15분'}
+        ],
+        '-6h': [
+            {value: '15m', label: '15분'},
+            {value: '1h', label: '1시간'}
+        ],
+        '-24h': [
+            {value: '15m', label: '15분'},
+            {value: '1h', label: '1시간'}
+        ],
+        '-7d': [
+            {value: '1h', label: '1시간'}
+        ]
+    };
+
+    function updateAggOptions(selectedRange, currentAgg) {
+        if (!aggSelect) return;
+        const allowed = AGG_OPTIONS_BY_RANGE[selectedRange] || AGG_OPTIONS_BY_RANGE['-1h'];
+        aggSelect.innerHTML = allowed.map(opt =>
+            `<option value="${opt.value}" ${opt.value === currentAgg ? 'selected' : ''}>${opt.label}</option>`
+        ).join('');
+
+        if (!allowed.some(opt => opt.value === aggSelect.value)) {
+            aggSelect.value = allowed[0].value;
+        }
+    }
+
     function openConfigModal(w) {
         editingUid = w.uid;
         const displayMode = (w.widgetConfig && w.widgetConfig.displayMode) || 'SCROLL';
@@ -786,7 +830,7 @@
             if (opt.dataset.eui === w.widgetConfig.sensorEui) sensorSelect.value = opt.value;
         });
         rangeSelect.value = w.widgetConfig.range || '-1h';
-        aggSelect.value = w.widgetConfig.aggregateWindow || '15m';
+        updateAggOptions(rangeSelect.value, w.widgetConfig.aggregateWindow || '15m');
 
         if (sensorSelect.value) {
             loadMetrics(sensorSelect.value, w.widgetConfig.fields || []);
@@ -803,6 +847,12 @@
             metricListEl.innerHTML = `<p class="metric-check-empty">먼저 센서를 선택하세요.</p>`;
         }
     });
+
+    if (rangeSelect) {
+        rangeSelect.addEventListener('change', () => {
+            updateAggOptions(rangeSelect.value, aggSelect.value);
+        });
+    }
 
     btnApplyConfig.addEventListener('click', () => {
         const w = state.find((x) => x.uid === editingUid);

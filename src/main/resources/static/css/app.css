@@ -62,6 +62,16 @@
   --amber: #e08a2f;
   --danger: #b3261e;
   --danger-tint: rgba(179, 38, 30, 0.10);
+
+  /* 세컨더리 액센트 — "시그널 코럴". primary(파랑)는 그대로 주액센트,
+     coral 은 포커스 링 / 활성 상태 / 상승 추세 / 폼 섹션 레일 등 강조 지점에만. */
+  --sig: #ff5a3c;
+  --sig-deep: #e8492e;
+  --sig-tint: rgba(255, 90, 60, 0.12);
+  --sig-rgb: 255, 90, 60;
+
+  /* 구역을 가르는 얇은 선 = 코럴. (카드 보더 같은 일반 경계선은 그대로 --line) */
+  --rule-coral: rgba(255, 90, 60, 0.38);
 }
 
 /* ============================================================
@@ -100,6 +110,12 @@
   --amber: #eaa457;
   --danger: #ff6b6b;
   --danger-tint: rgba(255, 107, 107, 0.16);
+
+  --sig: #ff6b4a;
+  --sig-deep: #ff5a3c;
+  --sig-tint: rgba(255, 107, 74, 0.18);
+  --sig-rgb: 255, 107, 74;
+  --rule-coral: rgba(255, 107, 74, 0.42);
 
   /* 시맨틱 토큰을 참조하지 않는 부트스트랩 원시값들 */
   --bs-primary: #2997ff;
@@ -169,6 +185,65 @@
   --bs-modal-color: var(--ink);
   --bs-modal-header-border-color: var(--line);
   --bs-modal-footer-border-color: var(--line);
+  --bs-modal-border-color: var(--line);
+  --bs-modal-border-radius: var(--radius-soft);
+  --bs-modal-inner-border-radius: var(--radius-soft);
+  --bs-modal-header-padding: var(--sp-4) var(--sp-5);
+  --bs-modal-padding: var(--sp-5);
+
+  /* 부트스트랩 버튼도 앱 톤(둥근 10px, 살짝 촘촘한 패딩)으로 통일 */
+  --bs-btn-border-radius: 10px;
+  --bs-btn-padding-x: 16px;
+  --bs-btn-padding-y: 8px;
+  --bs-btn-font-weight: 600;
+}
+
+/* 부트스트랩 기본 버튼 계열을 앱 팔레트로 (btn-primary / btn-outline-secondary 등) */
+.btn { letter-spacing: -0.01em; }
+.btn-primary {
+  --bs-btn-bg: var(--primary);
+  --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary2);
+  --bs-btn-hover-border-color: var(--primary2);
+  --bs-btn-active-bg: var(--primary2);
+  --bs-btn-disabled-bg: var(--line-strong);
+  --bs-btn-disabled-border-color: var(--line-strong);
+}
+.btn-outline-secondary {
+  --bs-btn-color: var(--ink);
+  --bs-btn-border-color: var(--line-strong);
+  --bs-btn-hover-color: var(--ink);
+  --bs-btn-hover-bg: var(--surface-alt);
+  --bs-btn-hover-border-color: var(--ink);
+  --bs-btn-active-bg: var(--surface-alt);
+}
+
+/* ---------- 팝업(모달) 통일 스킨 — 위치 추가 / 액추에이터 추가 / 위젯 설정 등
+   앱 안의 모든 부트스트랩 모달이 같은 톤을 공유하도록. ---------- */
+.modal-content {
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+}
+
+.modal-header {
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.modal-footer {
+  padding: var(--sp-3) var(--sp-5) var(--sp-4);
+  gap: var(--sp-2);
+}
+
+.modal-footer .btn {
+  border-radius: 10px;
+  padding: 8px 16px;
 }
 
 body {
@@ -297,7 +372,11 @@ button:focus-visible,
   color: var(--ink);
 }
 
-.app-header .brand i {
+/* 로고 심볼(=브랜드 첫 아이콘)만 파란 라운드 박스로. locationHeader 의
+   "우리회사 › 위치명" 사이 chevron 까지 파란 박스가 씌워지던 버그 수정 */
+.app-header .brand > i:first-child,
+.app-header .brand > .brand-mark {
+  position: relative;
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -307,12 +386,35 @@ button:focus-visible,
   background: linear-gradient(135deg, var(--primary), var(--primary2));
   color: #fff;
   font-size: 13px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.app-header .brand .text-muted-group {
+/* 로고 이미지: static/img/logo-mark.(svg|png|jpg) 를 넣으면 박스 위에 얹힌다.
+   파일이 없으면 onerror 로 <img> 가 제거되고 폴백 아이콘이 보인다. */
+.brand-mark img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  object-fit: contain;
+}
+
+/* 로고 이미지가 존재하면(로딩 중·성공) 폴백 그래프 아이콘을 숨긴다.
+   투명 배경 로고 뒤로 아이콘이 비쳐 보이던 문제 수정. onerror 로 <img> 가
+   빠지면 :has(img) 가 거짓이 되어 아이콘이 다시 나온다. */
+.brand-mark:has(img) > i { display: none; }
+
+.app-header .brand .text-muted-group,
+.app-header .brand > i:not(:first-child) {
   font-weight: 500;
   color: var(--ink-faint);
   font-size: var(--fs-body);
+  background: none;
+  width: auto;
+  height: auto;
+  border-radius: 0;
 }
 
 .app-nav .nav-link {
@@ -363,6 +465,96 @@ button:focus-visible,
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-body);
   border-radius: var(--radius);
+}
+
+/* ---------- 계정 메뉴 (헤더 우측 아바타 + 드롭다운) ---------- */
+.account-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--primary-tint);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.account-avatar:hover,
+.account-avatar[aria-expanded="true"] {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.account-avatar.sm {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.account-dropdown {
+  min-width: 216px;
+  padding: var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+  background: var(--surface);
+}
+
+.account-dropdown-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.account-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-body);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-dropdown-item i {
+  font-size: var(--icon-md);
+  color: var(--ink-faint);
+}
+
+.account-dropdown-item:hover {
+  background: var(--surface-alt);
+}
+
+.account-dropdown-item.is-logout {
+  color: var(--sig-deep);
+}
+
+.account-dropdown-item.is-logout i { color: var(--sig-deep); }
+
+.account-dropdown-item.is-logout:hover {
+  background: var(--sig-tint);
 }
 
 .notif-count {
@@ -565,7 +757,7 @@ button:focus-visible,
   gap: 1px;
   margin: 2px 0 8px var(--sp-4);
   padding-left: 10px;
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--rule-coral);
 }
 .app-sidebar .location-sublink {
   display: flex;
@@ -579,14 +771,15 @@ button:focus-visible,
   white-space: nowrap;
 }
 .app-sidebar .location-sublink i { font-size: var(--icon-sm); flex-shrink: 0; }
+/* 위치 선택은 파랑, 그 안의 바로가기 hover/선택은 코럴 (한 단계 더 안쪽이라는 신호) */
 .app-sidebar .location-sublink:hover {
-  color: var(--primary);
-  background: var(--primary-tint);
+  color: var(--sig-deep);
+  background: var(--sig-tint);
 }
 /* 현재 보고 있는 화면의 바로가기 (layout.html :: sidebar 의 스크립트가 부여) */
 .app-sidebar .location-sublink.active {
-  color: var(--primary);
-  background: var(--primary-tint);
+  color: var(--sig-deep);
+  background: var(--sig-tint);
   font-weight: 600;
 }
 
@@ -605,6 +798,20 @@ button:focus-visible,
 
 .app-sidebar .add-location-link:hover {
   background: var(--primary-tint);
+}
+
+/* 그룹 관리 — 헤더 드롭다운에서 내려온 3개. 사이드바 맨 아래에 고정 */
+.app-sidebar .sidebar-group-manage {
+  margin-top: auto;
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--rule-coral);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.app-sidebar .sidebar-group-manage .sidebar-label {
+  margin-bottom: var(--sp-1);
 }
 
 /* ---------- main ---------- */
@@ -635,7 +842,15 @@ button:focus-visible,
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--line);
+  background: var(--rule-coral);
+}
+
+/* 같은 카드 안에서 섹션을 가르는 코럴 헤어라인 (마이페이지 등) */
+.coral-rule {
+  height: 1px;
+  border: 0;
+  margin: var(--sp-6) 0;
+  background: var(--rule-coral);
 }
 
 .section-header {
@@ -924,16 +1139,21 @@ button:focus-visible,
 
 .location-summary-list {
   overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .location-summary-row {
   display: flex;
   align-items: center;
   gap: var(--sp-6);
-  padding: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3);
   text-decoration: none;
   color: var(--ink);
   border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
 .location-summary-row:last-child {
@@ -942,6 +1162,7 @@ button:focus-visible,
 
 .location-summary-row:hover {
   background: var(--surface-alt);
+  border-left-color: var(--rule-coral);
 }
 
 .location-summary-name {
@@ -1080,6 +1301,34 @@ button:focus-visible,
   color: #fff;
 }
 
+/* AI 응답 대기 중 — 물결치는 3점 타이핑 인디케이터 */
+.chat-bubble.is-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 11px var(--sp-3);
+}
+
+.chat-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  animation: chat-typing-wave 1.2s ease-in-out infinite;
+}
+
+.chat-typing-dot:nth-child(2) { animation-delay: 0.16s; }
+.chat-typing-dot:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes chat-typing-wave {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-typing-dot { animation: none; opacity: 0.6; }
+}
+
 .chat-bubble.bot > :first-child, .report-content > :first-child { margin-top: 0; }
 .chat-bubble.bot > :last-child, .report-content > :last-child { margin-bottom: 0; }
 .chat-bubble.bot h1, .chat-bubble.bot h2, .chat-bubble.bot h3,
@@ -1185,7 +1434,7 @@ button:focus-visible,
   gap: var(--sp-3);
   margin-top: var(--sp-6);
   padding-top: var(--sp-4);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule-coral);
 }
 
 /* =====================================================================
@@ -1226,33 +1475,63 @@ button:focus-visible,
   border-radius: var(--radius-soft);
 }
 
-.grid-stack-item > .grid-stack-item-content.grid-widget {
+.grid-stack-item > .grid-stack-item-content.grid-widget,
+.grid-stack-item > .grid-widget {
   position: relative;
   box-sizing: border-box;
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius-soft);
   box-shadow: var(--card-shadow);
-  padding: var(--sp-2) var(--sp-3);
+  padding: 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   height: 100%;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* 메트릭별 색 액센트 바 — 카드가 무슨 데이터인지 한눈에 (widget-dashboard.js 가
+   --w-accent 를 첫 필드 색으로 세팅) */
+.grid-widget::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: var(--w-accent, var(--primary));
+  z-index: 1;
 }
 
 .grid-widget:hover,
 .grid-widget:focus-within {
-  border-color: var(--primary);
+  border-color: var(--w-accent, var(--primary));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
 }
 
 .grid-stack-item.ui-draggable-dragging .grid-widget,
 .grid-stack-item.ui-resizable-resizing .grid-widget {
-  box-shadow: 0 8px 20px rgba(22, 35, 47, 0.18);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.20);
 }
+
+/* 헤더 — 대문자 모노(계기판 톤) → 읽기 쉬운 제목 */
+.grid-widget-header {
+  padding: 10px var(--sp-3) !important;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line) !important;
+  flex-shrink: 0;
+}
+
+.grid-widget-label .ti-drag-drop {
+  color: var(--ink-faint) !important;
+  font-size: var(--icon-sm) !important;
+  cursor: grab;
+}
+
+.grid-widget-body { padding: var(--sp-3) !important; }
 
 .grid-stack-item .ui-resizable-handle {
   z-index: 2;
@@ -1270,11 +1549,12 @@ button:focus-visible,
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  color: var(--ink-soft);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
   min-width: 0;
 }
 
@@ -1479,7 +1759,9 @@ button:focus-visible,
   text-decoration: none;
 }
 
-.landing-header .brand i {
+.landing-header .brand > i:first-child,
+.landing-header .brand > .brand-mark {
+  position: relative;
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -1489,6 +1771,8 @@ button:focus-visible,
   background: linear-gradient(135deg, var(--primary), var(--primary2));
   color: #fff;
   font-size: 13px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .landing-nav {
@@ -1580,40 +1864,47 @@ button:focus-visible,
 .btn-landing-secondary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--sp-2);
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 10px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 13.5px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   text-decoration: none;
   border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.06s ease;
 }
 
+.btn-landing-primary:active,
+.btn-landing-secondary:active { transform: translateY(1px); }
+
 .btn-landing-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  background: var(--primary);
   color: #fff;
 }
 
 .btn-landing-primary:hover {
-  filter: brightness(1.08);
+  background: var(--primary2);
   color: #fff;
 }
 
 .btn-landing-primary:disabled {
   background: var(--line-strong);
-  filter: none;
   cursor: not-allowed;
 }
 
 .btn-landing-secondary {
-  border-color: var(--line);
+  border-color: var(--line-strong);
   color: var(--ink);
   background: var(--surface);
 }
 
 .btn-landing-secondary:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--ink);
+  color: var(--ink);
   background: var(--surface-alt);
 }
 
@@ -2393,6 +2684,92 @@ button:focus-visible,
   margin-bottom: var(--sp-6);
 }
 
+/* 그룹 신청 화면 — 직전 신청(반려/취소) 요약, 클릭 시 펼침 */
+.prev-reg {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink-faint);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  margin-bottom: var(--sp-5);
+}
+
+.prev-reg.is-rejected { border-left-color: var(--danger); }
+
+.prev-reg > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+}
+
+.prev-reg > summary::-webkit-details-marker { display: none; }
+
+.prev-reg > summary > .ti:first-child { color: var(--ink-faint); font-size: var(--icon-md); }
+.prev-reg.is-rejected > summary > .ti:first-child { color: var(--danger); }
+
+.prev-reg-title { color: var(--ink); }
+.prev-reg-title b { font-weight: 600; }
+
+.prev-reg-caret {
+  margin-left: auto;
+  color: var(--ink-faint);
+  transition: transform 0.15s ease;
+}
+
+.prev-reg[open] .prev-reg-caret { transform: rotate(180deg); }
+
+.prev-reg-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+}
+
+.prev-reg-count + .prev-reg-caret { margin-left: var(--sp-2); }
+
+.prev-reg-list {
+  padding: 0 var(--sp-4) var(--sp-2);
+}
+
+.prev-reg-item {
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--line);
+}
+
+.prev-reg-item.is-rejected { border-left: 2px solid var(--danger); padding-left: var(--sp-2); margin-left: calc(var(--sp-2) * -1); }
+
+.prev-reg-item .pr-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-body);
+}
+
+.prev-reg-item .pr-line b { font-weight: 600; color: var(--ink); }
+
+.prev-reg-item .pr-meta {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.prev-reg-item .pr-desc {
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  margin-top: var(--sp-1);
+}
+
+.prev-reg-hint {
+  margin: 0;
+  padding: 0 var(--sp-4) var(--sp-3);
+  font-size: var(--fs-meta);
+  color: var(--danger);
+}
+
 .registration-detail-row {
   display: flex;
   justify-content: space-between;
@@ -2501,7 +2878,9 @@ button:focus-visible,
   margin-bottom: 22px;
 }
 
-.auth-form-brand i {
+.auth-form-brand i,
+.auth-form-brand > .brand-mark {
+  position: relative;
   width: 26px;
   height: 26px;
   border-radius: 7px;
@@ -2511,6 +2890,8 @@ button:focus-visible,
   background: var(--auth-accent);
   color: #fff;
   font-size: 14px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 /* ---------- inputs ---------- */
@@ -2700,7 +3081,7 @@ button:focus-visible,
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--auth-hair);
+  background: var(--rule-coral);
 }
 
 /* ---------- error / success alert (th:if 블록) ---------- */
@@ -4602,7 +4983,7 @@ button:focus-visible,
 
 .chip-option.active {
   background: var(--ink);
-  color: #fff;
+  color: var(--paper);   /* 다크모드에서 --ink 가 밝은색이라 #fff 텍스트가 안 보이던 버그 수정 */
   border-color: var(--ink);
   font-weight: 600;
 }
@@ -4645,12 +5026,20 @@ button:focus-visible,
 .filter-bar {
   display: flex;
   gap: var(--sp-2);
+  align-items: center;
   margin-bottom: var(--sp-4);
+  padding: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--rule-coral);
+  border-radius: var(--radius);
 }
 
 .filter-bar .form-select {
   max-width: 200px;
 }
+
+.filter-bar .btn-add-widget { margin-left: auto; }
 
 .report-content {
   white-space: pre-wrap;
@@ -4805,6 +5194,7 @@ button:focus-visible,
 
 .split-row:hover {
   background: var(--surface-alt);
+  border-left-color: var(--rule-coral);
 }
 
 .split-row.active {
@@ -4865,139 +5255,6 @@ button:focus-visible,
 }
 
 /* =====================================================================
-   날씨 & 대기질 패널 — 그룹 메인의 히어로 섹션. API가 주는 필드를 최대한 보여준다.
-   ===================================================================== */
-
-.weather-panel {
-  display: flex;
-  gap: var(--sp-6);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: var(--sp-6);
-  margin-bottom: var(--sp-4);
-}
-
-.weather-half,
-.air-quality-half {
-  flex: 1;
-  min-width: 0;
-}
-
-.air-quality-half {
-  border-left: 1px solid var(--line);
-  padding-left: var(--sp-6);
-}
-
-.weather-hero {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  margin-bottom: var(--sp-4);
-}
-
-.weather-hero-icon {
-  font-size: 2.75rem;
-  color: var(--primary);
-  line-height: 1;
-}
-
-.weather-hero-temp {
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1;
-}
-
-.weather-hero-sky {
-  font-size: var(--fs-body);
-  color: var(--ink-soft);
-  margin-top: var(--sp-1);
-}
-
-.weather-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 var(--sp-4);
-}
-
-.weather-meta-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--fs-meta);
-  color: var(--ink-soft);
-  padding: var(--sp-2) 0;
-  border-top: 1px solid var(--line);
-}
-
-.weather-meta-item:nth-child(1),
-.weather-meta-item:nth-child(2) {
-  border-top: none;
-}
-
-.weather-meta-value {
-  font-family: var(--font-mono);
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.aq-section-label {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--ink-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: var(--sp-3);
-}
-
-.aq-metric {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  padding: var(--sp-3) 0;
-  border-top: 1px solid var(--line);
-}
-
-.aq-metric:first-of-type {
-  border-top: none;
-  padding-top: 0;
-}
-
-.aq-metric-name {
-  font-weight: 600;
-  color: var(--ink);
-  display: block;
-}
-
-.aq-metric-caption {
-  font-size: var(--fs-meta);
-  color: var(--ink-faint);
-  display: block;
-  margin-top: var(--sp-1);
-}
-
-.aq-metric-value {
-  font-family: var(--font-mono);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin-right: var(--sp-2);
-}
-
-@media (max-width: 900px) {
-  .weather-panel {
-    flex-direction: column;
-  }
-  .air-quality-half {
-    border-left: none;
-    padding-left: 0;
-    border-top: 1px solid var(--line);
-    padding-top: var(--sp-4);
-  }
-}
-
-/* =====================================================================
    위치 대시보드 — 위젯이 많아지면 "바로가기"가 한참 아래로 밀려서, 위젯 영역만
    따로 스크롤되게 하고 바로가기는 화면 하단에 항상 보이게 고정한다.
    ===================================================================== */
@@ -5037,3 +5294,357 @@ button:focus-visible,
 .flow-page .app-main .form-select {
   font-size: var(--fs-body);
 }
+
+/* =====================================================================
+   InsightOn "Signal" 아이덴티티 — 리브랜딩이 아니라 시그니처 하나(웨이브폼)
+   + 세컨더리 색 하나(--sig 코럴) + 위계. 색·radius·폰트 토큰은 위 :root 를
+   그대로 쓰고, 여기서는 (1) 웨이브폼 모티프 (2) 통일된 폼 화면 셸
+   (3) 분위기 있는 날씨 히어로 (4) KPI 카드 위계만 추가한다.
+   ===================================================================== */
+
+/* ---------- (1) 웨이브폼 모티프 — "raw 신호 → 인사이트" 를 형태로 ----------
+   coral 을 데이터 URI 에 그대로 구워넣는다(라이트/다크 양쪽에서 읽힘).
+   폼 섹션 구분선·빈 상태·로딩 등에서 재사용. */
+.wave-divider {
+  height: 14px;
+  margin: var(--sp-5) 0;
+  opacity: 0.5;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='16' viewBox='0 0 400 16'%3E%3Cpath d='M0 8 q 20 -7 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0' fill='none' stroke='%23ff5a3c' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center/auto 100% repeat-x;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wave-divider.is-live {
+    background-size: 200px 100%;
+    animation: wave-drift 12s linear infinite;
+  }
+}
+@keyframes wave-drift {
+  to { background-position: -200px 0; }
+}
+
+/* ---------- (2) 통일된 폼 화면 셸 ----------
+   비밀번호 재설정 / 초대 코드 가입 / 그룹 신청 / 내 정보 수정 이 전부
+   같은 골격(가운데 한 컬럼 카드 + 메달 헤더 + 코럴 섹션 레일)을 공유한다. */
+.form-page {
+  min-height: calc(100vh - var(--header-height));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-8) var(--sp-6) calc(var(--sp-8) * 2);
+}
+
+.form-panel {
+  width: 100%;
+  max-width: 460px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-soft);
+  box-shadow: var(--card-shadow);
+  padding: var(--sp-8);
+}
+
+.form-panel-wide { max-width: 560px; }
+
+.form-panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+
+.form-medallion {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  color: #fff;
+  font-size: 20px;
+}
+
+.form-panel-head h1 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+
+.form-panel-head p {
+  margin: 3px 0 0;
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+/* 코럴 좌측 레일 + 라벨 — 필드 그룹을 묶어 "딱딱한 나열" 을 깬다 */
+.form-section {
+  border-left: 2px solid var(--sig);
+  padding-left: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+.form-section:last-of-type { margin-bottom: 0; }
+
+/* 코럴 헤어라인(.coral-rule)으로 이미 구역이 나뉘는 화면(마이페이지 등)에서는
+   좌측 레일을 빼서 코럴이 과하지 않게 */
+.form-section.is-flush {
+  border-left: 0;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.form-section > .form-section-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--sig-deep);
+  margin-bottom: var(--sp-3);
+}
+
+/* 폼 화면 안에서는 라벨을 대문자 모노(=계기판 톤) 대신 문장형으로 —
+   생성/신청 화면이 "AI 가 만든 폼" 처럼 딱딱하게 안 읽히도록 */
+.form-panel .settings-field { margin-bottom: var(--sp-3); }
+
+.form-panel .settings-field label {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 5px;
+}
+
+.form-panel .settings-field .field-hint {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  margin: 0 0 6px;
+}
+
+.form-panel .form-control,
+.form-panel .form-select {
+  background: var(--surface-alt);
+  border-color: var(--line-strong);
+  border-radius: 10px;
+  font-size: var(--fs-body);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.form-panel .form-control:focus,
+.form-panel .form-select:focus {
+  background: var(--surface);
+  border-color: var(--sig);
+  box-shadow: 0 0 0 4px var(--sig-tint);
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
+}
+
+.form-actions .spacer { flex: 1; }
+
+.form-actions .steps {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.form-panel .btn-landing-primary { border-radius: 11px; }
+
+.form-panel-foot {
+  text-align: center;
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--rule-coral);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+}
+
+.form-panel-foot a { font-weight: 600; }
+
+/* ---------- (3) 날씨 히어로 — 그룹 메인 ---------- */
+.wx {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius-soft);
+  box-shadow: var(--card-shadow);
+  margin-bottom: var(--sp-4);
+  color: #fff;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  min-height: 236px;
+  background: linear-gradient(135deg, #2f7fd4 0%, #56b4e6 55%, #9fd8ef 100%);
+}
+
+.wx[data-cond="clear"]  { background: linear-gradient(135deg, #2f7fd4 0%, #56b4e6 55%, #9fd8ef 100%); }
+.wx[data-cond="cloudy"] { background: linear-gradient(135deg, #5b7183 0%, #8397a8 55%, #b3c1cd 100%); }
+.wx[data-cond="rain"]   { background: linear-gradient(135deg, #3a4a57 0%, #566c7d 55%, #7d94a3 100%); }
+.wx[data-cond="snow"]   { background: linear-gradient(135deg, #5a6b82 0%, #8fa0b8 55%, #ccd6e4 100%); }
+.wx[data-tod="dusk"]    { background: linear-gradient(135deg, #23315f 0%, #7b5aa6 45%, #e8846b 100%); }
+.wx[data-tod="night"]   { background: linear-gradient(135deg, #141a2e 0%, #23305a 60%, #37406b 100%); }
+
+.wx::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.wx-glyph {
+  position: absolute;
+  right: -42px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 0;
+  font-size: 290px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+}
+
+.wx-wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 62px;
+  z-index: 0;
+  color: rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+.wx-body {
+  position: relative;
+  z-index: 1;
+  padding: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sp-3);
+}
+
+.wx-place {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.wx-temp {
+  font-size: clamp(3rem, 8vw, 4.5rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-temp sup {
+  font-size: 0.32em;
+  font-weight: 500;
+  margin-left: 3px;
+  top: -1.1em;
+}
+
+.wx-sky {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.wx-sky b { font-weight: 600; }
+
+.wx-chips {
+  position: relative;
+  z-index: 1;
+  padding: var(--sp-6);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-2);
+  align-content: center;
+}
+
+.wx-chip {
+  background: rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+}
+
+.wx-chip .k {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.wx-chip .v {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-chip.bad {
+  background: rgba(var(--sig-rgb), 0.34);
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
+@media (max-width: 820px) {
+  .wx { grid-template-columns: 1fr; }
+  .wx-body { padding-bottom: var(--sp-3); }
+  .wx-chips { padding-top: 0; }
+  .wx-glyph { font-size: 190px; right: -52px; top: 24%; transform: none; }
+}
+
+/* ---------- (4) KPI 카드 위계 — 그룹 메인 상단 요약 줄 ----------
+   기존 .widget-card 는 그대로 두고, .kpi 수식자를 붙인 카드만 메트릭별
+   액센트 색 + 큰 값(디스플레이 톤) 으로 한눈에 훑히게 한다. */
+.widget-card.kpi {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--kpi-accent, var(--primary));
+  padding: var(--sp-4) var(--sp-3) var(--sp-3);
+}
+
+.widget-card.kpi .widget-icon { color: var(--kpi-accent, var(--primary)); }
+
+.widget-card.kpi .widget-value {
+  font-family: var(--font-sans);
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-top: var(--sp-2);
+}
+
+.widget-card.kpi.danger {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  border-left-color: var(--danger);
+}
+.widget-card.kpi.danger .widget-icon,
+.widget-card.kpi.danger .widget-value { color: var(--danger); }

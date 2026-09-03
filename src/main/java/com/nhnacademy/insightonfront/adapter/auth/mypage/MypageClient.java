@@ -1,7 +1,6 @@
 package com.nhnacademy.insightonfront.adapter.auth.mypage;
 
 import com.nhnacademy.insightonfront.adapter.auth.mypage.dto.MyInfoUpdateRequest;
-import com.nhnacademy.insightonfront.adapter.auth.mypage.dto.OauthLoginRequest;
 import com.nhnacademy.insightonfront.adapter.auth.mypage.dto.PasswordChangeRequest;
 import com.nhnacademy.insightonfront.domain.mypage.dto.MyInfoResponse;
 import com.nhnacademy.insightonfront.domain.mypage.dto.OauthResponse;
@@ -41,9 +40,7 @@ public interface MypageClient {
     @GetMapping("/api/v1/users/me/oauths")
     ResponseEntity<List<OauthResponse>> findMyOauths();
 
-    @PostMapping("/api/v1/users/me/oauths/{provider}")
-    ResponseEntity<Void> linkOauth(@PathVariable("provider") String provider,
-                                   @RequestBody OauthLoginRequest request);
+    // 소셜 계정 신규 연동은 브라우저 주도 왕복이 필요해 front 의 GET /oauth/link/{provider} 가 담당한다.
 
     @DeleteMapping("/api/v1/users/me/oauths/{oauthId}")
     ResponseEntity<Void> unlinkOauth(@PathVariable("oauthId") Long oauthId);
