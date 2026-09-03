@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>그룹 메인 - InsightOn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.46.0/dist/tabler-icons.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/img/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
-    <script th:src="@{/js/theme.js}"></script>
+    <script th:replace="~{fragments/layout :: themeInit}"></script>
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -20,94 +21,72 @@
     <aside th:replace="~{fragments/layout :: sidebar}"></aside>
 
     <main class="app-main">
-        <!-- 날씨 & 대기질 — 강수 중이면 강수 형태 아이콘이 하늘 상태보다 우선 -->
-        <div class="weather-panel" th:if="${weather != null}">
-            <div class="weather-half" th:if="${weather.forecast() != null}">
-                <div class="weather-hero">
-                    <div class="weather-hero-icon">
-                        <i th:if="${weather.current() != null and (weather.current().precipitationType() == '비' or weather.current().precipitationType() == '소나기')}" class="ti ti-cloud-rain"></i>
-                        <i th:if="${weather.current() != null and weather.current().precipitationType() == '눈'}" class="ti ti-cloud-snow"></i>
-                        <i th:if="${weather.current() != null and weather.current().precipitationType() == '비/눈'}" class="ti ti-cloud-snow"></i>
-                        <i th:if="${weather.current() == null or weather.current().precipitationType() == null or weather.current().precipitationType() == '없음'}"
-                           th:switch="${weather.forecast().skyStatus()}">
-                            <i th:case="'맑음'" class="ti ti-sun"></i>
-                            <i th:case="'구름많음'" class="ti ti-cloud"></i>
-                            <i th:case="'흐림'" class="ti ti-cloud"></i>
-                            <i th:case="*" class="ti ti-help"></i>
-                        </i>
-                    </div>
-                    <div>
-                        <div class="weather-hero-temp" th:text="(${weather.current() != null ? weather.current().temp() : weather.forecast().temperature()}) + '°C'">-°C</div>
-                        <div class="weather-hero-sky" th:text="${weather.forecast().skyStatus()}">-</div>
-                    </div>
+        <!-- 날씨 히어로 — 강수 중이면 강수 형태가 하늘 상태보다 우선. 배경 그라데이션은
+             data-cond(하늘상태) + data-tod(시간대, 아래 스크립트가 부여)로 결정 -->
+        <div class="wx" th:if="${weather != null and weather.forecast() != null}"
+             th:with="pt=${weather?.current()?.precipitationType()},
+                      sky=${weather?.forecast()?.skyStatus()},
+                      pm10g=${weather?.airQuality()?.pm10Grade()},
+                      pm25g=${weather?.airQuality()?.pm25Grade()},
+                      cond=${(pt == '비' or pt == '소나기' or pt == '비/눈') ? 'rain' : (pt == '눈' ? 'snow' : ((sky == '구름많음' or sky == '흐림') ? 'cloudy' : 'clear'))},
+                      aqBad=${pm10g == '나쁨' or pm10g == '매우나쁨' or pm25g == '나쁨' or pm25g == '매우나쁨'}"
+             th:attr="data-cond=${cond}">
+            <div class="wx-body">
+                <div class="wx-place">
+                    <i class="ti ti-map-pin"></i>
+                    <span th:text="${myGroup.groupRegion() != null ? myGroup.groupRegion() : myGroup.name()}">지역</span>
                 </div>
-                <div class="weather-meta-grid">
-                    <div class="weather-meta-item">
-                        <span>최고</span>
-                        <span class="weather-meta-value" th:text="${weather.forecast().maxTemp()} + '°'">-</span>
-                    </div>
-                    <div class="weather-meta-item">
-                        <span>최저</span>
-                        <span class="weather-meta-value" th:text="${weather.forecast().minTemp()} + '°'">-</span>
-                    </div>
-                    <div class="weather-meta-item" th:if="${weather.current() != null}">
-                        <span>습도</span>
-                        <span class="weather-meta-value" th:text="${weather.current().humidity()} + '%'">-</span>
-                    </div>
-                    <div class="weather-meta-item">
-                        <span>강수확률</span>
-                        <span class="weather-meta-value" th:text="${weather.forecast().rainPrecipitation()} + '%'">-</span>
-                    </div>
-                    <div class="weather-meta-item">
-                        <span>강수형태</span>
-                        <span class="weather-meta-value" th:text="${weather.forecast().forecastPrecipitationType()}">-</span>
-                    </div>
-                    <div class="weather-meta-item" th:if="${weather.current() != null}">
-                        <span>시간당 강수량</span>
-                        <span class="weather-meta-value" th:text="${weather.current().hourlyRainFall()} + 'mm'">-</span>
-                    </div>
+                <div class="wx-temp">
+                    <span th:text="${weather.current() != null ? weather.current().temp() : weather.forecast().temperature()}">21</span><sup>°C</sup>
+                </div>
+                <div class="wx-sky">
+                    <span th:text="${sky}">구름많음</span>
+                    <span th:if="${weather.forecast().forecastPrecipitationType() != null and weather.forecast().forecastPrecipitationType() != '없음'}"
+                          th:text="' · ' + ${weather.forecast().forecastPrecipitationType()}"></span>
                 </div>
             </div>
 
-            <div class="air-quality-half" th:if="${weather.airQuality() != null}">
-                <p class="aq-section-label">대기질</p>
-                <div class="aq-metric">
-                    <div>
-                        <span class="aq-metric-name">미세먼지 PM10</span>
-                        <span class="aq-metric-caption" th:text="'24시간 평균 ' + ${weather.airQuality().pm10Value24()} + '㎍/m³'">-</span>
-                    </div>
-                    <div style="text-align:right;">
-                        <span class="aq-metric-value" th:text="${weather.airQuality().pm10Value()}">-</span>
-                        <span class="status-badge neutral" style="margin-top:0;"
-                              th:if="${weather.airQuality().pm10Grade() == '좋음' or weather.airQuality().pm10Grade() == '보통' or weather.airQuality().pm10Grade() == '정보없음'}"
-                              th:text="${weather.airQuality().pm10Grade()}">-</span>
-                        <span class="status-badge warning" style="margin-top:0;" th:if="${weather.airQuality().pm10Grade() == '나쁨'}" th:text="${weather.airQuality().pm10Grade()}"></span>
-                        <span class="status-badge danger" style="margin-top:0;" th:if="${weather.airQuality().pm10Grade() == '매우나쁨'}" th:text="${weather.airQuality().pm10Grade()}"></span>
-                    </div>
+            <div class="wx-chips">
+                <div class="wx-chip">
+                    <span class="k">최고 / 최저</span>
+                    <span class="v" th:text="${weather.forecast().maxTemp()} + '° / ' + ${weather.forecast().minTemp()} + '°'">24° / 17°</span>
                 </div>
-                <div class="aq-metric">
-                    <div>
-                        <span class="aq-metric-name">초미세먼지 PM2.5</span>
-                        <span class="aq-metric-caption" th:text="'24시간 평균 ' + ${weather.airQuality().pm25Value24()} + '㎍/m³'">-</span>
-                    </div>
-                    <div style="text-align:right;">
-                        <span class="aq-metric-value" th:text="${weather.airQuality().pm25Value()}">-</span>
-                        <span class="status-badge neutral" style="margin-top:0;"
-                              th:if="${weather.airQuality().pm25Grade() == '좋음' or weather.airQuality().pm25Grade() == '보통' or weather.airQuality().pm25Grade() == '정보없음'}"
-                              th:text="${weather.airQuality().pm25Grade()}">-</span>
-                        <span class="status-badge warning" style="margin-top:0;" th:if="${weather.airQuality().pm25Grade() == '나쁨'}" th:text="${weather.airQuality().pm25Grade()}"></span>
-                        <span class="status-badge danger" style="margin-top:0;" th:if="${weather.airQuality().pm25Grade() == '매우나쁨'}" th:text="${weather.airQuality().pm25Grade()}"></span>
-                    </div>
+                <div class="wx-chip" th:if="${weather.current() != null}">
+                    <span class="k">습도</span>
+                    <span class="v" th:text="${weather.current().humidity()} + '%'">58%</span>
+                </div>
+                <div class="wx-chip">
+                    <span class="k">강수확률</span>
+                    <span class="v" th:text="${weather.forecast().rainPrecipitation()} + '%'">20%</span>
+                </div>
+                <div class="wx-chip" th:if="${weather.airQuality() != null}" th:classappend="${aqBad} ? ' bad'">
+                    <span class="k">미세먼지 PM10</span>
+                    <span class="v" th:text="${weather.airQuality().pm10Value()} + ' · ' + ${pm10g}">32 · 보통</span>
+                </div>
+                <div class="wx-chip" th:if="${weather.airQuality() != null}"
+                     th:classappend="${pm25g == '나쁨' or pm25g == '매우나쁨'} ? ' bad'">
+                    <span class="k">초미세먼지 PM2.5</span>
+                    <span class="v" th:text="${weather.airQuality().pm25Value()} + ' · ' + ${pm25g}">18 · 보통</span>
+                </div>
+                <div class="wx-chip" th:if="${weather.current() != null and weather.current().hourlyRainFall() != null}">
+                    <span class="k">시간당 강수량</span>
+                    <span class="v" th:text="${weather.current().hourlyRainFall()} + 'mm'">0mm</span>
                 </div>
             </div>
+
+            <i class="wx-glyph ti"
+               th:classappend="${cond == 'rain' ? 'ti-cloud-rain' : (cond == 'snow' ? 'ti-cloud-snow' : (cond == 'clear' ? 'ti-sun' : 'ti-cloud'))}"></i>
+            <svg class="wx-wave" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 40 Q 60 40 90 40 T 180 36 Q 220 14 260 34 T 350 40 Q 400 54 450 34 T 560 34 Q 620 12 680 34 T 800 40 Q 860 56 920 36 T 1050 34 Q 1110 20 1160 34 L 1200 34 L 1200 60 L 0 60 Z" fill="currentColor"/>
+            </svg>
         </div>
-        <p class="split-detail-empty" style="margin-bottom: var(--sp-4);" th:if="${weather == null}">
+        <p class="split-detail-empty" style="margin-bottom: var(--sp-4);" th:if="${weather == null or weather.forecast() == null}">
             날씨/대기질 정보를 불러오지 못했어요.
         </p>
 
         <div class="row row-cols-2 row-cols-lg-5 g-2 mb-3">
             <div class="col">
-                <div class="widget-card">
+                <div class="widget-card kpi" style="--kpi-accent: var(--primary);">
                     <div class="widget-icon"><i class="ti ti-building"></i></div>
                     <div class="widget-label">그룹</div>
                     <div class="widget-value" th:text="${myGroup.name()}">그룹명</div>
@@ -115,14 +94,14 @@
                 </div>
             </div>
             <div class="col">
-                <div class="widget-card">
+                <div class="widget-card kpi" style="--kpi-accent: #4ecdc4;">
                     <div class="widget-icon"><i class="ti ti-map-pin"></i></div>
                     <div class="widget-label">전체 위치</div>
                     <div class="widget-value" th:text="${locationCount != null ? locationCount + '곳' : '-'}">-</div>
                 </div>
             </div>
             <div class="col">
-                <div class="widget-card">
+                <div class="widget-card kpi" style="--kpi-accent: #00b894;">
                     <div class="widget-icon"><i class="ti ti-cpu"></i></div>
                     <div class="widget-label">전체 센서</div>
                     <div class="widget-value" th:text="${sensorCount != null ? sensorCount + '개' : '-'}">-</div>
@@ -130,7 +109,8 @@
             </div>
 
             <div class="col" th:if="${gateway != null}">
-                <div class="widget-card" th:classappend="${gateway.status().name() == 'FAULT'} ? ' danger' : ' success'">
+                <div class="widget-card kpi" style="--kpi-accent: var(--success);"
+                     th:classappend="${gateway.status().name() == 'FAULT'} ? ' danger'">
                     <div class="widget-icon"><i class="ti ti-router"></i></div>
                     <div class="widget-label">게이트웨이</div>
                     <div class="widget-value" th:text="${gateway.name()}">-</div>
@@ -139,7 +119,7 @@
                 </div>
             </div>
             <div class="col" th:if="${gateway == null}">
-                <div class="widget-card warning">
+                <div class="widget-card kpi warning" style="--kpi-accent: var(--warning);">
                     <div class="widget-icon"><i class="ti ti-router-off"></i></div>
                     <div class="widget-label">게이트웨이</div>
                     <div class="widget-value">미등록</div>
@@ -148,7 +128,8 @@
             </div>
 
             <div class="col">
-                <div class="widget-card" th:classappend="${criticalAlertCount != null and criticalAlertCount > 0} ? ' danger' : ''">
+                <div class="widget-card kpi" style="--kpi-accent: var(--warning);"
+                     th:classappend="${criticalAlertCount != null and criticalAlertCount > 0} ? ' danger'">
                     <div class="widget-icon"><i class="ti ti-alert-triangle"></i></div>
                     <div class="widget-label">엔진 알람</div>
                     <div class="widget-value" th:text="${criticalAlertCount != null ? criticalAlertCount : '-'}">-</div>
@@ -184,5 +165,15 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
+<script>
+    // 날씨 히어로 배경을 접속 시각(시간대)에 맞춰 저녁/밤 그라데이션으로 전환
+    (function () {
+        var el = document.querySelector('.wx');
+        if (!el) return;
+        var h = new Date().getHours();
+        if (h >= 20 || h < 6) el.setAttribute('data-tod', 'night');
+        else if (h >= 17) el.setAttribute('data-tod', 'dusk');
+    })();
+</script>
 </body>
 </html>
