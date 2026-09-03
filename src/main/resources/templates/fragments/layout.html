@@ -54,7 +54,7 @@
 <!-- 브랜드 로고 심볼 — static/img/logo-mark.(svg|png|jpg) 있으면 자동 사용, 없으면 ti-chart-line 폴백.
      모든 헤더(앱/랜딩)가 이 프래그먼트를 참조해 동일하게 유지. -->
 <span th:fragment="brandMark" class="brand-mark">
-    <img src="/img/logo-mark.svg" alt="InsightOn" onerror="if(this.dataset.step==null){this.dataset.step='1';this.src='/img/logo-mark.png';}else if(this.dataset.step=='1'){this.dataset.step='2';this.src='/img/logo-mark.jpg';}else{this.remove();}">
+    <img src="/img/logo-mark.png" alt="InsightOn" onerror="if(this.dataset.step==null){this.dataset.step='1';this.src='/img/logo-mark.svg';}else if(this.dataset.step=='1'){this.dataset.step='2';this.src='/img/logo-mark.jpg';}else{this.remove();}">
     <i class="ti ti-chart-line" aria-hidden="true"></i>
 </span>
 
