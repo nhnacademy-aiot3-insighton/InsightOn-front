@@ -2606,6 +2606,69 @@ button:focus-visible,
   margin-bottom: var(--sp-6);
 }
 
+/* 그룹 신청 화면 — 직전 신청(반려/취소) 요약, 클릭 시 펼침 */
+.prev-reg {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink-faint);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  margin-bottom: var(--sp-5);
+}
+
+.prev-reg.is-rejected { border-left-color: var(--danger); }
+
+.prev-reg > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+}
+
+.prev-reg > summary::-webkit-details-marker { display: none; }
+
+.prev-reg > summary > .ti:first-child { color: var(--ink-faint); font-size: var(--icon-md); }
+.prev-reg.is-rejected > summary > .ti:first-child { color: var(--danger); }
+
+.prev-reg-title { color: var(--ink); }
+.prev-reg-title b { font-weight: 600; }
+
+.prev-reg-caret {
+  margin-left: auto;
+  color: var(--ink-faint);
+  transition: transform 0.15s ease;
+}
+
+.prev-reg[open] .prev-reg-caret { transform: rotate(180deg); }
+
+.prev-reg-body {
+  margin: 0;
+  padding: 0 var(--sp-4) var(--sp-3);
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.prev-reg-body > div {
+  display: flex;
+  gap: var(--sp-3);
+  font-size: var(--fs-meta);
+  padding: var(--sp-1) 0;
+  border-top: 1px solid var(--line);
+}
+
+.prev-reg-body dt { color: var(--ink-faint); flex-shrink: 0; min-width: 52px; }
+.prev-reg-body dd { margin: 0; color: var(--ink); }
+
+.prev-reg-hint {
+  margin: 0;
+  padding: 0 var(--sp-4) var(--sp-3);
+  font-size: var(--fs-meta);
+  color: var(--danger);
+}
+
 .registration-detail-row {
   display: flex;
   justify-content: space-between;

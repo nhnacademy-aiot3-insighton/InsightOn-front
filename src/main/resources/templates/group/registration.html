@@ -39,15 +39,29 @@
             </div>
         </div>
 
-        <div class="auth-error" th:if="${previous != null and previous.status().name() == 'REJECTED'}">
-            <i class="ti ti-x"></i>
-            <span>이전 신청("<span th:text="${previous.groupName()}"></span>")이 반려됐어요. 내용을 확인하고 다시 신청해보세요.</span>
-        </div>
-        <div class="auth-error" style="background:var(--surface-alt); color:var(--ink-soft); border-color:var(--line);"
-             th:if="${previous != null and previous.status().name() == 'CANCELLED'}">
-            <i class="ti ti-info-circle"></i>
-            <span>이전 신청("<span th:text="${previous.groupName()}"></span>")을 취소했어요. 새로 신청할 수 있어요.</span>
-        </div>
+        <!-- 직전 신청(반려/취소) — 요약만 보이고 클릭하면 상세가 펼쳐진다(정보 조회용, 전환 아님) -->
+        <details class="prev-reg" th:if="${previous != null}"
+                 th:classappend="${previous.status().name() == 'REJECTED'} ? ' is-rejected'">
+            <summary>
+                <i class="ti" th:classappend="${previous.status().name() == 'REJECTED'} ? 'ti-x' : 'ti-info-circle'"></i>
+                <span class="prev-reg-title">
+                    직전 신청 &middot; <b th:text="${previous.groupName()}">그룹명</b>
+                </span>
+                <span class="status-badge" style="margin-top:0;"
+                      th:classappend="${previous.status().name() == 'REJECTED'} ? ' danger' : ' neutral'"
+                      th:text="${previous.status().name() == 'REJECTED'} ? '반려' : '취소'">상태</span>
+                <i class="ti ti-chevron-down prev-reg-caret"></i>
+            </summary>
+            <dl class="prev-reg-body">
+                <div><dt>그룹명</dt><dd th:text="${previous.groupName()}"></dd></div>
+                <div><dt>소재지</dt><dd th:text="${previous.groupRegion()}"></dd></div>
+                <div th:if="${previous.createdAt() != null}"><dt>신청일</dt>
+                    <dd th:text="${#temporals.format(previous.createdAt(), 'yyyy-MM-dd')}"></dd></div>
+                <div th:if="${previous.description() != null and !previous.description().isEmpty()}">
+                    <dt>설명</dt><dd th:text="${previous.description()}"></dd></div>
+            </dl>
+            <p class="prev-reg-hint" th:if="${previous.status().name() == 'REJECTED'}">내용을 확인하고 아래에서 다시 신청해보세요.</p>
+        </details>
 
         <form id="registrationForm" method="post" th:action="@{/group-registration}">
             <div class="form-section">
