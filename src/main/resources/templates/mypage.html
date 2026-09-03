@@ -88,14 +88,19 @@
         <div class="settings-card">
             <h2 style="font-size:1rem; font-weight:600; margin-bottom: var(--sp-4);">연동된 계정</h2>
             <p id="socialError" class="field-hint danger" style="display:none;"></p>
+            <p th:if="${param.linked}" class="field-hint">계정을 연동했어요.</p>
+            <p th:if="${param.linkError}" class="field-hint danger"
+               th:text="${param.linkError[0] == 'already'} ? '이미 연동된 계정이에요.'
+                      : (${param.linkError[0] == 'other_account'} ? '다른 계정에 연동된 소셜 계정이에요.'
+                      : '연동에 실패했어요. 잠시 후 다시 시도해주세요.')"></p>
 
             <div id="socialList">
                 <div class="social-account-row" th:each="oauth : ${oauths}" th:data-oauth-id="${oauth.oauthId}">
                     <span class="social-icon">
-                        <i th:class="${oauth.provider == 'GOOGLE'} ? 'ti ti-brand-google' : 'ti ti-brand-github'"></i>
+                        <i th:class="${#strings.toLowerCase(oauth.provider) == 'google'} ? 'ti ti-brand-google' : 'ti ti-brand-github'"></i>
                     </span>
                     <div class="social-info">
-                        <div class="social-name" th:text="${oauth.provider}"></div>
+                        <div class="social-name" th:text="${#strings.capitalize(#strings.toLowerCase(oauth.provider))}"></div>
                         <div class="social-meta">연동됨</div>
                     </div>
                     <button type="button" class="btn btn-outline-secondary btn-unlink"
@@ -103,11 +108,15 @@
                 </div>
             </div>
 
-            <div class="oauth-list" style="margin-top: var(--sp-4);">
-                <form th:action="@{/login/google}" method="post">
+            <!-- 이미 연동된 provider 는 연동하기 버튼을 숨긴다 (linkedProviders 는 컨트롤러에서 소문자로 계산) -->
+            <div class="oauth-list" style="margin-top: var(--sp-4);"
+                 th:if="${linkedProviders == null or !linkedProviders.contains('google') or !linkedProviders.contains('github')}">
+                <form th:action="@{/oauth/link/google}" method="get"
+                      th:unless="${linkedProviders != null and linkedProviders.contains('google')}">
                     <button type="submit" class="btn-google">Google 계정 연동하기</button>
                 </form>
-                <form th:action="@{/login/github}" method="post">
+                <form th:action="@{/oauth/link/github}" method="get"
+                      th:unless="${linkedProviders != null and linkedProviders.contains('github')}">
                     <button type="submit" class="btn-google">GitHub 계정 연동하기</button>
                 </form>
             </div>
