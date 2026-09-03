@@ -8,6 +8,7 @@ import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorResponse;
 import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorRunLogResponse;
 import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ActuatorType;
 import com.nhnacademy.insightonfront.adapter.core.actuator.dto.CommandType;
+import com.nhnacademy.insightonfront.adapter.core.actuator.dto.ControlProvider;
 import com.nhnacademy.insightonfront.adapter.core.location.LocationClient;
 import com.nhnacademy.insightonfront.adapter.core.location.dto.LocationDetailResponse;
 import com.nhnacademy.insightonfront.common.dto.PageResponse;
@@ -99,7 +100,8 @@ public class ActuatorController {
         // 추가는 MANAGER 이상만 — MEMBER가 호출하면 core에 요청 보내기 전에 여기서 403
         groupPermissionService.requireManagerOrAbove(groupId, userId, "액추에이터를 추가할");
         return actuatorClient.createActuator(groupId,
-                new ActuatorRequest(locationId, form.name(), form.actuatorType(), defaultState(form.actuatorType())));
+                new ActuatorRequest(locationId, form.name(), form.actuatorType(), defaultState(form.actuatorType()),
+                        form.controlProvider()));
     }
 
     // 타입별 기본 상태 — 생성 직후 카드에 바로 의미 있는 값이 보이도록 채워줌
@@ -109,6 +111,7 @@ public class ActuatorController {
         switch (actuatorType) {
             case AIRCON -> {
                 state.put(CommandType.OPERATION_MODE.getStateKey(), "COOL");
+                state.put(CommandType.WIND_DIRECTION.getStateKey(), "FIXED");
                 state.put(CommandType.SET_TEMPERATURE.getStateKey(), 18);
             }
             case AIR_PURIFIER -> state.put(CommandType.OPERATION_MODE.getStateKey(), "AUTO");
@@ -162,6 +165,8 @@ public class ActuatorController {
         actuatorClient.deleteActuatorById(groupId, actuatorId);
     }
 
-    /** 액추에이터 추가 폼 — locationId는 URL에서 이미 정해지므로 이름·타입만 받는다. */
-    public record ActuatorCreateForm(String name, ActuatorType actuatorType) {}
+    /** 액추에이터 추가 폼 — locationId는 URL에서 이미 정해지므로 나머지만 받는다.
+     * controlProvider는 선택 — 안 주면 미연결(UNBOUND) 상태로 생성되고 제어가 거절된다.
+     * 지정하면 core가 external_device_id를 자동 생성한다. */
+    public record ActuatorCreateForm(String name, ActuatorType actuatorType, ControlProvider controlProvider) {}
 }

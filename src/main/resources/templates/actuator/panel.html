@@ -76,6 +76,7 @@
                     </label>
                 </div>
                 <div th:each="cmd : ${commandRules.get(type.name())}">
+                    <!-- 일괄 조작은 타입 전체(공급자 혼재 가능) 대상이라 중립 공통 모드로 둔다. 카드에 없는 칩은 JS가 알아서 건너뜀 -->
                     <div class="actuator-command-row" th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}">
                         <span class="actuator-command-label" th:text="${cmd.key}">OPERATION_MODE</span>
                         <div class="chip-select">
@@ -127,6 +128,11 @@
                             != null ? #temporals.format(actuator.stateUpdatedAt().
                             withOffsetSameInstant(T(java.time.ZoneOffset).ofHours(9)), 'MM-dd HH:mm')
                             + ' 갱신' : '갱신 기록 없음'}">방금 전</div>
+                            <!-- provider 미연결(UNBOUND)이면 제어 요청이 core에서 거절되므로 화면에서도 바로 알 수 있게 표시 -->
+                            <div class="field-hint" style="margin:2px 0 0;"
+                                 th:text="${actuator.controlProvider() != null
+                                    ? (actuator.controlProvider().name() + ' · ' + actuator.externalDeviceId())
+                                    : '공급자 미연결'}">SMART_THINGS · st-aircon-001</div>
                         </div>
                         <!-- 실행 이력/수정/삭제 모두 MANAGER 이상만 — 서버(ActuatorController)도 각 엔드포인트에서 다시 막는다 -->
                         <div class="dropdown" th:if="${canManage}">
@@ -158,9 +164,12 @@
                                 <span class="toggle-track"></span>
                             </label>
 
+                            <!-- SELECT 칩(모드/바람방향): core가 준 이 액추에이터의 supportedValues[stateKey] 대로 그림 (없으면 타입 기본값) -->
                             <div th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}"
-                                 class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}">
-                                <button type="button" class="chip-option cmd-chip" th:each="v : ${cmd.value.get('values')}"
+                                 class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}"
+                                 th:with="pv=${actuator.supportedValues() == null ? null : actuator.supportedValues().get(cmd.value.get('stateKey'))}">
+                                <button type="button" class="chip-option cmd-chip"
+                                        th:each="v : ${pv != null and !pv.isEmpty() ? pv : cmd.value.get('values')}"
                                         th:text="${v}" th:attr="data-value=${v}" th:disabled="${not canManage}"
                                         th:classappend="${actuator.currentState().get(cmd.value.get('stateKey'))} == ${v} ? ' active' : ''"></button>
                             </div>
@@ -193,6 +202,15 @@
                 <div class="settings-field">
                     <label for="newActuatorName">이름</label>
                     <input type="text" id="newActuatorName" class="form-control" placeholder="예: 천장형 에어컨">
+                </div>
+                <div class="settings-field">
+                    <label for="newActuatorProvider">제어 공급자</label>
+                    <select id="newActuatorProvider" class="form-select">
+                        <option value="">제품을 연결해 주세요</option>
+                        <option value="SMART_THINGS">SmartThings</option>
+                        <option value="LG_THINQ">LG ThinQ</option>
+                    </select>
+                    <p class="field-hint" style="margin-top:4px; margin-bottom:0;">공급자를 선택하면 등록 시 장치 식별자(external device id)가 자동 생성됩니다.</p>
                 </div>
                 <div class="settings-field">
                     <label>종류</label>
