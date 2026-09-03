@@ -155,11 +155,11 @@ public class FlowController {
         });
     }
 
-    /** ActuatorController.panel()과 동일한 방식으로 타입별 명령·값 규칙을 만든다(ACTUATOR_CONTROL 노드 속성 패널용). */
+    /** ACTUATOR_CONTROL 노드 속성 패널용 타입별 명령·값 규칙 (룰엔진이 지원하는 명령만 - WIND_DIRECTION 제외). */
     private Map<String, Object> actuatorCommandRules() {
         Map<String, Object> commandRules = new LinkedHashMap<>();
         for (ActuatorType type : ActuatorType.values()) {
-            commandRules.put(type.name(), ActuatorCommandPreset.forTemplate(type));
+            commandRules.put(type.name(), ActuatorCommandPreset.forFlowNode(type));
         }
         return commandRules;
     }

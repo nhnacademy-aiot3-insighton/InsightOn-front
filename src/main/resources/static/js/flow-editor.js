@@ -71,7 +71,43 @@
         return `0 ${minute} ${hour} * * *`;
     }
 
-    // buildCron의 역변환. 화면에서 만들 수 있는 3가지 형태(매일/매주/매월)만 인식하고,
+    // cron 요일 필드를 0(일)~6(토) 집합으로 정규화한다.
+    // 이 화면은 숫자 콤마열만 만들지만, AI가 생성하는 draft는 Spring CronExpression이
+    // 허용하는 이름(MON~SUN)과 범위(MON-FRI) 표기를 함께 쓰므로 둘 다 인식해야 한다.
+    const weekdayNameToIndex = {SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6};
+
+    function weekdayIndex(token) {
+        const value = token.trim().toUpperCase();
+        if (value === '7') return 0;
+        if (/^[0-6]$/.test(value)) return Number(value);
+        return Object.prototype.hasOwnProperty.call(weekdayNameToIndex, value) ? weekdayNameToIndex[value] : null;
+    }
+
+    function parseWeekdayField(field) {
+        const days = new Set();
+        for (const token of field.split(',')) {
+            const range = token.split('-');
+            if (range.length === 1) {
+                const value = weekdayIndex(range[0]);
+                if (value === null) return null;
+                days.add(value);
+            } else if (range.length === 2) {
+                const start = weekdayIndex(range[0]);
+                const end = weekdayIndex(range[1]);
+                if (start === null || end === null) return null;
+                for (let i = start; ; i = (i + 1) % 7) {
+                    days.add(i);
+                    if (i === end) break;
+                }
+            } else {
+                return null;
+            }
+        }
+        return Array.from(days);
+    }
+
+    // buildCron의 역변환. 화면에서 만들 수 있는 3가지 형태(매일/매주/매월)와
+    // AI가 draft로 만드는 요일 이름/범위 표기까지 인식하고,
     // 그 외(다른 사람이 손으로 만든 복잡한 cron 등)는 null을 돌려줘 호출부가 기본값으로 대체하게 한다.
     function parseCron(cron) {
         const parts = String(cron || '').trim().split(/\s+/);
@@ -88,8 +124,8 @@
             return {repeatType: 'MONTHLY', hour: h, minute: m, day: d, weekdays: []};
         }
         if (day === '*' && weekday !== '*') {
-            const weekdays = weekday.split(',').map(Number);
-            if (weekdays.some((value) => !Number.isInteger(value) || value < 0 || value > 6)) return null;
+            const weekdays = parseWeekdayField(weekday);
+            if (!weekdays || !weekdays.length) return null;
             return {repeatType: 'WEEKLY', hour: h, minute: m, day: null, weekdays};
         }
         if (day === '*' && weekday === '*') {
@@ -380,6 +416,10 @@
         if (selectedStateKey && Array.from(select.options).some((option) => option.value === selectedStateKey)) {
             select.value = selectedStateKey;
         }
+        // 드롭다운을 열어보지 않아도 이 기기에서 고를 수 있는 명령을 한눈에 볼 수 있게 한다.
+        const hint = select.closest('.settings-field').querySelector('.action-actuator-command-hint');
+        const labels = Object.keys(rules).map((commandType) => commandLabels[commandType] || commandType);
+        hint.textContent = labels.length ? `선택 가능: ${labels.join(' · ')}` : '';
     }
 
     // "값" 입력은 명령마다 모양이 달라(전원=선택, 온도=범위) select/number input을 동적으로 바꿔 끼운다.
@@ -426,12 +466,48 @@
             return;
         }
         summary.textContent = `${typeLabel} ${commandValueLabels[value] || value} 설정으로 바꿉니다.`;
+        const tempField = action.querySelector('.action-actuator-temp-field');
+        const tempInput = action.querySelector('.action-actuator-temp-value');
+        if (tempField.style.display !== 'none' && tempInput.value.trim()) {
+            summary.textContent += ` 온도는 ${tempInput.value.trim()}°C로 함께 바꿉니다.`;
+        }
+    }
+
+    // 이 기기 타입에서 숫자 범위로 값을 받는 명령(현재는 에어컨 온도)을 찾는다.
+    function findRangeCommandWidget(actuatorType) {
+        const rules = actuatorCommandRules[actuatorType] || {};
+        return Object.values(rules).find((widget) => widget.kind === 'RANGE') || null;
+    }
+
+    // updateActuatorState는 병합이 아니라 통째 교체라, 온도만 보내면 기존 전원 상태가 그대로 유지된다
+    // (InsightOn-core UpdateActuatorStateByGroupUseCase 참고). 그래서 "전원 켜기"를 실제로 보내면서
+    // 온도까지 같이 바꾸고 싶을 때는 팬아웃으로 별도 액션 노드를 하나 더 만들어야 하므로,
+    // 전원=켜기를 고른 경우에만 보조 온도 입력을 보여준다.
+    function updateActuatorTempFieldVisibility(action) {
+        const actuatorType = action.querySelector('.action-actuator-type').value;
+        const command = action.querySelector('.action-actuator-command').value;
+        const valueEl = action.querySelector('.action-actuator-value');
+        const tempField = action.querySelector('.action-actuator-temp-field');
+        const tempWidget = command === 'power' && valueEl && valueEl.value === 'ON'
+            ? findRangeCommandWidget(actuatorType)
+            : null;
+        tempField.style.display = tempWidget ? '' : 'none';
+        if (!tempWidget) {
+            tempField.querySelector('.action-actuator-temp-value').value = '';
+            return;
+        }
+        const tempInput = tempField.querySelector('.action-actuator-temp-value');
+        tempInput.min = String(tempWidget.min);
+        tempInput.max = String(tempWidget.max);
+        tempField.querySelector('.field-hint').textContent =
+            `비워두면 온도는 바꾸지 않고 전원만 켭니다. (${tempWidget.min}~${tempWidget.max})`;
     }
 
     function refreshActuatorFields(action, selectedCommand, selectedValue) {
         const actuatorType = action.querySelector('.action-actuator-type').value;
         populateActuatorCommandSelect(action.querySelector('.action-actuator-command'), actuatorType, selectedCommand);
         renderActuatorValueControl(action, selectedValue);
+        updateActuatorTempFieldVisibility(action);
         updateActuatorSummary(action);
     }
 
@@ -508,10 +584,16 @@
                     <div class="settings-field">
                         <label>명령</label>
                         <select class="form-select action-actuator-command" aria-label="명령"></select>
+                        <p class="field-hint action-actuator-command-hint"></p>
                     </div>
                     <div class="settings-field">
                         <label>값</label>
                         <div class="action-actuator-value-control"></div>
+                    </div>
+                    <div class="settings-field action-actuator-temp-field" style="display:none;">
+                        <label>설정 온도 (선택)</label>
+                        <input type="number" class="form-control action-actuator-temp-value" aria-label="설정 온도" placeholder="예: 24">
+                        <p class="field-hint">비워두면 온도는 바꾸지 않고 전원만 켭니다.</p>
                     </div>
                 </div>
                 <p class="field-hint action-actuator-summary" aria-live="polite"></p>
@@ -678,16 +760,20 @@
         }
         if (event.target.matches('.action-actuator-command')) {
             renderActuatorValueControl(event.target.closest('.flow-action-item'), null);
+            updateActuatorTempFieldVisibility(event.target.closest('.flow-action-item'));
             updateActuatorSummary(event.target.closest('.flow-action-item'));
         }
         if (event.target.matches('.action-actuator-value')) {
+            updateActuatorTempFieldVisibility(event.target.closest('.flow-action-item'));
             updateActuatorSummary(event.target.closest('.flow-action-item'));
         }
     });
 
     pathList.addEventListener('input', (event) => {
         if (event.target.matches('.action-required-count')) updateCountTimeout(event.target.closest('.flow-action-item'));
-        if (event.target.matches('.action-actuator-value')) updateActuatorSummary(event.target.closest('.flow-action-item'));
+        if (event.target.matches('.action-actuator-value, .action-actuator-temp-value')) {
+            updateActuatorSummary(event.target.closest('.flow-action-item'));
+        }
     });
 
     pathList.addEventListener('click', (event) => {
@@ -811,6 +897,7 @@
                 const actionType = action.querySelector('.action-type').value;
                 const actionKey = `${prefix}-action-${actionIndex + 1}`;
                 let configuration;
+                let pendingTempAction = null;
 
                 if (actionType === 'ACTUATOR_CONTROL') {
                     const actuatorType = action.querySelector('.action-actuator-type').value;
@@ -821,6 +908,26 @@
                         return showError('제어할 기기의 명령과 값을 선택해주세요.');
                     }
                     configuration = {actuatorType, command, commandValue};
+
+                    // "전원 켜기"를 고르고 온도까지 입력했으면, 팬아웃으로 온도 액션 노드를 하나 더 만든다
+                    // (같은 조건에서 나가는 별도 액션 2개 — updateActuatorTempFieldVisibility 주석 참고).
+                    const tempField = action.querySelector('.action-actuator-temp-field');
+                    const tempInput = action.querySelector('.action-actuator-temp-value');
+                    if (tempField.style.display !== 'none' && tempInput.value.trim()) {
+                        const tempWidget = findRangeCommandWidget(actuatorType);
+                        const numericTemp = Number(tempInput.value.trim());
+                        if (!tempWidget || !Number.isFinite(numericTemp)
+                            || numericTemp < tempWidget.min || numericTemp > tempWidget.max) {
+                            return showError(
+                                `설정 온도는 ${tempWidget ? `${tempWidget.min}~${tempWidget.max}` : '허용 범위'} 사이로 입력해주세요.`
+                            );
+                        }
+                        pendingTempAction = {
+                            clientNodeKey: `${actionKey}-temp`,
+                            nodeType: 'ACTUATOR_CONTROL',
+                            configuration: {actuatorType, command: tempWidget.stateKey, commandValue: String(numericTemp)}
+                        };
+                    }
                 } else {
                     const title = action.querySelector('.action-title').value.trim();
                     const message = action.querySelector('.action-message').value.trim();
@@ -861,6 +968,15 @@
 
                 nodes.push({clientNodeKey: actionKey, nodeType: actionType, configuration});
                 links.push({sourceClientNodeKey: sourceKey, targetClientNodeKey: actionKey, sourcePort, targetPort: 'in'});
+                if (pendingTempAction) {
+                    nodes.push(pendingTempAction);
+                    links.push({
+                        sourceClientNodeKey: sourceKey,
+                        targetClientNodeKey: pendingTempAction.clientNodeKey,
+                        sourcePort,
+                        targetPort: 'in'
+                    });
+                }
             }
         }
 
