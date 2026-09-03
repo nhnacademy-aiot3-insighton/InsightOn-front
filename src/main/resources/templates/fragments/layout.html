@@ -26,11 +26,20 @@
     <a th:href="@{/my-group/location/list?openModal=true}" class="add-location-link" id="sidebarAddLocationBtn" th:if="${isManager == null or isManager}">
         <i class="ti ti-plus"></i>위치 추가
     </a>
-    <!-- 현재 보고 있는 화면에 해당하는 사이드바 바로가기에 음영(active) 표시 -->
+
+    <!-- 그룹 관리 — 헤더 드롭다운에 묻혀 있던 3개를 사이드바 하단으로 펼쳐서 노출 -->
+    <div class="sidebar-group-manage" th:if="${isManager == null or isManager}">
+        <p class="sidebar-label">그룹 관리</p>
+        <a th:href="@{/my-group/manage}" class="location-link">그룹 설정</a>
+        <a th:href="@{/my-group/members}" class="location-link">멤버 관리</a>
+        <a th:href="@{/manage/gateway}" class="location-link">게이트웨이 관리</a>
+    </div>
+
+    <!-- 현재 보고 있는 화면에 해당하는 사이드바 항목에 음영(active) 표시 -->
     <script>
       (function () {
         var path = window.location.pathname;
-        document.querySelectorAll('.app-sidebar .location-sublink').forEach(function (a) {
+        document.querySelectorAll('.app-sidebar .location-sublink, .app-sidebar .sidebar-group-manage .location-link').forEach(function (a) {
           var base = (a.getAttribute('href') || '').split('?')[0];
           if (base && (path === base || path.indexOf(base + '/') === 0)) {
             a.classList.add('active');
@@ -59,21 +68,12 @@
         <a th:href="@{/my-group/engine-alerts}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions}" class="nav-link">제안</a>
         <a th:href="@{/my-group/sensors}" class="nav-link">센서</a>
-        <!-- 액추에이터는 위치별 화면이라, 그룹 홈에서는 위치 목록을 거쳐 이동 -->
-        <a th:href="@{/my-group/location/list}" class="nav-link">액추에이터</a>
+        <!-- 액추에이터는 위치별 화면이라, 그룹 홈에서는 위치 목록을 거쳐 이동.
+             목적지가 위치 목록과 같아서 active 하이라이트에서는 제외(라우팅 shim). -->
+        <a th:href="@{/my-group/location/list}" class="nav-link" data-nav-shim="true">액추에이터</a>
         <a th:href="@{/my-group/flows}" class="nav-link">Flow</a>
     </nav>
     <div class="flex-grow-1"></div>
-    <div class="dropdown">
-        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            그룹 관리
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" th:href="@{/my-group/manage}">그룹 설정</a></li>
-            <li><a class="dropdown-item" th:href="@{/my-group/members}">멤버 관리</a></li>
-            <li><a class="dropdown-item" th:href="@{/manage/gateway}">게이트웨이 관리</a></li>
-        </ul>
-    </div>
     <div class="dropdown">
         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="ti ti-bell"></i>
@@ -110,6 +110,7 @@
       (function () {
         var path = window.location.pathname;
         document.querySelectorAll('.app-header .app-nav .nav-link').forEach(function (a) {
+          if (a.dataset.navShim === 'true') return;   // 라우팅 shim 링크는 하이라이트 대상 아님
           var base = (a.getAttribute('href') || '').split('?')[0];
           if (base && base !== '/' && (path === base || path.indexOf(base + '/') === 0)) {
             a.classList.add('active');
@@ -177,6 +178,7 @@
       (function () {
         var path = window.location.pathname;
         document.querySelectorAll('.app-header .app-nav .nav-link').forEach(function (a) {
+          if (a.dataset.navShim === 'true') return;   // 라우팅 shim 링크는 하이라이트 대상 아님
           var base = (a.getAttribute('href') || '').split('?')[0];
           if (base && base !== '/' && (path === base || path.indexOf(base + '/') === 0)) {
             a.classList.add('active');
