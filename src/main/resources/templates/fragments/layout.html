@@ -2,6 +2,55 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
+<!-- 테마 판정 — 첫 페인트 전에 동기 실행돼야 라이트↔다크 깜빡임이 안 생긴다.
+     예전엔 <script src="/js/theme.js"> 외부 로드라 네트워크 왕복 동안 깜빡였음.
+     각 템플릿 <head> 에서 <script th:replace="~{fragments/layout :: themeInit}"></script> 로 인라인. -->
+<script th:fragment="themeInit">
+  (function () {
+    function readPref() {
+      var m = document.cookie.match(/(?:^|;\s*)theme=(system|light|dark)/);
+      return m ? m[1] : 'system';
+    }
+    function systemDark() {
+      return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    function resolve(pref) {
+      if (pref === 'dark' || pref === 'light') return pref;
+      return systemDark() ? 'dark' : 'light';
+    }
+    function apply(theme) {
+      var el = document.documentElement;
+      el.setAttribute('data-theme', theme);
+      el.setAttribute('data-bs-theme', theme);
+    }
+    apply(resolve(readPref()));
+    window.InsightTheme = {
+      getPref: function () { return readPref(); },
+      getResolved: function () { return resolve(readPref()); },
+      set: function (pref) {
+        if (pref !== 'system' && pref !== 'light' && pref !== 'dark') return;
+        document.cookie = 'theme=' + pref + '; path=/; max-age=31536000; samesite=lax';
+        apply(resolve(pref));
+        try {
+          window.dispatchEvent(new CustomEvent('themechange', { detail: { pref: pref, theme: resolve(pref) } }));
+        } catch (e) { /* 구형 브라우저 무시 */ }
+      }
+    };
+    if (window.matchMedia) {
+      try {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+          if (readPref() === 'system') {
+            apply(resolve('system'));
+            try {
+              window.dispatchEvent(new CustomEvent('themechange', { detail: { pref: 'system', theme: resolve('system') } }));
+            } catch (e) {}
+          }
+        });
+      } catch (e) { /* Safari < 14 등 */ }
+    }
+  })();
+</script>
+
 <div th:fragment="sidebar" class="app-sidebar d-flex flex-column"
      th:with="curLocId=${locationId != null ? locationId : (param.locationId != null ? param.locationId[0] : null)}">
     <p class="sidebar-label">위치</p>
