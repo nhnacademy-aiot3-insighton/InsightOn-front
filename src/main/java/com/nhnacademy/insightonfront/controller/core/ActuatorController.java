@@ -111,6 +111,7 @@ public class ActuatorController {
         switch (actuatorType) {
             case AIRCON -> {
                 state.put(CommandType.OPERATION_MODE.getStateKey(), "COOL");
+                state.put(CommandType.WIND_DIRECTION.getStateKey(), "FIXED");
                 state.put(CommandType.SET_TEMPERATURE.getStateKey(), 18);
             }
             case AIR_PURIFIER -> state.put(CommandType.OPERATION_MODE.getStateKey(), "AUTO");

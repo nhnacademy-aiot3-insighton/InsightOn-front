@@ -75,6 +75,7 @@
                     </label>
                 </div>
                 <div th:each="cmd : ${commandRules.get(type.name())}">
+                    <!-- 일괄 조작은 타입 전체(공급자 혼재 가능) 대상이라 중립 공통 모드로 둔다. 카드에 없는 칩은 JS가 알아서 건너뜀 -->
                     <div class="actuator-command-row" th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}">
                         <span class="actuator-command-label" th:text="${cmd.key}">OPERATION_MODE</span>
                         <div class="chip-select">
@@ -162,9 +163,12 @@
                                 <span class="toggle-track"></span>
                             </label>
 
+                            <!-- SELECT 칩(모드/바람방향): core가 준 이 액추에이터의 supportedValues[stateKey] 대로 그림 (없으면 타입 기본값) -->
                             <div th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}"
-                                 class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}">
-                                <button type="button" class="chip-option cmd-chip" th:each="v : ${cmd.value.get('values')}"
+                                 class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}"
+                                 th:with="pv=${actuator.supportedValues() == null ? null : actuator.supportedValues().get(cmd.value.get('stateKey'))}">
+                                <button type="button" class="chip-option cmd-chip"
+                                        th:each="v : ${pv != null and !pv.isEmpty() ? pv : cmd.value.get('values')}"
                                         th:text="${v}" th:attr="data-value=${v}" th:disabled="${not canManage}"
                                         th:classappend="${actuator.currentState().get(cmd.value.get('stateKey'))} == ${v} ? ' active' : ''"></button>
                             </div>
