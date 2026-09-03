@@ -37,9 +37,10 @@
                 </a>
                 <div class="d-flex align-items-center gap-2">
                     <a th:href="@{/my-group/location/{id}(id=${loc.locationId()})}" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta); text-decoration:none;">상세 보기</a>
-                    <form th:action="@{/my-group/location/{id}/toggle-mode(id=${loc.locationId()}, redirect='/my-group/location/list')}" method="post" style="display:inline;">
-                        <button type="submit" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta);">모드 전환</button>
-                    </form>
+                    <button type="button" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta); color: var(--danger);"
+                            th:if="${isManager}"
+                            th:attr="data-loc-id=${loc.locationId()}, data-loc-name=${loc.locationName()}"
+                            onclick="deleteLocationRow(this)">삭제</button>
                 </div>
             </div>
         </div>
@@ -81,6 +82,27 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    function deleteLocationRow(btn) {
+        var id = btn.getAttribute('data-loc-id');
+        var name = btn.getAttribute('data-loc-name') || '이 위치';
+        if (!id) return;
+        if (!confirm('"' + name + '" 위치를 삭제할까요? 관련 대시보드·위젯도 함께 삭제됩니다.')) return;
+        btn.disabled = true;
+        fetch('/my-group/location/' + id + '/delete', { method: 'DELETE' })
+            .then(function (res) {
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    alert('위치 삭제에 실패했어요. 잠시 후 다시 시도해주세요.');
+                    btn.disabled = false;
+                }
+            })
+            .catch(function () {
+                alert('위치 삭제 중 오류가 발생했어요.');
+                btn.disabled = false;
+            });
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('openModal') === 'true') {

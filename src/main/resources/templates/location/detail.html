@@ -43,7 +43,10 @@
                         <span class="text-muted" style="font-size: var(--fs-meta);" th:text="'ID: ' + ${location.locationId()}">ID</span>
                     </div>
                 </div>
-                <div>
+                <div class="d-flex align-items-center gap-2">
+                    <form th:action="@{/my-group/location/{id}/toggle-mode(id=${location.locationId()}, redirect='/my-group/location/' + ${location.locationId()})}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;">모드 전환</button>
+                    </form>
                     <span class="status-badge"
                           th:classappend="${location.autoControlMode().name() == 'AI_DIRECT'} ? ' success' : ' neutral'"
                           th:text="${location.autoControlMode().name() == 'AI_DIRECT'} ? 'AI 자동 제어' : '제안만 받기'">MODE</span>
@@ -58,11 +61,8 @@
                 <dd th:text="${location.locationName()}" style="margin: 0; font-weight: 600;"></dd>
 
                 <dt style="color: var(--ink-faint); font-weight: 500;">자동 제어 모드</dt>
-                <dd style="margin: 0;" class="d-flex align-items-center gap-2">
+                <dd style="margin: 0;">
                     <span th:text="${location.autoControlMode().name() == 'AI_DIRECT'} ? 'AI 자동 제어 (AI_DIRECT)' : '제안만 받기 (SUGGESTION)'"></span>
-                    <form th:action="@{/my-group/location/{id}/toggle-mode(id=${location.locationId()}, redirect='/my-group/location/' + ${location.locationId()})}" method="post" style="display:inline;">
-                        <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;">모드 전환</button>
-                    </form>
                 </dd>
 
                 <dt style="color: var(--ink-faint); font-weight: 500;">생성일</dt>

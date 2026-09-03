@@ -619,6 +619,20 @@ button:focus-visible,
   background: var(--primary-tint);
 }
 
+/* 그룹 관리 — 헤더 드롭다운에서 내려온 3개. 사이드바 맨 아래에 고정 */
+.app-sidebar .sidebar-group-manage {
+  margin-top: auto;
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.app-sidebar .sidebar-group-manage .sidebar-label {
+  margin-bottom: var(--sp-1);
+}
+
 /* ---------- main ---------- */
 
 .app-main {
