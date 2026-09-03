@@ -1393,33 +1393,63 @@ button:focus-visible,
   border-radius: var(--radius-soft);
 }
 
-.grid-stack-item > .grid-stack-item-content.grid-widget {
+.grid-stack-item > .grid-stack-item-content.grid-widget,
+.grid-stack-item > .grid-widget {
   position: relative;
   box-sizing: border-box;
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius-soft);
   box-shadow: var(--card-shadow);
-  padding: var(--sp-2) var(--sp-3);
+  padding: 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   height: 100%;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* 메트릭별 색 액센트 바 — 카드가 무슨 데이터인지 한눈에 (widget-dashboard.js 가
+   --w-accent 를 첫 필드 색으로 세팅) */
+.grid-widget::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: var(--w-accent, var(--primary));
+  z-index: 1;
 }
 
 .grid-widget:hover,
 .grid-widget:focus-within {
-  border-color: var(--primary);
+  border-color: var(--w-accent, var(--primary));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
 }
 
 .grid-stack-item.ui-draggable-dragging .grid-widget,
 .grid-stack-item.ui-resizable-resizing .grid-widget {
-  box-shadow: 0 8px 20px rgba(22, 35, 47, 0.18);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.20);
 }
+
+/* 헤더 — 대문자 모노(계기판 톤) → 읽기 쉬운 제목 */
+.grid-widget-header {
+  padding: 10px var(--sp-3) !important;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line) !important;
+  flex-shrink: 0;
+}
+
+.grid-widget-label .ti-drag-drop {
+  color: var(--ink-faint) !important;
+  font-size: var(--icon-sm) !important;
+  cursor: grab;
+}
+
+.grid-widget-body { padding: var(--sp-3) !important; }
 
 .grid-stack-item .ui-resizable-handle {
   z-index: 2;
@@ -1437,11 +1467,12 @@ button:focus-visible,
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  color: var(--ink-soft);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
   min-width: 0;
 }
 
