@@ -188,24 +188,6 @@ public class AuthController {
                         .build().toString());
     }
 
-    @PostMapping("/login/google")
-    public String loginWithGoogle(HttpSession session) {
-        session.setAttribute("userId", 1L);
-        session.setAttribute("userEmail", "google-user@insighton.io");
-        session.setAttribute("hasPassword", false);
-        session.setAttribute("linkedProviders", new ArrayList<>(List.of("GOOGLE")));
-        return "redirect:/";
-    }
-
-    @PostMapping("/login/github")
-    public String loginWithGithub(HttpSession session) {
-        session.setAttribute("userId", 1L);
-        session.setAttribute("userEmail", "github-user@insighton.io");
-        session.setAttribute("hasPassword", false);
-        session.setAttribute("linkedProviders", new ArrayList<>(List.of("GITHUB")));
-        return "redirect:/";
-    }
-
     // ================================================================
     // 소셜 로그인 — authorize·code교환·토큰발급은 전부 auth 가 한다.
     //   /oauth/authorize/{provider} : auth 의 authorize 엔드포인트로 넘겨주는 얇은 리다이렉트
@@ -220,6 +202,16 @@ public class AuthController {
             return "redirect:/login?oauthError=1";
         }
         return "redirect:" + oauthAuthBaseUrl + "/api/v1/auth/oauth/authorize/" + provider;
+    }
+
+    // 마이페이지 소셜 계정 연동 — 로그인과 동일하게 auth 의 연동 authorize 엔드포인트로 넘겨주는 얇은 리다이렉트.
+    // 이후 동의화면 → auth 콜백 → auth 가 연동까지 끝내고 /mypage?linked=1 (또는 ?linkError=..) 로 302.
+    @GetMapping("/oauth/link/{provider}")
+    public String oauthLink(@PathVariable String provider) {
+        if (!OAUTH_PROVIDERS.contains(provider)) {
+            return "redirect:/mypage?linkError=1";
+        }
+        return "redirect:" + oauthAuthBaseUrl + "/api/v1/auth/oauth/link/authorize/" + provider;
     }
 
     @GetMapping("/oauth/complete")
@@ -440,7 +432,15 @@ public class AuthController {
         model.addAttribute("name", info.userName());
         model.addAttribute("phone", info.phoneNumber());
         model.addAttribute("groupName", info.groupName());
-        model.addAttribute("oauths", mypageService.findMyOauths());
+
+        var oauths = mypageService.findMyOauths();
+        model.addAttribute("oauths", oauths);
+        // 이미 연동된 provider(소문자) 집합 — 템플릿에서 "연동하기" 버튼을 숨기는 데 쓴다.
+        Set<String> linkedProviders = oauths == null ? Set.of()
+                : oauths.stream()
+                        .map(o -> o.provider() == null ? "" : o.provider().toLowerCase())
+                        .collect(java.util.stream.Collectors.toSet());
+        model.addAttribute("linkedProviders", linkedProviders);
         // 헤더 로고 클릭 시: 그룹 보유자는 대시보드로, 그 외에는 랜딩으로
         model.addAttribute("groupId", groupId);
         return "mypage";

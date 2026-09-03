@@ -5,82 +5,122 @@
     <meta content="width=device-width, initial-scale=1" name="viewport">
     <title>그룹 신청 - InsightOn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.46.0/dist/tabler-icons.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/img/favicon.png">
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
-    <script th:src="@{/js/theme.js}"></script>
+    <script th:replace="~{fragments/layout :: themeInit}"></script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
 
 <header class="landing-header">
     <a class="brand" th:href="@{/}">
-        <i class="ti ti-chart-line"></i>
-        InsightOn
+        <span th:replace="~{fragments/layout :: brandMark}"></span>InsightOn
     </a>
+    <div class="landing-header-actions" style="margin-left:auto;">
+        <form th:action="@{/logout}" method="post" style="display:inline;">
+            <button type="submit" class="btn-landing-secondary">로그아웃</button>
+        </form>
+    </div>
 </header>
 
-<main class="auth-main">
+<main class="form-page">
 
     <!-- 아직 그룹 신청 이력이 없거나, 이전 신청이 반려/취소돼서 다시 신청할 수 있는 상태 -->
-    <div class="auth-card auth-card-wide" th:if="${state == 'FORM'}"
+    <div class="form-panel form-panel-wide" th:if="${state == 'FORM'}"
          th:with="prevRegion=${previous != null ? #strings.arraySplit(previous.groupRegion(), ' ') : null}">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-            <h1 class="m-0">그룹 신청</h1>
-            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onclick="history.back()">
-                <i class="ti ti-arrow-left"></i> 뒤로가기
-            </button>
-        </div>
-        <p class="auth-subtitle">아직 속한 그룹이 없어요. 그룹을 신청하면 관리자 승인 후 대시보드를 쓸 수 있어요.</p>
 
-        <div class="auth-error" th:if="${previous != null and previous.status().name() == 'REJECTED'}">
-            <i class="ti ti-x"></i>
-            <span>이전 신청("<span th:text="${previous.groupName()}"></span>")이 반려됐어요. 내용을 확인하고 다시 신청해보세요.</span>
+        <div class="form-panel-head">
+            <span class="form-medallion"><i class="ti ti-building"></i></span>
+            <div>
+                <h1>그룹 신청</h1>
+                <p>아직 속한 그룹이 없어요. 그룹을 신청하면 관리자 승인 후 대시보드를 쓸 수 있어요.</p>
+            </div>
         </div>
-        <div class="auth-error" style="background:var(--surface-alt); color:var(--ink-soft); border-color:var(--line);"
-             th:if="${previous != null and previous.status().name() == 'CANCELLED'}">
-            <i class="ti ti-info-circle"></i>
-            <span>이전 신청("<span th:text="${previous.groupName()}"></span>")을 취소했어요. 새로 신청할 수 있어요.</span>
-        </div>
+
+        <!-- 지난 신청 내역 — 요약(건수)만 보이고 클릭하면 전체 목록이 펼쳐진다(조회용).
+             반려된 직전 신청이 있으면 기본으로 열어둔다. -->
+        <details class="prev-reg" th:if="${previous != null or (history != null and !history.isEmpty())}"
+                 th:attr="open=${previous != null and previous.status().name() == 'REJECTED'} ? 'open' : null">
+            <summary>
+                <i class="ti ti-history"></i>
+                <span class="prev-reg-title">지난 신청 내역</span>
+                <span class="prev-reg-count"
+                      th:text="${(previous != null ? 1 : 0) + (history != null ? history.size() : 0)} + '건'">3건</span>
+                <i class="ti ti-chevron-down prev-reg-caret"></i>
+            </summary>
+            <div class="prev-reg-list">
+                <div class="prev-reg-item" th:if="${previous != null}"
+                     th:classappend="${previous.status().name() == 'REJECTED'} ? ' is-rejected'">
+                    <div class="pr-line">
+                        <b th:text="${previous.groupName()}">그룹명</b>
+                        <span class="status-badge" style="margin-top:0;"
+                              th:classappend="${previous.status().name() == 'REJECTED'} ? ' danger' : ' neutral'"
+                              th:text="${previous.status().name() == 'REJECTED'} ? '반려' : '취소'">상태</span>
+                    </div>
+                    <div class="pr-meta">
+                        <span th:text="${previous.groupRegion()}">소재지</span>
+                        <span th:if="${previous.createdAt() != null}"
+                              th:text="' · ' + ${#temporals.format(previous.createdAt(), 'yyyy-MM-dd')}"></span>
+                    </div>
+                    <div class="pr-desc" th:if="${previous.description() != null and !previous.description().isEmpty()}"
+                         th:text="${previous.description()}"></div>
+                </div>
+                <div class="prev-reg-item" th:each="item : ${history}"
+                     th:classappend="${item.status().name() == 'REJECTED'} ? ' is-rejected'">
+                    <div class="pr-line">
+                        <b th:text="${item.groupName()}">그룹명</b>
+                        <span class="status-badge" style="margin-top:0;" th:classappend="${item.status().badgeClass}"
+                              th:text="${item.status().label}">상태</span>
+                    </div>
+                    <div class="pr-meta"
+                         th:text="${item.groupRegion()} + ' · ' + ${#temporals.format(item.createdAt(), 'yyyy-MM-dd')}"></div>
+                </div>
+            </div>
+            <p class="prev-reg-hint" th:if="${previous != null and previous.status().name() == 'REJECTED'}">
+                반려된 신청 내용을 확인하고 아래에서 다시 신청해보세요.</p>
+        </details>
 
         <form id="registrationForm" method="post" th:action="@{/group-registration}">
-            <div class="settings-field">
-                <label for="groupName">그룹명</label>
-                <input class="form-control" id="groupName" name="groupName" placeholder="우리회사" required
-                       th:value="${previous != null} ? ${previous.groupName()} : ''"
-                       type="text">
-            </div>
-            <div class="row g-3">
-                <div class="col-6 settings-field">
-                    <label for="state">시/도</label>
-                    <select class="form-select" id="state" name="state" required>
-                        <option value="">선택하세요</option>
-                        <option th:each="s : ${states}" th:selected="${prevRegion != null and prevRegion[0] == s}"
-                                th:text="${s}"
-                                th:value="${s}"></option>
-                    </select>
+            <div class="form-section">
+                <div class="form-section-label"><i class="ti ti-id-badge"></i>그룹 정보</div>
+                <div class="settings-field">
+                    <label for="groupName">그룹명</label>
+                    <input class="form-control" id="groupName" name="groupName" placeholder="우리회사" required
+                           th:value="${previous != null} ? ${previous.groupName()} : ''"
+                           type="text">
                 </div>
-                <div class="col-6 settings-field">
-                    <label for="city">시/군/구</label>
-                    <select class="form-select" id="city" name="city" required>
-                        <option value="">먼저 시/도를 선택하세요</option>
-                    </select>
+                <div class="row g-3">
+                    <div class="col-6 settings-field">
+                        <label for="state">시/도</label>
+                        <select class="form-select" id="state" name="state" required>
+                            <option value="">선택하세요</option>
+                            <option th:each="s : ${states}" th:selected="${prevRegion != null and prevRegion[0] == s}"
+                                    th:text="${s}"
+                                    th:value="${s}"></option>
+                        </select>
+                    </div>
+                    <div class="col-6 settings-field">
+                        <label for="city">시/군/구</label>
+                        <select class="form-select" id="city" name="city" required>
+                            <option value="">먼저 시/도를 선택하세요</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="settings-field">
+                    <label for="description">설명 <span class="field-hint" style="display:inline; margin:0;">(선택)</span></label>
+                    <textarea class="form-control" id="description" name="description" placeholder="어떤 그룹인지 간단히 설명해주세요"
+                              rows="3"
+                              th:text="${previous != null} ? ${previous.description()} : ''"></textarea>
                 </div>
             </div>
-            <div class="settings-field">
-                <label for="description">설명 <span class="field-hint" style="display:inline; margin:0;">(선택)</span></label>
-                <textarea class="form-control" id="description" name="description" placeholder="어떤 그룹인지 간단히 설명해주세요"
-                          rows="3"
-                          th:text="${previous != null} ? ${previous.description()} : ''"></textarea>
-            </div>
-            <div class="settings-actions d-flex gap-2" style="justify-content: stretch;">
-                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1; border-radius: var(--radius-md);" type="button" onclick="history.back()">
-                    <i class="ti ti-arrow-left"></i> 뒤로가기
-                </button>
-                <button class="btn-landing-primary justify-content-center" style="flex: 2;" type="submit">
-                    신청하기<i class="ti ti-arrow-right"></i>
-                </button>
+
+            <div class="form-actions">
+                <button class="btn-landing-secondary" type="button" onclick="history.back()">뒤로가기</button>
+                <span class="spacer"></span>
+                <button class="btn-landing-primary" type="submit">신청하기</button>
             </div>
         </form>
 
@@ -93,12 +133,15 @@
     </div>
 
     <!-- 이미 낸 신청이 승인 대기 중인 상태 -->
-    <div class="auth-card" th:if="${state == 'PENDING'}">
-        <div class="registration-status-head">
-            <h1 style="margin-bottom:0;">그룹 신청</h1>
-            <span class="status-badge warning">PENDING</span>
+    <div class="form-panel" th:if="${state == 'PENDING'}">
+        <div class="form-panel-head">
+            <span class="form-medallion" style="background: linear-gradient(135deg, var(--warning), var(--amber));"><i class="ti ti-clock-hour-4"></i></span>
+            <div>
+                <h1>그룹 신청</h1>
+                <p>관리자 승인을 기다리고 있어요. 페이지를 새로고침하면 최신 상태를 확인할 수 있어요.</p>
+            </div>
+            <span class="status-badge warning" style="margin-left:auto; margin-top:0;">PENDING</span>
         </div>
-        <p class="auth-subtitle">관리자 승인을 기다리고 있어요. 페이지를 새로고침하면 최신 상태를 확인할 수 있어요.</p>
 
         <dl style="margin:0;">
             <div class="registration-detail-row">
@@ -115,28 +158,10 @@
             </div>
         </dl>
 
-        <form method="post" style="margin-top: var(--sp-6);" th:action="@{/group-registration/cancel}">
+        <form method="post" class="form-actions" th:action="@{/group-registration/cancel}">
             <input name="groupRegistrationId" th:value="${registration.groupRegistrationId()}" type="hidden">
-            <button class="btn btn-outline-secondary w-100" type="submit">신청 취소</button>
+            <button class="btn-landing-secondary" type="submit" style="width:100%; justify-content:center;">신청 취소</button>
         </form>
-    </div>
-
-    <!-- 과거 신청 이력 (현재 화면에 나온 최신 건 제외, 최신순) -->
-    <div class="auth-card auth-card-wide" th:if="${history != null and !history.isEmpty()}" style="margin-top: var(--sp-6);">
-        <h1 style="font-size:1.125rem; margin-bottom: var(--sp-2);">지난 신청 내역</h1>
-        <dl style="margin:0;">
-            <div class="registration-detail-row" th:each="item : ${history}">
-                <dt>
-                    <div th:text="${item.groupName()}"></div>
-                    <div style="color:var(--ink-faint); font-size:var(--fs-meta); margin-top:2px;"
-                         th:text="${item.groupRegion()} + ' · ' + ${#temporals.format(item.createdAt(), 'yyyy-MM-dd')}"></div>
-                </dt>
-                <dd>
-                    <span class="status-badge" style="margin-top:0;" th:classappend="${item.status().badgeClass}"
-                          th:text="${item.status().label}"></span>
-                </dd>
-            </div>
-        </dl>
     </div>
 
     <!-- 이미 대기 중인 신청이 있는데 다시 제출했을 때(409) 뜨는 안내 팝업 -->

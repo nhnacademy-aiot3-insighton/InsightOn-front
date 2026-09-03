@@ -2,7 +2,6 @@ package com.nhnacademy.insightonfront.domain.mypage;
 
 import com.nhnacademy.insightonfront.adapter.auth.mypage.MypageClient;
 import com.nhnacademy.insightonfront.adapter.auth.mypage.dto.MyInfoUpdateRequest;
-import com.nhnacademy.insightonfront.adapter.auth.mypage.dto.OauthLoginRequest;
 import com.nhnacademy.insightonfront.adapter.auth.mypage.dto.PasswordChangeRequest;
 import com.nhnacademy.insightonfront.domain.mypage.dto.MyInfoResponse;
 import com.nhnacademy.insightonfront.domain.mypage.dto.OauthResponse;
@@ -40,10 +39,6 @@ public class MypageService {
 
     public List<OauthResponse> findMyOauths() {
         return mypageClient.findMyOauths().getBody();
-    }
-
-    public void linkOauth(String provider, String code) {
-        mypageClient.linkOauth(provider, new OauthLoginRequest(code));
     }
 
     public void unlinkOauth(Long oauthId) {
