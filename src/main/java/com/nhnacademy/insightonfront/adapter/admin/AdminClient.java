@@ -2,14 +2,17 @@ package com.nhnacademy.insightonfront.adapter.admin;
 
 import com.nhnacademy.insightonfront.adapter.admin.dto.AdminFindUsersResponse;
 import com.nhnacademy.insightonfront.adapter.admin.dto.AdminUserDetailResponse;
+import com.nhnacademy.insightonfront.adapter.admin.dto.RoleResponse;
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.UserLoginResponse;
-import com.nhnacademy.insightonfront.domain.admin.dto.RoleChangeRequest;
+import com.nhnacademy.insightonfront.common.dto.PageResponse;
+import com.nhnacademy.insightonfront.domain.admin.dto.RolesUpdateRequest;
 import com.nhnacademy.insightonfront.domain.auth.dto.UserLoginRequest;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 프론트 서버 → 게이트웨이(→ 인증 서버) 관리자 회원관리 호출.
@@ -31,7 +34,7 @@ public interface AdminClient {
 
     // 회원 목록 조회 (검색·페이징)
     @GetMapping("/api/v1/admin/users")
-    ResponseEntity<Page<AdminFindUsersResponse>> findUsers(
+    ResponseEntity<PageResponse<AdminFindUsersResponse>> findUsers(
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String userName,
             @RequestParam(required = false) String status,   // Status enum name (예: ACTIVE)
@@ -41,6 +44,10 @@ public interface AdminClient {
     // 회원 상세 조회
     @GetMapping("/api/v1/admin/users/{userId}")
     ResponseEntity<AdminUserDetailResponse> findUserDetail(@PathVariable("userId") Long userId);
+
+    // 지정 가능한 권한 목록
+    @GetMapping("/api/v1/admin/roles")
+    ResponseEntity<List<RoleResponse>> findRoles();
 
     // 회원 계정 차단
     @PostMapping("/api/v1/admin/users/{userId}/block")
@@ -54,11 +61,11 @@ public interface AdminClient {
     @PostMapping("/api/v1/admin/users/{userId}/activate")
     ResponseEntity<Void> activate(@PathVariable("userId") Long userId);
 
-    // 회원 권한 변경
+    // 회원 권한 전체 교체 (목록이 최종 상태, auth 가 유지/추가/삭제 계산)
     @PutMapping("/api/v1/admin/users/{userId}/roles")
-    ResponseEntity<Void> changeRole(
+    ResponseEntity<Void> updateRoles(
             @PathVariable("userId") Long userId,
-            @RequestBody RoleChangeRequest request);
+            @RequestBody RolesUpdateRequest request);
 
     // 강제 로그아웃
     @PostMapping("/api/v1/admin/users/{userId}/force-logout")
