@@ -1,12 +1,15 @@
 package com.nhnacademy.insightonfront.controller.ai;
 
+import com.nhnacademy.insightonfront.adapter.ai.chat.ChatClient;
 import com.nhnacademy.insightonfront.adapter.ai.chat.dto.ChatMessageRequest;
+import com.nhnacademy.insightonfront.adapter.ai.chat.dto.ChatMessageResponse;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,9 +17,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.databind.ObjectMapper;
@@ -32,10 +37,24 @@ import tools.jackson.databind.ObjectMapper;
 public class ChatController {
 
     private final ObjectMapper objectMapper;
+    private final ChatClient chatClient;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     @Value("${service-url.gateway}")
     private String gatewayUrl;
+
+    /**
+     * 이전 대화 이력 조회. 스트리밍이 필요 없는 단순 JSON 응답이라 chat()과 달리 Feign(ChatClient)을 쓴다
+     * - Authorization은 AuthorizationRequestInterceptor가 accessToken 쿠키에서 자동으로 붙여준다.
+     */
+    @GetMapping("/my-group/chat")
+    @ResponseBody
+    public List<ChatMessageResponse> history(@CookieValue(value = "groupId", required = false) Long groupId) {
+        if (groupId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        return chatClient.getHistory(groupId);
+    }
 
     @PostMapping("/my-group/chat")
     public SseEmitter chat(@CookieValue(value = "accessToken", required = false) String accessToken,

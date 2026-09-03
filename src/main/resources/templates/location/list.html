@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>위치 관리 - InsightOn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.46.0/dist/tabler-icons.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/img/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
-    <script th:src="@{/js/theme.js}"></script>
+    <script th:replace="~{fragments/layout :: themeInit}"></script>
     <link th:href="@{/css/app.css}" rel="stylesheet">
 </head>
 <body>
@@ -37,9 +38,10 @@
                 </a>
                 <div class="d-flex align-items-center gap-2">
                     <a th:href="@{/my-group/location/{id}(id=${loc.locationId()})}" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta); text-decoration:none;">상세 보기</a>
-                    <form th:action="@{/my-group/location/{id}/toggle-mode(id=${loc.locationId()}, redirect='/my-group/location/list')}" method="post" style="display:inline;">
-                        <button type="submit" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta);">모드 전환</button>
-                    </form>
+                    <button type="button" class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta); color: var(--danger);"
+                            th:if="${isManager}"
+                            th:attr="data-loc-id=${loc.locationId()}, data-loc-name=${loc.locationName()}"
+                            onclick="deleteLocationRow(this)">삭제</button>
                 </div>
             </div>
         </div>
@@ -52,20 +54,20 @@
 <!-- 위치 추가 모달 팝업 -->
 <div class="modal fade" id="createLocationModal" tabindex="-1" aria-labelledby="createLocationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: var(--radius-lg); border: 1px solid var(--line); box-shadow: var(--shadow-lg);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--line); padding: var(--sp-4);">
-                <h5 class="modal-title font-weight-bold" id="createLocationModalLabel" style="font-size: 1.1rem; color: var(--ink);">새 위치 추가</h5>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createLocationModalLabel">새 위치 추가</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form th:action="@{/my-group/location/create}" method="post">
-                <div class="modal-body" style="padding: var(--sp-4);">
-                    <div class="mb-3">
-                        <label for="locationName" class="form-label" style="font-weight: 500; color: var(--ink);">위치 이름</label>
-                        <input type="text" id="locationName" name="locationName" class="form-control" placeholder="예: 2층 사무실, B동 로비" required style="border-radius: var(--radius-md);">
+                <div class="modal-body">
+                    <div class="settings-field">
+                        <label for="locationName">위치 이름</label>
+                        <input type="text" id="locationName" name="locationName" class="form-control" placeholder="예: 2층 사무실, B동 로비" required>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--line); padding: var(--sp-3) var(--sp-4);">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">취소</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
                     <button type="submit" class="btn-landing-primary">
                         <i class="ti ti-plus"></i>추가하기
                     </button>
@@ -74,13 +76,32 @@
         </div>
     </div>
 </div>
-    </main>
-</div>
 
 <div th:replace="~{fragments/layout :: chatWidget}"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    function deleteLocationRow(btn) {
+        var id = btn.getAttribute('data-loc-id');
+        var name = btn.getAttribute('data-loc-name') || '이 위치';
+        if (!id) return;
+        if (!confirm('"' + name + '" 위치를 삭제할까요? 관련 대시보드·위젯도 함께 삭제됩니다.')) return;
+        btn.disabled = true;
+        fetch('/my-group/location/' + id + '/delete', { method: 'DELETE' })
+            .then(function (res) {
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    alert('위치 삭제에 실패했어요. 잠시 후 다시 시도해주세요.');
+                    btn.disabled = false;
+                }
+            })
+            .catch(function () {
+                alert('위치 삭제 중 오류가 발생했어요.');
+                btn.disabled = false;
+            });
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('openModal') === 'true') {
