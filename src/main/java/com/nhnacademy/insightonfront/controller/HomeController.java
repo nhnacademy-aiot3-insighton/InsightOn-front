@@ -1,12 +1,10 @@
 package com.nhnacademy.insightonfront.controller;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -15,16 +13,9 @@ import java.nio.charset.StandardCharsets;
 @Controller
 public class HomeController {
 
-    /**
-     * 파비콘 파일을 두지 않으므로, 브라우저가 자동으로 보내는 /favicon.ico 요청은
-     * 204로 조용히 응답한다(정적 리소스 404 → GlobalExceptionHandler 로 넘어가
-     * 에러 로그가 쌓이는 것 방지).
-     */
-    @GetMapping("/favicon.ico")
-    @ResponseBody
-    public ResponseEntity<Void> favicon() {
-        return ResponseEntity.noContent().build();
-    }
+    // /favicon.ico 는 src/main/resources/static/favicon.ico 를 스프링부트 정적 리소스
+    // 핸들러가 그대로 서빙한다. (예전엔 파비콘 파일이 없어서 204로 눌렀는데,
+    // 파일이 생겨서 그 핸들러를 제거함 — 남겨두면 정적 파일보다 우선해서 아이콘이 안 뜬다.)
 
     @GetMapping("/")
     public String home(@CookieValue(value = "accessToken", required = false) String accessToken,
