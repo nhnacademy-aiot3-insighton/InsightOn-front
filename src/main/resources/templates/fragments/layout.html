@@ -51,6 +51,13 @@
   })();
 </script>
 
+<!-- 브랜드 로고 심볼 — static/img/logo-mark.(svg|png|jpg) 있으면 자동 사용, 없으면 ti-chart-line 폴백.
+     모든 헤더(앱/랜딩)가 이 프래그먼트를 참조해 동일하게 유지. -->
+<span th:fragment="brandMark" class="brand-mark">
+    <img src="/img/logo-mark.svg" alt="InsightOn" onerror="if(this.dataset.step==null){this.dataset.step='1';this.src='/img/logo-mark.png';}else if(this.dataset.step=='1'){this.dataset.step='2';this.src='/img/logo-mark.jpg';}else{this.remove();}">
+    <i class="ti ti-chart-line" aria-hidden="true"></i>
+</span>
+
 <!-- 헤더 우측 계정 메뉴 — 사람 아이콘 아바타 + 정돈된 드롭다운(내 정보 / 로그아웃).
      groupHeader·locationHeader 둘 다 여기서 참조해 동일하게 유지. -->
 <div th:fragment="accountMenu" class="dropdown account-menu">
@@ -127,11 +134,7 @@
 
 <header th:fragment="groupHeader" class="app-header d-flex align-items-center px-4 gap-4">
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
-        <!-- 로고 심볼: static/img/logo-mark.svg 를 넣으면 자동 적용, 없으면 ti-chart-line 로 폴백 -->
-        <span class="brand-mark">
-            <img src="/img/logo-mark.svg" alt="InsightOn" onerror="if(this.dataset.step==null){this.dataset.step='1';this.src='/img/logo-mark.png';}else if(this.dataset.step=='1'){this.dataset.step='2';this.src='/img/logo-mark.jpg';}else{this.remove();}">
-            <i class="ti ti-chart-line" aria-hidden="true"></i>
-        </span>
+        <span th:replace="~{fragments/layout :: brandMark}"></span>
         InsightOn <span class="text-muted-group">· 우리회사</span>
     </a>
     <nav class="app-nav d-flex gap-2">
@@ -184,10 +187,7 @@
 <header th:fragment="locationHeader(locationName, locationId, autoControlMode)" class="app-header d-flex align-items-center px-4 gap-4">
     <!-- 로고(우리회사) 클릭 → 그룹 메인 대시보드로 -->
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
-        <span class="brand-mark">
-            <img src="/img/logo-mark.svg" alt="InsightOn" onerror="if(this.dataset.step==null){this.dataset.step='1';this.src='/img/logo-mark.png';}else if(this.dataset.step=='1'){this.dataset.step='2';this.src='/img/logo-mark.jpg';}else{this.remove();}">
-            <i class="ti ti-chart-line" aria-hidden="true"></i>
-        </span>
+        <span th:replace="~{fragments/layout :: brandMark}"></span>
         우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
         <span th:text="${locationName}">위치명</span>
     </a>

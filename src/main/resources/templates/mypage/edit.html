@@ -16,7 +16,7 @@
 
 <header class="landing-header">
     <a th:href="${groupId != null} ? @{/my-group} : @{/}" class="brand">
-        <i class="ti ti-chart-line"></i>InsightOn
+        <span th:replace="~{fragments/layout :: brandMark}"></span>InsightOn
     </a>
     <div class="landing-header-actions" style="margin-left:auto;">
         <form th:action="@{/logout}" method="post" style="display:inline;">
