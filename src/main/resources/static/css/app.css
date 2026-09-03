@@ -309,7 +309,10 @@ button:focus-visible,
   color: var(--ink);
 }
 
-.app-header .brand i {
+/* 로고 심볼(=브랜드 첫 아이콘)만 파란 라운드 박스로. locationHeader 의
+   "우리회사 › 위치명" 사이 chevron 까지 파란 박스가 씌워지던 버그 수정 */
+.app-header .brand > i:first-child,
+.app-header .brand > .brand-mark {
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -319,12 +322,27 @@ button:focus-visible,
   background: linear-gradient(135deg, var(--primary), var(--primary2));
   color: #fff;
   font-size: 13px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.app-header .brand .text-muted-group {
+/* 로고 이미지를 넣을 경우: static/img/logo-mark.svg (파란 배경 위 단색 심볼 권장) */
+.app-header .brand > .brand-mark img,
+.landing-header .brand > .brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.app-header .brand .text-muted-group,
+.app-header .brand > i:not(:first-child) {
   font-weight: 500;
   color: var(--ink-faint);
   font-size: var(--fs-body);
+  background: none;
+  width: auto;
+  height: auto;
+  border-radius: 0;
 }
 
 .app-nav .nav-link {
@@ -1505,7 +1523,8 @@ button:focus-visible,
   text-decoration: none;
 }
 
-.landing-header .brand i {
+.landing-header .brand > i:first-child,
+.landing-header .brand > .brand-mark {
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -1515,6 +1534,8 @@ button:focus-visible,
   background: linear-gradient(135deg, var(--primary), var(--primary2));
   color: #fff;
   font-size: 13px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .landing-nav {
@@ -4628,7 +4649,7 @@ button:focus-visible,
 
 .chip-option.active {
   background: var(--ink);
-  color: #fff;
+  color: var(--paper);   /* 다크모드에서 --ink 가 밝은색이라 #fff 텍스트가 안 보이던 버그 수정 */
   border-color: var(--ink);
   font-weight: 600;
 }

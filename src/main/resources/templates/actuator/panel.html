@@ -57,7 +57,7 @@
                         <i th:switch="${type.name()}">
                             <i th:case="'AIRCON'" class="ti ti-snowflake"></i>
                             <i th:case="'AIR_PURIFIER'" class="ti ti-wind"></i>
-                            <i th:case="'VENTILATION_FAN'" class="ti ti-fan"></i>
+                            <i th:case="'VENTILATION_FAN'" class="ti ti-propeller"></i>
                         </i>
                     </span>
                     <div class="actuator-name" th:switch="${type.name()}">
@@ -116,7 +116,7 @@
                             <i th:switch="${actuator.actuatorType().name()}">
                                 <i th:case="'AIRCON'" class="ti ti-snowflake"></i>
                                 <i th:case="'AIR_PURIFIER'" class="ti ti-wind"></i>
-                                <i th:case="'VENTILATION_FAN'" class="ti ti-fan"></i>
+                                <i th:case="'VENTILATION_FAN'" class="ti ti-propeller"></i>
                             </i>
                         </span>
                         <div style="flex:1;">
@@ -206,7 +206,7 @@
                         </label>
                         <label class="type-choice">
                             <input type="radio" name="newActuatorType" value="VENTILATION_FAN">
-                            <i class="ti ti-fan"></i>환풍기
+                            <i class="ti ti-propeller"></i>환풍기
                         </label>
                     </div>
                 </div>
