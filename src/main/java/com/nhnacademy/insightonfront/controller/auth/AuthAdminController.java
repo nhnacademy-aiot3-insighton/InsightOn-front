@@ -2,16 +2,17 @@ package com.nhnacademy.insightonfront.controller.auth;
 
 import com.nhnacademy.insightonfront.adapter.admin.dto.AdminFindUsersResponse;
 import com.nhnacademy.insightonfront.adapter.admin.dto.AdminUserDetailResponse;
+import com.nhnacademy.insightonfront.adapter.admin.dto.RoleResponse;
 import com.nhnacademy.insightonfront.adapter.auth.auth.dto.LoginResult;
+import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import com.nhnacademy.insightonfront.domain.admin.AdminService;
-import com.nhnacademy.insightonfront.domain.admin.dto.RoleChangeRequest;
+import com.nhnacademy.insightonfront.domain.admin.dto.RolesUpdateRequest;
 import com.nhnacademy.insightonfront.domain.auth.AuthService;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * 관리자 회원관리 컨트롤러.
@@ -142,6 +144,7 @@ public class AuthAdminController {
     private String loginErrorMessage(int status) {
         return switch (status) {
             case 401, 400 -> "이메일 또는 비밀번호가 올바르지 않아요.";
+            case 403 -> "이용이 제한된(정지) 계정이에요. 관리자에게 문의해주세요.";
             case 423 -> "로그인이 일시적으로 잠겼어요. 잠시 후 다시 시도해주세요.";
             default -> "로그인에 실패했어요. 잠시 후 다시 시도해주세요.";
         };
@@ -183,15 +186,27 @@ public class AuthAdminController {
 
     /** 회원 관리 목록 페이지 */
     @GetMapping("/users")
-    public String usersPage() {
+    public String usersPage(@CookieValue(value = "userName", required = false) String userName,
+                            Model model) {
+        addUserName(userName, model);
         return "admin/users";   // templates/admin/users.html
     }
 
     /** 회원 상세 페이지 */
     @GetMapping("/users/{userId}")
-    public String userDetailPage(@PathVariable Long userId, Model model) {
+    public String userDetailPage(@PathVariable Long userId,
+                                 @CookieValue(value = "userName", required = false) String userName,
+                                 Model model) {
+        addUserName(userName, model);
         model.addAttribute("userId", userId);
         return "admin/user-detail";   // templates/admin/user-detail.html
+    }
+
+    /** 로그인 때 URL 인코딩해 담아둔 userName 쿠키를 디코드해 모델에 넣는다 (헤더 인사말용). */
+    private void addUserName(String userName, Model model) {
+        if (userName != null) {
+            model.addAttribute("userName", URLDecoder.decode(userName, StandardCharsets.UTF_8));
+        }
     }
 
     // ================================================================
@@ -201,14 +216,14 @@ public class AuthAdminController {
     /** 회원 목록 조회 (검색·페이징) */
     @GetMapping("/api/users")
     @ResponseBody
-    public ResponseEntity<Page<AdminFindUsersResponse>> findUsers(
+    public ResponseEntity<PageResponse<AdminFindUsersResponse>> findUsers(
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String userName,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        Page<AdminFindUsersResponse> users =
+        PageResponse<AdminFindUsersResponse> users =
                 adminService.findUsers(email, userName, status, page, size);
         return ResponseEntity.ok(users);
     }
@@ -218,6 +233,13 @@ public class AuthAdminController {
     @ResponseBody
     public ResponseEntity<AdminUserDetailResponse> findUserDetail(@PathVariable Long userId) {
         return ResponseEntity.ok(adminService.findUserDetail(userId));
+    }
+
+    /** 지정 가능한 권한 목록 */
+    @GetMapping("/api/roles")
+    @ResponseBody
+    public ResponseEntity<List<RoleResponse>> findRoles() {
+        return ResponseEntity.ok(adminService.findRoles());
     }
 
     /** 회원 계정 차단 */
@@ -244,12 +266,12 @@ public class AuthAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    /** 회원 권한 변경 */
+    /** 회원 권한 전체 교체 (roles 목록이 최종 상태) */
     @PutMapping("/api/users/{userId}/roles")
     @ResponseBody
-    public ResponseEntity<Void> changeRole(@PathVariable Long userId,
-                                           @RequestBody RoleChangeRequest request) {
-        adminService.changeRole(userId, request.role());
+    public ResponseEntity<Void> updateRoles(@PathVariable Long userId,
+                                            @RequestBody RolesUpdateRequest request) {
+        adminService.updateRoles(userId, request.roles());
         return ResponseEntity.ok().build();
     }
 
