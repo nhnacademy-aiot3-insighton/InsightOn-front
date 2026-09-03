@@ -385,6 +385,8 @@
 
     // ---------- 추가 ----------
     const addStatusEl = document.getElementById('addActuatorStatus');
+    const providerSelect = document.getElementById('newActuatorProvider');
+
     document.getElementById('btnCreateActuator').addEventListener('click', function () {
         const name = document.getElementById('newActuatorName').value.trim();
         if (!name) {
@@ -402,12 +404,14 @@
         }
         addStatusEl.style.display = 'none';
         const actuatorType = document.querySelector('input[name="newActuatorType"]:checked').value;
+        // 공급자를 고르면 core가 external device id를 자동 생성한다. 안 고르면 미연결(UNBOUND) 상태로 등록.
+        const controlProvider = providerSelect.value || null;
         this.disabled = true;
 
         fetch(BASE_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name, actuatorType})
+            body: JSON.stringify({name, actuatorType, controlProvider})
         }).then((r) => {
             if (!r.ok) throw new Error('create failed');
             location.reload();

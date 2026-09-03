@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 public enum CommandType {
     POWER_STATUS("power"),
     OPERATION_MODE("mode"),
+    WIND_DIRECTION("windDirection"),
     SET_TEMPERATURE("temperature");
 
     private final String stateKey;

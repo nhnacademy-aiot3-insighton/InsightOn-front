@@ -24,7 +24,9 @@ public final class ActuatorCommandPreset {
 
         Map<CommandType, CommandValueRule> aircon = new LinkedHashMap<>();
         aircon.put(CommandType.POWER_STATUS, new CommandValueRule.AllowedValues(new LinkedHashSet<>(java.util.List.of("ON", "OFF"))));
+        // OPERATION_MODE / WIND_DIRECTION 값은 core가 액추에이터별 supportedValues로 내려준다. 여기 목록은 폴백/일괄조작용.
         aircon.put(CommandType.OPERATION_MODE, new CommandValueRule.AllowedValues(new LinkedHashSet<>(java.util.List.of("COOL", "DRY", "FAN", "AUTO"))));
+        aircon.put(CommandType.WIND_DIRECTION, new CommandValueRule.AllowedValues(new LinkedHashSet<>(java.util.List.of("FIXED", "SWING"))));
         aircon.put(CommandType.SET_TEMPERATURE, new CommandValueRule.NumericRange(18, 30));
         rules.put(ActuatorType.AIRCON, aircon);
 
@@ -43,8 +45,20 @@ public final class ActuatorCommandPreset {
 
     /** Thymeleaf/Model에 얹기 쉬운 평범한 Map 모양으로 펼친다 (sealed record는 그대로 직렬화하면 형태가 지저분해짐). */
     public static Map<String, Object> forTemplate(ActuatorType type) {
+        return forTemplate(type, java.util.Set.of());
+    }
+
+    /** WIND_DIRECTION 은 수동 조작 전용(룰엔진/AI 미지원) - 플로우 에디터에서는 제외한다. */
+    public static Map<String, Object> forFlowNode(ActuatorType type) {
+        return forTemplate(type, java.util.Set.of(CommandType.WIND_DIRECTION));
+    }
+
+    private static Map<String, Object> forTemplate(ActuatorType type, java.util.Set<CommandType> exclude) {
         Map<String, Object> commands = new LinkedHashMap<>();
         RULES.get(type).forEach((commandType, rule) -> {
+            if (exclude.contains(commandType)) {
+                return;
+            }
             Map<String, Object> widget = new LinkedHashMap<>();
             widget.put("stateKey", commandType.getStateKey()); // 화면(panel.html)이 실제 통신 키를 알 수 있도록 노출
             if (rule instanceof CommandValueRule.AllowedValues allowed) {
