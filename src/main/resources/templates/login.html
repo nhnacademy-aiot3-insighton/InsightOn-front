@@ -20,7 +20,7 @@
          dots the dashboard itself uses, standing in for the sensors this product watches -->
     <div class="auth-visual" aria-hidden="true">
         <a th:href="@{/}" class="auth-visual-brand">
-            <i class="ti ti-chart-line"></i>
+            <span th:replace="~{fragments/layout :: brandMark}"></span>
             InsightOn
         </a>
         <div class="auth-visual-art">
@@ -61,7 +61,7 @@
     <div class="auth-form-panel">
         <div class="auth-form-wrap">
             <a th:href="@{/}" class="brand auth-form-brand">
-                <i class="ti ti-chart-line"></i>
+                <span th:replace="~{fragments/layout :: brandMark}"></span>
                 InsightOn
             </a>
             <h1>로그인</h1>
