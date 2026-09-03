@@ -767,14 +767,15 @@ button:focus-visible,
   white-space: nowrap;
 }
 .app-sidebar .location-sublink i { font-size: var(--icon-sm); flex-shrink: 0; }
+/* 위치 선택은 파랑, 그 안의 바로가기 hover/선택은 코럴 (한 단계 더 안쪽이라는 신호) */
 .app-sidebar .location-sublink:hover {
-  color: var(--primary);
-  background: var(--primary-tint);
+  color: var(--sig-deep);
+  background: var(--sig-tint);
 }
 /* 현재 보고 있는 화면의 바로가기 (layout.html :: sidebar 의 스크립트가 부여) */
 .app-sidebar .location-sublink.active {
-  color: var(--primary);
-  background: var(--primary-tint);
+  color: var(--sig-deep);
+  background: var(--sig-tint);
   font-weight: 600;
 }
 
