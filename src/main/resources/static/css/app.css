@@ -69,6 +69,9 @@
   --sig-deep: #e8492e;
   --sig-tint: rgba(255, 90, 60, 0.12);
   --sig-rgb: 255, 90, 60;
+
+  /* 구역을 가르는 얇은 선 = 코럴. (카드 보더 같은 일반 경계선은 그대로 --line) */
+  --rule-coral: rgba(255, 90, 60, 0.38);
 }
 
 /* ============================================================
@@ -112,6 +115,7 @@
   --sig-deep: #ff5a3c;
   --sig-tint: rgba(255, 107, 74, 0.18);
   --sig-rgb: 255, 107, 74;
+  --rule-coral: rgba(255, 107, 74, 0.42);
 
   /* 시맨틱 토큰을 참조하지 않는 부트스트랩 원시값들 */
   --bs-primary: #2997ff;
@@ -764,7 +768,7 @@ button:focus-visible,
 .app-sidebar .sidebar-group-manage {
   margin-top: auto;
   padding-top: var(--sp-4);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule-coral);
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
@@ -802,7 +806,15 @@ button:focus-visible,
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--line);
+  background: var(--rule-coral);
+}
+
+/* 같은 카드 안에서 섹션을 가르는 코럴 헤어라인 (마이페이지 등) */
+.coral-rule {
+  height: 1px;
+  border: 0;
+  margin: var(--sp-6) 0;
+  background: var(--rule-coral);
 }
 
 .section-header {
@@ -1352,7 +1364,7 @@ button:focus-visible,
   gap: var(--sp-3);
   margin-top: var(--sp-6);
   padding-top: var(--sp-4);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule-coral);
 }
 
 /* =====================================================================
@@ -2901,7 +2913,7 @@ button:focus-visible,
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--auth-hair);
+  background: var(--rule-coral);
 }
 
 /* ---------- error / success alert (th:if 블록) ---------- */
@@ -5200,6 +5212,14 @@ button:focus-visible,
 
 .form-section:last-of-type { margin-bottom: 0; }
 
+/* 코럴 헤어라인(.coral-rule)으로 이미 구역이 나뉘는 화면(마이페이지 등)에서는
+   좌측 레일을 빼서 코럴이 과하지 않게 */
+.form-section.is-flush {
+  border-left: 0;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
 .form-section > .form-section-label {
   display: flex;
   align-items: center;
@@ -5270,7 +5290,7 @@ button:focus-visible,
   text-align: center;
   margin-top: var(--sp-5);
   padding-top: var(--sp-4);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule-coral);
   font-size: var(--fs-meta);
   color: var(--ink-faint);
 }
