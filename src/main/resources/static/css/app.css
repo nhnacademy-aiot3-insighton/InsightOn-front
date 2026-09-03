@@ -350,6 +350,7 @@ button:focus-visible,
    "우리회사 › 위치명" 사이 chevron 까지 파란 박스가 씌워지던 버그 수정 */
 .app-header .brand > i:first-child,
 .app-header .brand > .brand-mark {
+  position: relative;
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -363,11 +364,15 @@ button:focus-visible,
   overflow: hidden;
 }
 
-/* 로고 이미지를 넣을 경우: static/img/logo-mark.svg (파란 배경 위 단색 심볼 권장) */
+/* 로고 이미지: static/img/logo-mark.svg 를 넣으면 파란 박스 위에 얹힌다(단색 심볼 권장).
+   파일이 없으면 onerror 로 <img> 가 제거되고 아래 ti-chart-line 폴백이 보인다. */
 .app-header .brand > .brand-mark img,
 .landing-header .brand > .brand-mark img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  padding: 4px;
   object-fit: contain;
 }
 
