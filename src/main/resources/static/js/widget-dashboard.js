@@ -772,6 +772,37 @@
             });
     }
 
+
+    const AGG_OPTIONS_BY_RANGE = {
+        '-1h': [
+            {value: '1m', label: '1분'},
+            {value: '15m', label: '15분'}
+        ],
+        '-6h': [
+            {value: '15m', label: '15분'},
+            {value: '1h', label: '1시간'}
+        ],
+        '-24h': [
+            {value: '15m', label: '15분'},
+            {value: '1h', label: '1시간'}
+        ],
+        '-7d': [
+            {value: '1h', label: '1시간'}
+        ]
+    };
+
+    function updateAggOptions(selectedRange, currentAgg) {
+        if (!aggSelect) return;
+        const allowed = AGG_OPTIONS_BY_RANGE[selectedRange] || AGG_OPTIONS_BY_RANGE['-1h'];
+        aggSelect.innerHTML = allowed.map(opt =>
+            `<option value="${opt.value}" ${opt.value === currentAgg ? 'selected' : ''}>${opt.label}</option>`
+        ).join('');
+
+        if (!allowed.some(opt => opt.value === aggSelect.value)) {
+            aggSelect.value = allowed[0].value;
+        }
+    }
+
     function openConfigModal(w) {
         editingUid = w.uid;
         const displayMode = (w.widgetConfig && w.widgetConfig.displayMode) || 'SCROLL';
@@ -786,7 +817,7 @@
             if (opt.dataset.eui === w.widgetConfig.sensorEui) sensorSelect.value = opt.value;
         });
         rangeSelect.value = w.widgetConfig.range || '-1h';
-        aggSelect.value = w.widgetConfig.aggregateWindow || '15m';
+        updateAggOptions(rangeSelect.value, w.widgetConfig.aggregateWindow || '15m');
 
         if (sensorSelect.value) {
             loadMetrics(sensorSelect.value, w.widgetConfig.fields || []);
@@ -803,6 +834,12 @@
             metricListEl.innerHTML = `<p class="metric-check-empty">먼저 센서를 선택하세요.</p>`;
         }
     });
+
+    if (rangeSelect) {
+        rangeSelect.addEventListener('change', () => {
+            updateAggOptions(rangeSelect.value, aggSelect.value);
+        });
+    }
 
     btnApplyConfig.addEventListener('click', () => {
         const w = state.find((x) => x.uid === editingUid);
