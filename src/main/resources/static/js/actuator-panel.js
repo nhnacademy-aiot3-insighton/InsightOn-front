@@ -316,7 +316,7 @@
                 e.preventDefault();
                 const card = btn.closest('.actuator-card');
                 logsActuatorId = actuatorIdOf(btn);
-                logsTitle.textContent = card.querySelector('.actuator-name').textContent + ' 실행 이력';
+                logsTitlㅍe.textContent = card.querySelector('.actuator-name').textContent + ' 실행 이력';
                 loadLogs(0);
                 logsModal.show();
             });
