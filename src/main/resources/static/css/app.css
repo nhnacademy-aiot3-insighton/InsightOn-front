@@ -190,6 +190,32 @@
   --bs-modal-inner-border-radius: var(--radius-soft);
   --bs-modal-header-padding: var(--sp-4) var(--sp-5);
   --bs-modal-padding: var(--sp-5);
+
+  /* 부트스트랩 버튼도 앱 톤(둥근 10px, 살짝 촘촘한 패딩)으로 통일 */
+  --bs-btn-border-radius: 10px;
+  --bs-btn-padding-x: 16px;
+  --bs-btn-padding-y: 8px;
+  --bs-btn-font-weight: 600;
+}
+
+/* 부트스트랩 기본 버튼 계열을 앱 팔레트로 (btn-primary / btn-outline-secondary 등) */
+.btn { letter-spacing: -0.01em; }
+.btn-primary {
+  --bs-btn-bg: var(--primary);
+  --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary2);
+  --bs-btn-hover-border-color: var(--primary2);
+  --bs-btn-active-bg: var(--primary2);
+  --bs-btn-disabled-bg: var(--line-strong);
+  --bs-btn-disabled-border-color: var(--line-strong);
+}
+.btn-outline-secondary {
+  --bs-btn-color: var(--ink);
+  --bs-btn-border-color: var(--line-strong);
+  --bs-btn-hover-color: var(--ink);
+  --bs-btn-hover-bg: var(--surface-alt);
+  --bs-btn-hover-border-color: var(--ink);
+  --bs-btn-active-bg: var(--surface-alt);
 }
 
 /* ---------- 팝업(모달) 통일 스킨 — 위치 추가 / 액추에이터 추가 / 위젯 설정 등
@@ -727,7 +753,7 @@ button:focus-visible,
   gap: 1px;
   margin: 2px 0 8px var(--sp-4);
   padding-left: 10px;
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--rule-coral);
 }
 .app-sidebar .location-sublink {
   display: flex;
@@ -1108,16 +1134,21 @@ button:focus-visible,
 
 .location-summary-list {
   overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .location-summary-row {
   display: flex;
   align-items: center;
   gap: var(--sp-6);
-  padding: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3);
   text-decoration: none;
   color: var(--ink);
   border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
 .location-summary-row:last-child {
@@ -1126,6 +1157,7 @@ button:focus-visible,
 
 .location-summary-row:hover {
   background: var(--surface-alt);
+  border-left-color: var(--rule-coral);
 }
 
 .location-summary-name {
@@ -1798,40 +1830,47 @@ button:focus-visible,
 .btn-landing-secondary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--sp-2);
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 10px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 13.5px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   text-decoration: none;
   border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.06s ease;
 }
 
+.btn-landing-primary:active,
+.btn-landing-secondary:active { transform: translateY(1px); }
+
 .btn-landing-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  background: var(--primary);
   color: #fff;
 }
 
 .btn-landing-primary:hover {
-  filter: brightness(1.08);
+  background: var(--primary2);
   color: #fff;
 }
 
 .btn-landing-primary:disabled {
   background: var(--line-strong);
-  filter: none;
   cursor: not-allowed;
 }
 
 .btn-landing-secondary {
-  border-color: var(--line);
+  border-color: var(--line-strong);
   color: var(--ink);
   background: var(--surface);
 }
 
 .btn-landing-secondary:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--ink);
+  color: var(--ink);
   background: var(--surface-alt);
 }
 
@@ -2649,23 +2688,46 @@ button:focus-visible,
 
 .prev-reg[open] .prev-reg-caret { transform: rotate(180deg); }
 
-.prev-reg-body {
-  margin: 0;
-  padding: 0 var(--sp-4) var(--sp-3);
-  display: grid;
-  gap: var(--sp-1);
+.prev-reg-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
 }
 
-.prev-reg-body > div {
-  display: flex;
-  gap: var(--sp-3);
-  font-size: var(--fs-meta);
-  padding: var(--sp-1) 0;
+.prev-reg-count + .prev-reg-caret { margin-left: var(--sp-2); }
+
+.prev-reg-list {
+  padding: 0 var(--sp-4) var(--sp-2);
+}
+
+.prev-reg-item {
+  padding: var(--sp-3) 0;
   border-top: 1px solid var(--line);
 }
 
-.prev-reg-body dt { color: var(--ink-faint); flex-shrink: 0; min-width: 52px; }
-.prev-reg-body dd { margin: 0; color: var(--ink); }
+.prev-reg-item.is-rejected { border-left: 2px solid var(--danger); padding-left: var(--sp-2); margin-left: calc(var(--sp-2) * -1); }
+
+.prev-reg-item .pr-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-body);
+}
+
+.prev-reg-item .pr-line b { font-weight: 600; color: var(--ink); }
+
+.prev-reg-item .pr-meta {
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.prev-reg-item .pr-desc {
+  font-size: var(--fs-meta);
+  color: var(--ink-soft);
+  margin-top: var(--sp-1);
+}
 
 .prev-reg-hint {
   margin: 0;
@@ -4926,12 +4988,20 @@ button:focus-visible,
 .filter-bar {
   display: flex;
   gap: var(--sp-2);
+  align-items: center;
   margin-bottom: var(--sp-4);
+  padding: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--rule-coral);
+  border-radius: var(--radius);
 }
 
 .filter-bar .form-select {
   max-width: 200px;
 }
+
+.filter-bar .btn-add-widget { margin-left: auto; }
 
 .report-content {
   white-space: pre-wrap;
@@ -5086,6 +5156,7 @@ button:focus-visible,
 
 .split-row:hover {
   background: var(--surface-alt);
+  border-left-color: var(--rule-coral);
 }
 
 .split-row.active {

@@ -5,7 +5,7 @@
     <meta content="width=device-width, initial-scale=1" name="viewport">
     <title>그룹 신청 - InsightOn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.46.0/dist/tabler-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -32,35 +32,54 @@
          th:with="prevRegion=${previous != null ? #strings.arraySplit(previous.groupRegion(), ' ') : null}">
 
         <div class="form-panel-head">
-            <span class="form-medallion"><i class="ti ti-building-plus"></i></span>
+            <span class="form-medallion"><i class="ti ti-building"></i></span>
             <div>
                 <h1>그룹 신청</h1>
                 <p>아직 속한 그룹이 없어요. 그룹을 신청하면 관리자 승인 후 대시보드를 쓸 수 있어요.</p>
             </div>
         </div>
 
-        <!-- 직전 신청(반려/취소) — 요약만 보이고 클릭하면 상세가 펼쳐진다(정보 조회용, 전환 아님) -->
-        <details class="prev-reg" th:if="${previous != null}"
-                 th:classappend="${previous.status().name() == 'REJECTED'} ? ' is-rejected'">
+        <!-- 지난 신청 내역 — 요약(건수)만 보이고 클릭하면 전체 목록이 펼쳐진다(조회용).
+             반려된 직전 신청이 있으면 기본으로 열어둔다. -->
+        <details class="prev-reg" th:if="${previous != null or (history != null and !history.isEmpty())}"
+                 th:attr="open=${previous != null and previous.status().name() == 'REJECTED'} ? 'open' : null">
             <summary>
-                <i class="ti" th:classappend="${previous.status().name() == 'REJECTED'} ? 'ti-x' : 'ti-info-circle'"></i>
-                <span class="prev-reg-title">
-                    직전 신청 &middot; <b th:text="${previous.groupName()}">그룹명</b>
-                </span>
-                <span class="status-badge" style="margin-top:0;"
-                      th:classappend="${previous.status().name() == 'REJECTED'} ? ' danger' : ' neutral'"
-                      th:text="${previous.status().name() == 'REJECTED'} ? '반려' : '취소'">상태</span>
+                <i class="ti ti-history"></i>
+                <span class="prev-reg-title">지난 신청 내역</span>
+                <span class="prev-reg-count"
+                      th:text="${(previous != null ? 1 : 0) + (history != null ? history.size() : 0)} + '건'">3건</span>
                 <i class="ti ti-chevron-down prev-reg-caret"></i>
             </summary>
-            <dl class="prev-reg-body">
-                <div><dt>그룹명</dt><dd th:text="${previous.groupName()}"></dd></div>
-                <div><dt>소재지</dt><dd th:text="${previous.groupRegion()}"></dd></div>
-                <div th:if="${previous.createdAt() != null}"><dt>신청일</dt>
-                    <dd th:text="${#temporals.format(previous.createdAt(), 'yyyy-MM-dd')}"></dd></div>
-                <div th:if="${previous.description() != null and !previous.description().isEmpty()}">
-                    <dt>설명</dt><dd th:text="${previous.description()}"></dd></div>
-            </dl>
-            <p class="prev-reg-hint" th:if="${previous.status().name() == 'REJECTED'}">내용을 확인하고 아래에서 다시 신청해보세요.</p>
+            <div class="prev-reg-list">
+                <div class="prev-reg-item" th:if="${previous != null}"
+                     th:classappend="${previous.status().name() == 'REJECTED'} ? ' is-rejected'">
+                    <div class="pr-line">
+                        <b th:text="${previous.groupName()}">그룹명</b>
+                        <span class="status-badge" style="margin-top:0;"
+                              th:classappend="${previous.status().name() == 'REJECTED'} ? ' danger' : ' neutral'"
+                              th:text="${previous.status().name() == 'REJECTED'} ? '반려' : '취소'">상태</span>
+                    </div>
+                    <div class="pr-meta">
+                        <span th:text="${previous.groupRegion()}">소재지</span>
+                        <span th:if="${previous.createdAt() != null}"
+                              th:text="' · ' + ${#temporals.format(previous.createdAt(), 'yyyy-MM-dd')}"></span>
+                    </div>
+                    <div class="pr-desc" th:if="${previous.description() != null and !previous.description().isEmpty()}"
+                         th:text="${previous.description()}"></div>
+                </div>
+                <div class="prev-reg-item" th:each="item : ${history}"
+                     th:classappend="${item.status().name() == 'REJECTED'} ? ' is-rejected'">
+                    <div class="pr-line">
+                        <b th:text="${item.groupName()}">그룹명</b>
+                        <span class="status-badge" style="margin-top:0;" th:classappend="${item.status().badgeClass}"
+                              th:text="${item.status().label}">상태</span>
+                    </div>
+                    <div class="pr-meta"
+                         th:text="${item.groupRegion()} + ' · ' + ${#temporals.format(item.createdAt(), 'yyyy-MM-dd')}"></div>
+                </div>
+            </div>
+            <p class="prev-reg-hint" th:if="${previous != null and previous.status().name() == 'REJECTED'}">
+                반려된 신청 내용을 확인하고 아래에서 다시 신청해보세요.</p>
         </details>
 
         <form id="registrationForm" method="post" th:action="@{/group-registration}">
@@ -142,29 +161,6 @@
             <input name="groupRegistrationId" th:value="${registration.groupRegistrationId()}" type="hidden">
             <button class="btn-landing-secondary" type="submit" style="width:100%; justify-content:center;">신청 취소</button>
         </form>
-    </div>
-
-    <!-- 과거 신청 이력 (현재 화면에 나온 최신 건 제외, 최신순) -->
-    <div class="form-panel form-panel-wide" th:if="${history != null and !history.isEmpty()}">
-        <div class="form-panel-head">
-            <span class="form-medallion" style="background: var(--surface-alt); color: var(--ink-soft);"><i class="ti ti-history"></i></span>
-            <div>
-                <h1 style="font-size:1.125rem;">지난 신청 내역</h1>
-            </div>
-        </div>
-        <dl style="margin:0;">
-            <div class="registration-detail-row" th:each="item : ${history}">
-                <dt>
-                    <div th:text="${item.groupName()}"></div>
-                    <div style="color:var(--ink-faint); font-size:var(--fs-meta); margin-top:2px;"
-                         th:text="${item.groupRegion()} + ' · ' + ${#temporals.format(item.createdAt(), 'yyyy-MM-dd')}"></div>
-                </dt>
-                <dd>
-                    <span class="status-badge" style="margin-top:0;" th:classappend="${item.status().badgeClass}"
-                          th:text="${item.status().label}"></span>
-                </dd>
-            </div>
-        </dl>
     </div>
 
     <!-- 이미 대기 중인 신청이 있는데 다시 제출했을 때(409) 뜨는 안내 팝업 -->
