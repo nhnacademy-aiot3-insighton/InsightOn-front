@@ -127,7 +127,11 @@
 
 <header th:fragment="groupHeader" class="app-header d-flex align-items-center px-4 gap-4">
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
-        <i class="ti ti-chart-line"></i>
+        <!-- 로고 심볼: static/img/logo-mark.svg 를 넣으면 자동 적용, 없으면 ti-chart-line 로 폴백 -->
+        <span class="brand-mark">
+            <img src="/img/logo-mark.svg" alt="InsightOn" onerror="this.remove()">
+            <i class="ti ti-chart-line" aria-hidden="true"></i>
+        </span>
         InsightOn <span class="text-muted-group">· 우리회사</span>
     </a>
     <nav class="app-nav d-flex gap-2">
@@ -180,7 +184,10 @@
 <header th:fragment="locationHeader(locationName, locationId, autoControlMode)" class="app-header d-flex align-items-center px-4 gap-4">
     <!-- 로고(우리회사) 클릭 → 그룹 메인 대시보드로 -->
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
-        <i class="ti ti-chart-line"></i>
+        <span class="brand-mark">
+            <img src="/img/logo-mark.svg" alt="InsightOn" onerror="this.remove()">
+            <i class="ti ti-chart-line" aria-hidden="true"></i>
+        </span>
         우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
         <span th:text="${locationName}">위치명</span>
     </a>
