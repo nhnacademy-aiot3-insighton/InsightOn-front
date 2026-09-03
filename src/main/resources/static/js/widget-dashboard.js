@@ -258,6 +258,10 @@
 
         const {sensorName, fields} = widgetTitle(w);
 
+        // 카드 상단 액센트 바 색 — 첫 메트릭 색(온도=레드, 습도=민트 …). 미설정이면 primary
+        const firstField = (w.widgetConfig.fields || [])[0];
+        const accent = firstField ? getFieldColor(firstField, 0) : 'var(--primary)';
+
         const cursorStyle = CAN_MANAGE ? 'cursor: move;' : '';
         const dragIcon = CAN_MANAGE ? '<i class="ti ti-drag-drop text-muted fs-3" title="드래그하여 위젯 이동"></i>' : '';
         const controlsHtml = CAN_MANAGE ? `
@@ -268,7 +272,7 @@
         ` : '';
 
         item.innerHTML = `
-            <div class="card grid-widget h-100 border shadow-sm rounded-3">
+            <div class="card grid-widget h-100 border shadow-sm rounded-3" style="--w-accent: ${accent};">
                 <div class="card-header grid-widget-header px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="${cursorStyle}">
                     <div class="grid-widget-label d-flex align-items-center gap-2 text-truncate" style="max-width: ${CAN_MANAGE ? 'calc(100% - 95px)' : '100%'};">
                         ${dragIcon}
@@ -308,6 +312,15 @@
             span.textContent = `${sensorName} · ${fields}`;
             span.title = `${sensorName} · ${fields}`;
         }
+        updateAccent(w);
+    }
+
+    // 카드 상단 액센트 바를 현재 첫 메트릭 색으로 갱신 (설정 변경 후)
+    function updateAccent(w) {
+        const el = contentEl(w.uid);
+        if (!el) return;
+        const f = (w.widgetConfig.fields || [])[0];
+        el.style.setProperty('--w-accent', f ? getFieldColor(f, 0) : 'var(--primary)');
     }
 
     function updateDim(w) {
