@@ -51,6 +51,24 @@
   })();
 </script>
 
+<!-- 헤더 우측 계정 메뉴 — 사람 아이콘 아바타 + 정돈된 드롭다운(내 정보 / 로그아웃).
+     groupHeader·locationHeader 둘 다 여기서 참조해 동일하게 유지. -->
+<div th:fragment="accountMenu" class="dropdown account-menu">
+    <button type="button" class="account-avatar" data-bs-toggle="dropdown" aria-expanded="false" aria-label="내 계정">
+        <i class="ti ti-user"></i>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end account-dropdown">
+        <div class="account-dropdown-head">
+            <span class="account-avatar sm"><i class="ti ti-user"></i></span>
+            <span>내 계정</span>
+        </div>
+        <a class="account-dropdown-item" th:href="@{/mypage}"><i class="ti ti-id-badge-2"></i>내 정보</a>
+        <form th:action="@{/logout}" method="post" class="m-0">
+            <button type="submit" class="account-dropdown-item is-logout"><i class="ti ti-logout"></i>로그아웃</button>
+        </form>
+    </div>
+</div>
+
 <div th:fragment="sidebar" class="app-sidebar d-flex flex-column"
      th:with="curLocId=${locationId != null ? locationId : (param.locationId != null ? param.locationId[0] : null)}">
     <p class="sidebar-label">위치</p>
@@ -142,18 +160,7 @@
             </div>
         </div>
     </div>
-    <div class="dropdown">
-        <button type="button" class="rounded-circle bg-primary-subtle border-0 p-0" style="width:32px;height:32px;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="내 계정"></button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" th:href="@{/mypage}">내 정보</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <form th:action="@{/logout}" method="post" class="m-0">
-                    <button type="submit" class="dropdown-item">로그아웃</button>
-                </form>
-            </li>
-        </ul>
-    </div>
+    <div th:replace="~{fragments/layout :: accountMenu}"></div>
     <!-- 현재 화면에 해당하는 헤더 네비 항목에 active 표시 -->
     <script>
       (function () {
@@ -210,18 +217,7 @@
             </div>
         </div>
     </div>
-    <div class="dropdown">
-        <button type="button" class="rounded-circle bg-primary-subtle border-0 p-0" style="width:32px;height:32px;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="내 계정"></button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" th:href="@{/mypage}">내 정보</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <form th:action="@{/logout}" method="post" class="m-0">
-                    <button type="submit" class="dropdown-item">로그아웃</button>
-                </form>
-            </li>
-        </ul>
-    </div>
+    <div th:replace="~{fragments/layout :: accountMenu}"></div>
     <!-- 현재 화면에 해당하는 헤더 네비 항목에 active 표시 -->
     <script>
       (function () {

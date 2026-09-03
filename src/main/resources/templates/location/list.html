@@ -53,20 +53,20 @@
 <!-- 위치 추가 모달 팝업 -->
 <div class="modal fade" id="createLocationModal" tabindex="-1" aria-labelledby="createLocationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: var(--radius-lg); border: 1px solid var(--line); box-shadow: var(--shadow-lg);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--line); padding: var(--sp-4);">
-                <h5 class="modal-title font-weight-bold" id="createLocationModalLabel" style="font-size: 1.1rem; color: var(--ink);">새 위치 추가</h5>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createLocationModalLabel">새 위치 추가</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form th:action="@{/my-group/location/create}" method="post">
-                <div class="modal-body" style="padding: var(--sp-4);">
-                    <div class="mb-3">
-                        <label for="locationName" class="form-label" style="font-weight: 500; color: var(--ink);">위치 이름</label>
-                        <input type="text" id="locationName" name="locationName" class="form-control" placeholder="예: 2층 사무실, B동 로비" required style="border-radius: var(--radius-md);">
+                <div class="modal-body">
+                    <div class="settings-field">
+                        <label for="locationName">위치 이름</label>
+                        <input type="text" id="locationName" name="locationName" class="form-control" placeholder="예: 2층 사무실, B동 로비" required>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--line); padding: var(--sp-3) var(--sp-4);">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">취소</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
                     <button type="submit" class="btn-landing-primary">
                         <i class="ti ti-plus"></i>추가하기
                     </button>
@@ -74,8 +74,6 @@
             </form>
         </div>
     </div>
-</div>
-    </main>
 </div>
 
 <div th:replace="~{fragments/layout :: chatWidget}"></div>
