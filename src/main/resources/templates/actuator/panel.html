@@ -79,7 +79,7 @@
                     <!-- 일괄 조작은 타입 전체(공급자 혼재 가능) 대상이라 중립 공통 모드로 둔다. 카드에 없는 칩은 JS가 알아서 건너뜀 -->
                     <div class="actuator-command-row" th:if="${cmd.key != 'POWER_STATUS' and cmd.value.get('kind') == 'SELECT'}">
                         <span class="actuator-command-label" th:text="${cmd.key}">OPERATION_MODE</span>
-                        <div class="chip-select">
+                        <div class="chip-select" th:attr="data-command=${cmd.value.get('stateKey')}">
                             <button type="button" class="chip-option type-bulk-mode" th:each="v : ${cmd.value.get('values')}"
                                     th:text="${v}" th:attr="data-value=${v}"></button>
                         </div>
