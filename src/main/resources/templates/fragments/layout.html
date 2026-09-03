@@ -2,6 +2,80 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
+<!-- 테마 판정 — 첫 페인트 전에 동기 실행돼야 라이트↔다크 깜빡임이 안 생긴다.
+     예전엔 <script src="/js/theme.js"> 외부 로드라 네트워크 왕복 동안 깜빡였음.
+     각 템플릿 <head> 에서 <script th:replace="~{fragments/layout :: themeInit}"></script> 로 인라인. -->
+<script th:fragment="themeInit">
+  (function () {
+    function readPref() {
+      var m = document.cookie.match(/(?:^|;\s*)theme=(system|light|dark)/);
+      return m ? m[1] : 'system';
+    }
+    function systemDark() {
+      return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    function resolve(pref) {
+      if (pref === 'dark' || pref === 'light') return pref;
+      return systemDark() ? 'dark' : 'light';
+    }
+    function apply(theme) {
+      var el = document.documentElement;
+      el.setAttribute('data-theme', theme);
+      el.setAttribute('data-bs-theme', theme);
+    }
+    apply(resolve(readPref()));
+    window.InsightTheme = {
+      getPref: function () { return readPref(); },
+      getResolved: function () { return resolve(readPref()); },
+      set: function (pref) {
+        if (pref !== 'system' && pref !== 'light' && pref !== 'dark') return;
+        document.cookie = 'theme=' + pref + '; path=/; max-age=31536000; samesite=lax';
+        apply(resolve(pref));
+        try {
+          window.dispatchEvent(new CustomEvent('themechange', { detail: { pref: pref, theme: resolve(pref) } }));
+        } catch (e) { /* 구형 브라우저 무시 */ }
+      }
+    };
+    if (window.matchMedia) {
+      try {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+          if (readPref() === 'system') {
+            apply(resolve('system'));
+            try {
+              window.dispatchEvent(new CustomEvent('themechange', { detail: { pref: 'system', theme: resolve('system') } }));
+            } catch (e) {}
+          }
+        });
+      } catch (e) { /* Safari < 14 등 */ }
+    }
+  })();
+</script>
+
+<!-- 브랜드 로고 심볼 — static/img/logo-mark.(svg|png|jpg) 있으면 자동 사용, 없으면 ti-chart-line 폴백.
+     모든 헤더(앱/랜딩)가 이 프래그먼트를 참조해 동일하게 유지. -->
+<span th:fragment="brandMark" class="brand-mark">
+    <img src="/img/logo-mark.png" alt="InsightOn" onerror="if(this.dataset.step==null){this.dataset.step='1';this.src='/img/logo-mark.svg';}else if(this.dataset.step=='1'){this.dataset.step='2';this.src='/img/logo-mark.jpg';}else{this.remove();}">
+    <i class="ti ti-chart-line" aria-hidden="true"></i>
+</span>
+
+<!-- 헤더 우측 계정 메뉴 — 사람 아이콘 아바타 + 정돈된 드롭다운(내 정보 / 로그아웃).
+     groupHeader·locationHeader 둘 다 여기서 참조해 동일하게 유지. -->
+<div th:fragment="accountMenu" class="dropdown account-menu">
+    <button type="button" class="account-avatar" data-bs-toggle="dropdown" aria-expanded="false" aria-label="내 계정">
+        <i class="ti ti-user"></i>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end account-dropdown">
+        <div class="account-dropdown-head">
+            <span class="account-avatar sm"><i class="ti ti-user"></i></span>
+            <span>내 계정</span>
+        </div>
+        <a class="account-dropdown-item" th:href="@{/mypage}"><i class="ti ti-id-badge-2"></i>내 정보</a>
+        <form th:action="@{/logout}" method="post" class="m-0">
+            <button type="submit" class="account-dropdown-item is-logout"><i class="ti ti-logout"></i>로그아웃</button>
+        </form>
+    </div>
+</div>
+
 <div th:fragment="sidebar" class="app-sidebar d-flex flex-column"
      th:with="curLocId=${locationId != null ? locationId : (param.locationId != null ? param.locationId[0] : null)}">
     <p class="sidebar-label">위치</p>
@@ -26,11 +100,20 @@
     <a th:href="@{/my-group/location/list?openModal=true}" class="add-location-link" id="sidebarAddLocationBtn" th:if="${isManager == null or isManager}">
         <i class="ti ti-plus"></i>위치 추가
     </a>
-    <!-- 현재 보고 있는 화면에 해당하는 사이드바 바로가기에 음영(active) 표시 -->
+
+    <!-- 그룹 관리 — 헤더 드롭다운에 묻혀 있던 3개를 사이드바 하단으로 펼쳐서 노출 -->
+    <div class="sidebar-group-manage" th:if="${isManager == null or isManager}">
+        <p class="sidebar-label">그룹 관리</p>
+        <a th:href="@{/my-group/manage}" class="location-link">그룹 설정</a>
+        <a th:href="@{/my-group/members}" class="location-link">멤버 관리</a>
+        <a th:href="@{/manage/gateway}" class="location-link">게이트웨이 관리</a>
+    </div>
+
+    <!-- 현재 보고 있는 화면에 해당하는 사이드바 항목에 음영(active) 표시 -->
     <script>
       (function () {
         var path = window.location.pathname;
-        document.querySelectorAll('.app-sidebar .location-sublink').forEach(function (a) {
+        document.querySelectorAll('.app-sidebar .location-sublink, .app-sidebar .sidebar-group-manage .location-link').forEach(function (a) {
           var base = (a.getAttribute('href') || '').split('?')[0];
           if (base && (path === base || path.indexOf(base + '/') === 0)) {
             a.classList.add('active');
@@ -51,7 +134,7 @@
 
 <header th:fragment="groupHeader" class="app-header d-flex align-items-center px-4 gap-4">
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
-        <i class="ti ti-chart-line"></i>
+        <span th:replace="~{fragments/layout :: brandMark}"></span>
         InsightOn <span class="text-muted-group">· 우리회사</span>
     </a>
     <nav class="app-nav d-flex gap-2">
@@ -59,21 +142,11 @@
         <a th:href="@{/my-group/engine-alerts}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions}" class="nav-link">제안</a>
         <a th:href="@{/my-group/sensors}" class="nav-link">센서</a>
-        <!-- 액추에이터는 위치별 화면이라, 그룹 홈에서는 위치 목록을 거쳐 이동 -->
-        <a th:href="@{/my-group/location/list}" class="nav-link">액추에이터</a>
+        <!-- 액추에이터는 위치별 전용 화면이라 그룹 헤더에는 두지 않는다.
+             사이드바에서 위치 선택 → 액추에이터, 또는 위치 화면의 헤더 nav 로 진입. -->
         <a th:href="@{/my-group/flows}" class="nav-link">Flow</a>
     </nav>
     <div class="flex-grow-1"></div>
-    <div class="dropdown">
-        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            그룹 관리
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" th:href="@{/my-group/manage}">그룹 설정</a></li>
-            <li><a class="dropdown-item" th:href="@{/my-group/members}">멤버 관리</a></li>
-            <li><a class="dropdown-item" th:href="@{/manage/gateway}">게이트웨이 관리</a></li>
-        </ul>
-    </div>
     <div class="dropdown">
         <button type="button" class="header-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="ti ti-bell"></i>
@@ -93,23 +166,13 @@
             </div>
         </div>
     </div>
-    <div class="dropdown">
-        <button type="button" class="rounded-circle bg-primary-subtle border-0 p-0" style="width:32px;height:32px;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="내 계정"></button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" th:href="@{/mypage}">내 정보</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <form th:action="@{/logout}" method="post" class="m-0">
-                    <button type="submit" class="dropdown-item">로그아웃</button>
-                </form>
-            </li>
-        </ul>
-    </div>
+    <div th:replace="~{fragments/layout :: accountMenu}"></div>
     <!-- 현재 화면에 해당하는 헤더 네비 항목에 active 표시 -->
     <script>
       (function () {
         var path = window.location.pathname;
         document.querySelectorAll('.app-header .app-nav .nav-link').forEach(function (a) {
+          if (a.dataset.navShim === 'true') return;   // 라우팅 shim 링크는 하이라이트 대상 아님
           var base = (a.getAttribute('href') || '').split('?')[0];
           if (base && base !== '/' && (path === base || path.indexOf(base + '/') === 0)) {
             a.classList.add('active');
@@ -123,7 +186,7 @@
 <header th:fragment="locationHeader(locationName, locationId, autoControlMode)" class="app-header d-flex align-items-center px-4 gap-4">
     <!-- 로고(우리회사) 클릭 → 그룹 메인 대시보드로 -->
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
-        <i class="ti ti-chart-line"></i>
+        <span th:replace="~{fragments/layout :: brandMark}"></span>
         우리회사 <i class="ti ti-chevron-right text-muted-group" style="font-size:0.75rem;"></i>
         <span th:text="${locationName}">위치명</span>
     </a>
@@ -160,23 +223,13 @@
             </div>
         </div>
     </div>
-    <div class="dropdown">
-        <button type="button" class="rounded-circle bg-primary-subtle border-0 p-0" style="width:32px;height:32px;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="내 계정"></button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" th:href="@{/mypage}">내 정보</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <form th:action="@{/logout}" method="post" class="m-0">
-                    <button type="submit" class="dropdown-item">로그아웃</button>
-                </form>
-            </li>
-        </ul>
-    </div>
+    <div th:replace="~{fragments/layout :: accountMenu}"></div>
     <!-- 현재 화면에 해당하는 헤더 네비 항목에 active 표시 -->
     <script>
       (function () {
         var path = window.location.pathname;
         document.querySelectorAll('.app-header .app-nav .nav-link').forEach(function (a) {
+          if (a.dataset.navShim === 'true') return;   // 라우팅 shim 링크는 하이라이트 대상 아님
           var base = (a.getAttribute('href') || '').split('?')[0];
           if (base && base !== '/' && (path === base || path.indexOf(base + '/') === 0)) {
             a.classList.add('active');
