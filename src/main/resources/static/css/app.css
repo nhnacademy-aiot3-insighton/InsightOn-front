@@ -435,12 +435,6 @@ button:focus-visible,
   font-weight: 600;
 }
 
-/* 액추에이터 위치 선택 드롭다운 */
-.app-nav .dropdown { display: inline-flex; align-items: center; }
-.app-nav .nav-link.dropdown-toggle { cursor: pointer; }
-.app-nav .nav-link.dropdown-toggle::after { margin-left: 5px; vertical-align: middle; }
-.app-nav .dropdown-menu { max-height: 60vh; overflow-y: auto; }
-
 .flow-page .app-nav .nav-link[href="/my-group/flows"] {
   color: var(--ink);
   border-bottom-color: var(--ink);
@@ -1767,6 +1761,7 @@ button:focus-visible,
 
 .landing-header .brand > i:first-child,
 .landing-header .brand > .brand-mark {
+  position: relative;
   width: 26px;
   height: 26px;
   border-radius: 8px;
