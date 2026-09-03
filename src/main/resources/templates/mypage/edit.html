@@ -25,45 +25,47 @@
     </div>
 </header>
 
-<div class="account-shell">
+<main class="form-page">
+    <div class="form-panel">
 
-    <div class="account-header">
-        <h1>My Page</h1>
-    </div>
-
-    <section class="account-section">
-        <div class="settings-card">
-
-            <div class="auth-error" th:if="${profileError}">
-                <i class="ti ti-alert-circle"></i>
-                <span th:text="${profileError}"></span>
+        <div class="form-panel-head">
+            <span class="form-medallion"><i class="ti ti-user-edit"></i></span>
+            <div>
+                <h1>내 정보 수정</h1>
+                <p>이름과 연락처를 바꿀 수 있어요.</p>
             </div>
+        </div>
 
-            <form th:action="@{/mypage/edit}" method="post">
+        <div class="auth-error" th:if="${profileError}">
+            <i class="ti ti-alert-circle"></i>
+            <span th:text="${profileError}"></span>
+        </div>
 
+        <form th:action="@{/mypage/edit}" method="post">
+            <div class="form-section">
+                <div class="form-section-label"><i class="ti ti-user"></i>프로필</div>
                 <div class="settings-field">
-                    <label>Email</label>
-                    <input type="email" class="form-control" th:value="${email}" disabled>
+                    <label>이메일</label>
                     <p class="field-hint">이메일은 변경할 수 없어요.</p>
+                    <input type="email" class="form-control" th:value="${email}" disabled>
                 </div>
-
                 <div class="settings-field">
-                    <label for="name">Name</label>
+                    <label for="name">이름</label>
                     <input type="text" id="name" name="name" class="form-control" th:value="${name}" required>
                 </div>
-
                 <div class="settings-field">
-                    <label for="phone">PhoneNumber</label>
+                    <label for="phone">연락처</label>
                     <input type="tel" id="phone" name="phone" class="form-control" th:value="${phone}" required>
                 </div>
+            </div>
 
-                <div class="settings-actions">
-                    <button type="submit" class="btn-landing-primary">수정하기</button>
-                </div>
-            </form>
-        </div>
-    </section>
-
-</div>
+            <div class="form-actions">
+                <span class="spacer"></span>
+                <a th:href="@{/mypage}" class="btn-landing-secondary">취소</a>
+                <button type="submit" class="btn-landing-primary">수정하기</button>
+            </div>
+        </form>
+    </div>
+</main>
 </body>
 </html>

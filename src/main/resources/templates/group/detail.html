@@ -23,10 +23,10 @@
         <!-- 날씨 히어로 — 강수 중이면 강수 형태가 하늘 상태보다 우선. 배경 그라데이션은
              data-cond(하늘상태) + data-tod(시간대, 아래 스크립트가 부여)로 결정 -->
         <div class="wx" th:if="${weather != null and weather.forecast() != null}"
-             th:with="pt=${weather.current() != null ? weather.current().precipitationType() : null},
-                      sky=${weather.forecast().skyStatus()},
-                      pm10g=${weather.airQuality() != null ? weather.airQuality().pm10Grade() : null},
-                      pm25g=${weather.airQuality() != null ? weather.airQuality().pm25Grade() : null},
+             th:with="pt=${weather?.current()?.precipitationType()},
+                      sky=${weather?.forecast()?.skyStatus()},
+                      pm10g=${weather?.airQuality()?.pm10Grade()},
+                      pm25g=${weather?.airQuality()?.pm25Grade()},
                       cond=${(pt == '비' or pt == '소나기' or pt == '비/눈') ? 'rain' : (pt == '눈' ? 'snow' : ((sky == '구름많음' or sky == '흐림') ? 'cloudy' : 'clear'))},
                       aqBad=${pm10g == '나쁨' or pm10g == '매우나쁨' or pm25g == '나쁨' or pm25g == '매우나쁨'}"
              th:attr="data-cond=${cond}">

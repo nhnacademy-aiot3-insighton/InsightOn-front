@@ -15,57 +15,58 @@
 
 <header class="landing-header">
     <a class="brand" th:href="@{/}">
-        <i class="ti ti-chart-line"></i>
-        InsightOn
+        <i class="ti ti-chart-line"></i>InsightOn
     </a>
+    <div class="landing-header-actions" style="margin-left:auto;">
+        <form th:action="@{/logout}" method="post" style="display:inline;">
+            <button type="submit" class="btn-landing-secondary">로그아웃</button>
+        </form>
+    </div>
 </header>
 
-<main class="auth-main">
+<main class="form-page">
+    <div class="form-panel form-panel-wide">
 
-    <div class="auth-card auth-card-wide">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-            <h1 style="margin: 0; font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                <i class="ti ti-ticket" style="color: var(--brand-primary);"></i>초대 코드로 그룹 가입
-            </h1>
-            <span class="badge bg-primary-subtle text-primary fw-medium" style="font-size: 0.8rem;">즉시 가입</span>
+        <div class="form-panel-head">
+            <span class="form-medallion"><i class="ti ti-ticket"></i></span>
+            <div>
+                <h1>초대 코드로 그룹 가입</h1>
+                <p>전달받은 12자리 초대 코드를 입력하면 관리자 승인 대기 없이 바로 그룹에 참가해요.</p>
+            </div>
         </div>
-        <p class="auth-subtitle mb-4">전달받은 12자리 초대 코드를 입력하면 관리자 승인 대기 없이 바로 그룹에 참가할 수 있어요.</p>
 
-        <div class="auth-error mb-3" th:if="${joinError}">
+        <div class="auth-error" th:if="${joinError}">
             <i class="ti ti-x"></i>
             <span th:text="${joinError}"></span>
         </div>
 
         <form id="joinForm" method="post" th:action="@{/my-group/join}">
-            <div class="settings-field mb-3">
-                <label for="joinInviteToken">초대 코드</label>
-                <div class="input-group">
-                    <input class="form-control" id="joinInviteToken" name="inviteToken" placeholder="12자리 초대 코드 입력" required type="text">
-                    <button class="btn btn-outline-secondary d-flex align-items-center gap-1" type="button" onclick="previewGroup('joinInviteToken', 'previewResult')">
-                        <i class="ti ti-eye"></i> 그룹 미리보기
-                    </button>
+            <div class="form-section">
+                <div class="form-section-label"><i class="ti ti-ticket"></i>초대 코드</div>
+                <div class="settings-field">
+                    <label for="joinInviteToken">코드 입력</label>
+                    <div class="input-group">
+                        <input class="form-control" id="joinInviteToken" name="inviteToken" placeholder="12자리 초대 코드" required type="text">
+                        <button class="btn btn-outline-secondary d-flex align-items-center gap-1" type="button" onclick="previewGroup('joinInviteToken', 'previewResult')">
+                            <i class="ti ti-eye"></i> 그룹 미리보기
+                        </button>
+                    </div>
+                    <div id="previewResult" style="display: none; margin-top: var(--sp-3);"></div>
                 </div>
             </div>
 
-            <!-- 그룹 미리보기 결과 창 -->
-            <div id="previewResult" class="mb-4" style="display: none;"></div>
-
-            <div class="settings-actions d-flex gap-2" style="justify-content: stretch;">
-                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-1" style="flex: 1; border-radius: var(--radius-md);" type="button" onclick="history.back()">
-                    <i class="ti ti-arrow-left"></i> 뒤로가기
-                </button>
-                <button class="btn-landing-primary justify-content-center" style="flex: 2;" type="submit">
-                    가입하기<i class="ti ti-arrow-right"></i>
-                </button>
+            <div class="form-actions">
+                <button class="btn-landing-secondary" type="button" onclick="history.back()">뒤로가기</button>
+                <span class="spacer"></span>
+                <button class="btn-landing-primary" type="submit">가입하기</button>
             </div>
         </form>
 
-        <div class="text-center mt-4 pt-3 border-top">
-            <span style="color: var(--ink-faint); font-size: var(--fs-meta);">초대 코드가 없으신가요? </span>
-            <a th:href="@{/group-registration}" style="font-size: var(--fs-meta); font-weight: 600;">새 그룹 신청하기</a>
+        <div class="form-panel-foot">
+            초대 코드가 없으신가요?
+            <a th:href="@{/group-registration}">새 그룹 신청하기</a>
         </div>
     </div>
-
 </main>
 
 <script th:src="@{/js/group-registration.js}"></script>
