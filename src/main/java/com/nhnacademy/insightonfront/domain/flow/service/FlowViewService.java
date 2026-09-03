@@ -19,13 +19,14 @@ import com.nhnacademy.insightonfront.domain.flow.dto.FlowStepViewModel;
 import com.nhnacademy.insightonfront.domain.flow.dto.FlowViewModel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -59,10 +60,13 @@ public class FlowViewService {
             Map.entry("COOL", "냉방"), Map.entry("DRY", "제습"), Map.entry("FAN", "송풍"), Map.entry("AUTO", "자동"),
             Map.entry("SLEEP", "취침"), Map.entry("TURBO", "터보"),
             Map.entry("LOW", "약"), Map.entry("MID", "중"), Map.entry("HIGH", "강"));
-    // Flow Editor(flow-editor.js의 buildCron)가 만들어내는 "매일/매주/매월" 3가지 형태만 인식한다.
+    // Flow Editor(flow-editor.js의 buildCron)가 만들어내는 "매일/매주/매월" 3가지 형태와
+    // AI가 draft로 만드는 요일 이름/범위 표기(MON-FRI 등)까지 인식한다.
     // Rule Engine의 CronExpressionValidator가 요구하는 Spring 6필드(초 분 시 일 월 요일) 형식이며 초는 항상 "0"이다.
     private static final Pattern SCHEDULE_CRON = Pattern.compile(
-            "^0\\s+(\\d{1,2})\\s+(\\d{1,2})\\s+(\\*|\\d{1,2})\\s+\\*\\s+(\\*|[0-6](?:,[0-6])*)$");
+            "^0\\s+(\\d{1,2})\\s+(\\d{1,2})\\s+(\\*|\\d{1,2})\\s+\\*\\s+(\\S+)$");
+    private static final Map<String, Integer> WEEKDAY_NAME_TO_INDEX = Map.of(
+            "SUN", 0, "MON", 1, "TUE", 2, "WED", 3, "THU", 4, "FRI", 5, "SAT", 6);
 
     private final FlowClient flowClient;
     private final LocationNameResolver locationNameResolver;
@@ -269,14 +273,49 @@ public class FlowViewService {
             return dayOfMonth >= 1 && dayOfMonth <= 31 ? "매월 " + dayOfMonth + "일 " + time : cron;
         }
         if (day.equals("*")) {
-            String days = Arrays.stream(weekday.split(","))
-                    .map(Integer::parseInt)
-                    .sorted()
+            Set<Integer> weekdays = parseWeekdays(weekday);
+            if (weekdays == null || weekdays.isEmpty()) return cron;
+            String days = weekdays.stream()
                     .map(index -> WEEKDAY_LABELS[index])
                     .collect(Collectors.joining(", "));
             return "매주 " + days + "요일 " + time;
         }
         return cron;
+    }
+
+    /**
+     * cron 요일 필드를 0(일)~6(토) 집합으로 정규화한다.
+     * 프론트 편집화면은 숫자 콤마열만 만들지만, AI가 생성하는 draft는
+     * Spring CronExpression이 허용하는 이름(MON~SUN)과 범위(MON-FRI) 표기를 함께 쓴다.
+     */
+    private Set<Integer> parseWeekdays(String field) {
+        Set<Integer> days = new TreeSet<>();
+        for (String token : field.split(",")) {
+            String[] range = token.split("-");
+            if (range.length == 1) {
+                Integer value = weekdayIndex(range[0]);
+                if (value == null) return null;
+                days.add(value);
+            } else if (range.length == 2) {
+                Integer start = weekdayIndex(range[0]);
+                Integer end = weekdayIndex(range[1]);
+                if (start == null || end == null) return null;
+                for (int i = start; ; i = (i + 1) % 7) {
+                    days.add(i);
+                    if (i == end) break;
+                }
+            } else {
+                return null;
+            }
+        }
+        return days;
+    }
+
+    private Integer weekdayIndex(String token) {
+        String value = token.trim().toUpperCase(Locale.ROOT);
+        if (value.equals("7")) return 0;
+        if (value.matches("[0-6]")) return Integer.parseInt(value);
+        return WEEKDAY_NAME_TO_INDEX.get(value);
     }
 
     private String duration(long seconds) {
