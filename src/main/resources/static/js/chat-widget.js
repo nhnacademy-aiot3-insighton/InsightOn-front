@@ -104,58 +104,78 @@ async function loadChatHistory() {
     });
 }
 
+let isSending = false;
+
+/**
+ * 같은 대화(conversationId)는 서버에서 Redis 락으로 직렬화되기 때문에, 응답이 오기 전에
+ * 같은 메시지를 또 보내면(더블클릭, 엔터 연타, 실패 메시지 보고 바로 재전송 등) 첫 요청이
+ * 아직 락을 쥐고 있어 두 번째 요청이 실패한다 - 애초에 두 번째 요청 자체가 안 나가게 막는다.
+ */
+function setSending(sending) {
+    isSending = sending;
+    chatInput.disabled = sending;
+    const sendButton = chatForm.querySelector('.chat-send-btn');
+    if (sendButton) sendButton.disabled = sending;
+}
+
 async function streamChatReply(message) {
     const locationId = chatPanel ? chatPanel.dataset.locationId : '';
     const bubble = appendChatBubble('', 'bot');
     showTypingIndicator(bubble);
     let rawText = '';
 
-    let response;
+    setSending(true);
     try {
-        response = await fetch('/my-group/chat' + (locationId ? `?locationId=${locationId}` : ''), {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({message}),
-        });
-    } catch (e) {
-        clearTypingIndicator(bubble);
-        bubble.textContent = '응답을 받아오지 못했어요. 잠시 후 다시 시도해주세요.';
-        return;
-    }
+        let response;
+        try {
+            response = await fetch('/my-group/chat' + (locationId ? `?locationId=${locationId}` : ''), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message}),
+            });
+        } catch (e) {
+            clearTypingIndicator(bubble);
+            bubble.textContent = '응답을 받아오지 못했어요. 잠시 후 다시 시도해주세요.';
+            return;
+        }
 
-    if (!response.ok || !response.body) {
-        clearTypingIndicator(bubble);
-        bubble.textContent = '응답을 받아오지 못했어요. 잠시 후 다시 시도해주세요.';
-        return;
-    }
+        if (!response.ok || !response.body) {
+            clearTypingIndicator(bubble);
+            bubble.textContent = '응답을 받아오지 못했어요. 잠시 후 다시 시도해주세요.';
+            return;
+        }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let received = false;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let received = false;
 
-    while (true) {
-        const {value, done} = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, {stream: true});
+        while (true) {
+            const {value, done} = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, {stream: true});
 
-        let boundary;
-        while ((boundary = buffer.indexOf('\n\n')) !== -1) {
-            const token = parseSseEvent(buffer.slice(0, boundary));
-            buffer = buffer.slice(boundary + 2);
-            if (token) {
-                rawText += token;
-                received = true;
-                clearTypingIndicator(bubble);
-                renderMarkdown(bubble, rawText);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+            let boundary;
+            while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+                const token = parseSseEvent(buffer.slice(0, boundary));
+                buffer = buffer.slice(boundary + 2);
+                if (token) {
+                    rawText += token;
+                    received = true;
+                    clearTypingIndicator(bubble);
+                    renderMarkdown(bubble, rawText);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
             }
         }
-    }
 
-    if (!received) {
-        clearTypingIndicator(bubble);
-        bubble.textContent = '응답이 없어요. 잠시 후 다시 시도해주세요.';
+        if (!received) {
+            clearTypingIndicator(bubble);
+            bubble.textContent = '응답이 없어요. 잠시 후 다시 시도해주세요.';
+        }
+    } finally {
+        setSending(false);
+        chatInput.focus();
     }
 }
 
@@ -166,6 +186,7 @@ if (chatMessages) {
 if (chatForm) {
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        if (isSending) return;
         const text = chatInput.value.trim();
         if (!text) return;
         appendChatBubble(text, 'user');
