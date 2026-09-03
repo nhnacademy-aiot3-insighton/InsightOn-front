@@ -142,9 +142,19 @@
         <a th:href="@{/my-group/engine-alerts}" class="nav-link">엔진알람</a>
         <a th:href="@{/my-group/suggestions}" class="nav-link">제안</a>
         <a th:href="@{/my-group/sensors}" class="nav-link">센서</a>
-        <!-- 액추에이터는 위치별 화면이라, 그룹 홈에서는 위치 목록을 거쳐 이동.
-             목적지가 위치 목록과 같아서 active 하이라이트에서는 제외(라우팅 shim). -->
-        <a th:href="@{/my-group/location/list}" class="nav-link" data-nav-shim="true">액추에이터</a>
+        <!-- 액추에이터는 위치별 화면이라 그룹 홈에선 위치를 골라 들어간다.
+             예전엔 위치 목록(위치 관리)으로 보냈는데 헷갈려서 위치 선택 드롭다운으로 교체. -->
+        <div class="dropdown">
+            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" data-nav-shim="true" aria-expanded="false">액추에이터</a>
+            <ul class="dropdown-menu">
+                <li th:if="${sidebarLocations == null or #lists.isEmpty(sidebarLocations)}">
+                    <span class="dropdown-item disabled">등록된 위치가 없어요</span>
+                </li>
+                <li th:each="loc : ${sidebarLocations}">
+                    <a class="dropdown-item" th:href="@{/locations/{id}/actuators(id=${loc.locationId()})}" th:text="${loc.locationName()}">위치</a>
+                </li>
+            </ul>
+        </div>
         <a th:href="@{/my-group/flows}" class="nav-link">Flow</a>
     </nav>
     <div class="flex-grow-1"></div>
