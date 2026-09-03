@@ -43,6 +43,21 @@ function appendChatBubble(text, who) {
     return bubble;
 }
 
+/** AI 응답 대기 중: 버블에 물결치는 3점 인디케이터를 넣는다. */
+function showTypingIndicator(bubble) {
+    bubble.classList.add('is-typing');
+    bubble.innerHTML = '<span class="chat-typing-dot"></span><span class="chat-typing-dot"></span><span class="chat-typing-dot"></span>';
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/** 첫 응답 토큰이 오거나 에러가 나면 인디케이터를 걷어낸다. */
+function clearTypingIndicator(bubble) {
+    if (bubble.classList.contains('is-typing')) {
+        bubble.classList.remove('is-typing');
+        bubble.innerHTML = '';
+    }
+}
+
 /** "data:" 뒤 공백 한 칸만 떼고 나머지는 그대로 둔다 - trim()을 쓰면 토큰 자체가 줄바꿈/공백일 때 사라진다. */
 function stripDataPrefix(line) {
     const value = line.slice(5);
@@ -89,6 +104,7 @@ async function loadChatHistory() {
 async function streamChatReply(message) {
     const locationId = chatPanel ? chatPanel.dataset.locationId : '';
     const bubble = appendChatBubble('', 'bot');
+    showTypingIndicator(bubble);
     let rawText = '';
 
     let response;
@@ -99,11 +115,13 @@ async function streamChatReply(message) {
             body: JSON.stringify({message}),
         });
     } catch (e) {
+        clearTypingIndicator(bubble);
         bubble.textContent = '응답을 받아오지 못했어요. 잠시 후 다시 시도해주세요.';
         return;
     }
 
     if (!response.ok || !response.body) {
+        clearTypingIndicator(bubble);
         bubble.textContent = '응답을 받아오지 못했어요. 잠시 후 다시 시도해주세요.';
         return;
     }
@@ -125,6 +143,7 @@ async function streamChatReply(message) {
             if (token) {
                 rawText += token;
                 received = true;
+                clearTypingIndicator(bubble);
                 renderMarkdown(bubble, rawText);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
@@ -132,6 +151,7 @@ async function streamChatReply(message) {
     }
 
     if (!received) {
+        clearTypingIndicator(bubble);
         bubble.textContent = '응답이 없어요. 잠시 후 다시 시도해주세요.';
     }
 }
