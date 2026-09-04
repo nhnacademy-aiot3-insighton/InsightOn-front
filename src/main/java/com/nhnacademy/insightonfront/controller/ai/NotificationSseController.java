@@ -10,7 +10,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,7 +29,7 @@ public class NotificationSseController {
     private String gatewayUrl;
 
     @GetMapping("/groups/notifications/stream")
-    public SseEmitter stream(@CookieValue(value = "accessToken", required = false) String accessToken,
+    public ResponseEntity<SseEmitter> stream(@CookieValue(value = "accessToken", required = false) String accessToken,
                              @CookieValue(value = "groupId", required = false) Long groupId) {
 
         if(accessToken == null || groupId == null) {
@@ -53,7 +55,14 @@ public class NotificationSseController {
         emitter.onCompletion(() -> upstream.cancel(true));
         emitter.onTimeout(() -> upstream.cancel(true));
 
-        return emitter;
+        // Cloudflare 등 앞단 프록시가 text/event-stream 응답을 실시간으로 흘려보내지 않고 버퍼링해버리는
+        // 경우가 흔하다(하트비트를 보내도 프록시가 안 흘려주면 브라우저는 여전히 침묵으로 봄) - nginx/Cloudflare가
+        // 인식하는 X-Accel-Buffering: no로 버퍼링을 끄고, 캐시 프록시가 응답을 캐싱/버퍼링 대상으로 취급하지
+        // 않도록 no-cache도 명시한다.
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noCache())
+                .header("X-Accel-Buffering", "no")
+                .body(emitter);
     }
 
     /**

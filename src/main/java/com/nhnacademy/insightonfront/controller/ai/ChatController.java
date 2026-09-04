@@ -15,7 +15,9 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,7 +60,7 @@ public class ChatController {
     }
 
     @PostMapping("/my-group/chat")
-    public SseEmitter chat(@CookieValue(value = "accessToken", required = false) String accessToken,
+    public ResponseEntity<SseEmitter> chat(@CookieValue(value = "accessToken", required = false) String accessToken,
                            @CookieValue(value = "groupId", required = false) Long groupId,
                            @RequestParam(required = false) Long locationId,
                            @RequestBody ChatMessageRequest request) {
@@ -100,7 +102,12 @@ public class ChatController {
         emitter.onCompletion(() -> upstream.cancel(true));
         emitter.onTimeout(() -> upstream.cancel(true));
 
-        return emitter;
+        // Cloudflare 등 앞단 프록시가 text/event-stream 응답을 버퍼링해 하트비트를 보내도 실시간으로
+        // 안 흘려보내는 경우가 흔하다 - X-Accel-Buffering: no로 버퍼링을 끄고 no-cache로 캐시 취급도 막는다.
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noCache())
+                .header("X-Accel-Buffering", "no")
+                .body(emitter);
     }
 
     /**
