@@ -276,7 +276,7 @@
                 <div class="card-header grid-widget-header px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="${cursorStyle}">
                     <div class="grid-widget-label d-flex align-items-center gap-2 text-truncate" style="max-width: ${CAN_MANAGE ? 'calc(100% - 95px)' : '100%'};">
                         ${dragIcon}
-                        <span class="fw-bold text-truncate" title="${sensorName} · ${fields}">${sensorName} · ${fields}</span>
+                        <span class="fw-bold text-truncate" title="${sensorName} · ${fields}">${fields}</span>
                     </div>
                     ${controlsHtml}
                 </div>
@@ -309,8 +309,8 @@
         const {sensorName, fields} = widgetTitle(w);
         const span = el.querySelector('.grid-widget-label span');
         if (span) {
-            span.textContent = `${sensorName} · ${fields}`;
-            span.title = `${sensorName} · ${fields}`;
+            span.textContent = fields;                       // 헤더엔 메트릭만
+            span.title = `${sensorName} · ${fields}`;        // 센서 이름은 hover 툴팁으로
         }
         updateAccent(w);
     }
