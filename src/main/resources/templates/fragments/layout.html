@@ -276,6 +276,12 @@
 <div th:fragment="chatWidget">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+      if (window.mermaid) {
+        mermaid.initialize({startOnLoad: false, theme: (window.InsightTheme && InsightTheme.getResolved() === 'dark') ? 'dark' : 'default'});
+      }
+    </script>
     <button type="button" class="chat-fab" data-bs-toggle="offcanvas" data-bs-target="#aiChatPanel" aria-controls="aiChatPanel">
         <i class="ti ti-message-chatbot"></i>
     </button>

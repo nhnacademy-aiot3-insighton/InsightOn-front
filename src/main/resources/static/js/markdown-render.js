@@ -12,7 +12,29 @@ function renderMarkdownIn(root) {
     root.querySelectorAll('[data-markdown]').forEach((el) => {
         const raw = el.textContent;
         el.innerHTML = DOMPurify.sanitize(marked.parse(raw, {breaks: true}));
+        renderMermaidIn(el);
     });
+}
+
+/**
+ * 리포트에 AI가 ```mermaid 코드블록(막대그래프 등)을 넣으면 marked가
+ * <pre><code class="language-mermaid">로 만들어주는데, mermaid.js는 <div class="mermaid">
+ * 안의 텍스트만 그려주므로 변환해서 렌더링한다. 문법이 깨진 차트는 mermaid가 알아서 에러
+ * 박스로 표시하고 나머지 리포트 렌더링은 막지 않는다.
+ */
+function renderMermaidIn(el) {
+    if (!window.mermaid) return;
+    const nodes = [];
+    el.querySelectorAll('code.language-mermaid').forEach((code) => {
+        const div = document.createElement('div');
+        div.className = 'mermaid';
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+        nodes.push(div);
+    });
+    if (nodes.length > 0) {
+        mermaid.run({nodes}).catch((e) => console.warn('mermaid 렌더링 실패', e));
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => renderMarkdownIn(document));
