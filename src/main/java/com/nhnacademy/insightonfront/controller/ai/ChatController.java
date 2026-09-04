@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -86,7 +87,7 @@ public class ChatController {
         }
 
         SseEmitter emitter = new SseEmitter(0L);
-        httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofLines())
+        CompletableFuture<Void> upstream = httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofLines())
                 .thenAccept(response -> relay(emitter, response.body()))
                 .exceptionally(e -> {
                     log.warn("[ChatController] AI 스트리밍 릴레이 실패", e);
@@ -94,20 +95,35 @@ public class ChatController {
                     return null;
                 });
 
+        // 브라우저가 연결을 끊었는데 업스트림(Gateway) 요청은 계속 살아있으면 AI가 이미 버려진
+        // 요청을 위해 계속 일하는 리소스 누수가 된다 - NotificationSseController와 동일하게 정리.
+        emitter.onCompletion(() -> upstream.cancel(true));
+        emitter.onTimeout(() -> upstream.cancel(true));
+
         return emitter;
     }
 
+    /**
+     * AI 백엔드는 도구 호출로 첫 토큰까지 수십 초 걸릴 수 있는 구간에 SSE 하트비트 주석(":"로 시작)을
+     * 보낸다. 예전엔 "data:"가 아니라고 걸러버려서, 그 하트비트가 여기서 죽고 브라우저까지 전혀
+     * 전달되지 않았다 - 그 사이 브라우저/중간 프록시가 진짜 침묵으로 보고 연결을 끊어버려도 AI는
+     * 뒤에서 계속 처리해 채팅 이력엔 저장되지만 사용자는 아무 응답도 못 보는 원인이었다. data:는
+     * 내용을 릴레이하고, 하트비트는 SSE 주석 그대로(마크다운 렌더링에 안 섞이게) 릴레이해 연결이
+     * 계속 "살아있다"는 신호가 브라우저까지 도달하게 한다.
+     */
     private void relay(SseEmitter emitter, Stream<String> lines) {
         try (lines) {
-            lines.filter(line -> line.startsWith("data:"))
-                    .map(this::stripDataPrefix)
-                    .forEach(token -> {
-                        try {
-                            emitter.send(token);
-                        } catch (IOException e) {
-                            throw new UncheckedIOException(e);
-                        }
-                    });
+            lines.forEach(line -> {
+                try {
+                    if (line.startsWith("data:")) {
+                        emitter.send(stripDataPrefix(line));
+                    } else if (line.startsWith(":")) {
+                        emitter.send(SseEmitter.event().comment(line.substring(1)));
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
             emitter.complete();
         } catch (Exception e) {
             emitter.completeWithError(e);
