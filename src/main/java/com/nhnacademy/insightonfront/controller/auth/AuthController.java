@@ -113,6 +113,7 @@ public class AuthController {
     private String loginErrorMessage(int status) {
         return switch (status) {
             case 401, 400 -> "이메일 또는 비밀번호가 올바르지 않아요.";
+            case 403 -> "이용이 제한된(정지) 계정이에요. 관리자에게 문의해주세요.";
             case 423 -> "로그인이 일시적으로 잠겼어요. 잠시 후 다시 시도해주세요.";
             default -> "로그인에 실패했어요. 잠시 후 다시 시도해주세요.";
         };

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>회원 상세 — InsightOn</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <script th:src="@{/js/theme.js}"></script>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="landing-page">
+
+<header class="landing-header">
+    <a class="brand" th:href="@{/admin/main}">
+        <i class="ti ti-shield-lock"></i>InsightOn
+    </a>
+    <nav class="landing-nav">
+        <a th:href="@{/admin/users}">회원 조회</a>
+        <a th:href="@{/admin/group-registrations}">그룹 신청 관리</a>
+    </nav>
+    <div class="landing-header-actions">
+        <a class="landing-greeting" th:href="@{/mypage}" th:if="${userName != null}" th:text="|${userName}님|"></a>
+        <form method="post" style="display:inline;" th:action="@{/admin/logout}">
+            <button class="btn-landing-secondary" type="submit">로그아웃</button>
+        </form>
+    </div>
+</header>
+
+<section class="landing-section" th:attr="data-user-id=${userId}">
+
+    <div style="margin-bottom: var(--sp-4);">
+        <a class="d-inline-flex align-items-center gap-1"
+           style="color: var(--ink-soft); text-decoration: none; font-size: var(--fs-body);"
+           th:href="@{/admin/users}">
+            <i class="ti ti-arrow-left"></i> 회원 목록으로
+        </a>
+    </div>
+
+    <div class="auth-error" id="loadError" style="display:none; margin-bottom: var(--sp-3);">
+        <i class="ti ti-x"></i>
+        <span>회원 정보를 불러오지 못했어요.</span>
+    </div>
+
+    <div id="detailBody" style="display:none;">
+        <!-- 프로필 카드 -->
+        <div class="settings-card" style="display:flex; align-items:center; gap: var(--sp-4); margin-bottom: var(--sp-4);">
+            <div class="location-avatar" id="dAvatar"
+                 style="width:48px; height:48px; font-size:1.25rem; flex-shrink:0;">?</div>
+            <div style="flex:1; min-width:0;">
+                <div id="dName" style="font-size:1rem; font-weight:600; color:var(--ink);"></div>
+                <div style="margin-top: var(--sp-1);"><span id="dStatusBadge"></span></div>
+            </div>
+        </div>
+
+        <!-- 상세 정보 -->
+        <p class="section-label">회원 정보</p>
+        <div class="settings-card">
+            <div class="settings-field">
+                <label>이메일</label>
+                <input class="form-control" disabled id="dEmail" type="text">
+            </div>
+            <div class="settings-field">
+                <label>이름</label>
+                <input class="form-control" disabled id="dNameField" type="text">
+            </div>
+            <div class="settings-field">
+                <label>계정 상태</label>
+                <input class="form-control" disabled id="dStatus" type="text">
+            </div>
+            <div class="settings-field">
+                <label>권한</label>
+                <input class="form-control" disabled id="dRoles" type="text">
+            </div>
+        </div>
+
+        <!-- 권한 관리 -->
+        <p class="section-label" style="margin-top: var(--sp-6);">권한 관리</p>
+        <div class="settings-card">
+            <div class="field-hint danger" id="roleError" style="display:none; margin-bottom: var(--sp-4);"></div>
+            <div class="field-hint" id="roleSaved" style="display:none; margin-bottom: var(--sp-4);">권한을 저장했어요.</div>
+
+            <!-- 체크박스는 아래 ROLES 배열로 렌더된다. 역할이 늘면 그 배열에 한 줄만 추가. -->
+            <div class="settings-field" style="gap: var(--sp-2);" id="roleChecks"></div>
+
+            <button class="btn btn-outline-secondary" id="btnSaveRoles" style="margin-top: var(--sp-3); align-self:flex-start;" type="button">권한 저장</button>
+        </div>
+
+        <!-- 계정 관리 -->
+        <p class="section-label" style="margin-top: var(--sp-6);">계정 관리</p>
+        <div class="settings-card">
+            <div class="field-hint danger" id="actionError" style="display:none; margin-bottom: var(--sp-4);"></div>
+
+            <div class="settings-field" style="flex-direction:row; align-items:center; justify-content:space-between; gap: var(--sp-4);"
+                 data-action-row="block">
+                <div>
+                    <div style="font-weight:500; color: var(--danger);">계정 정지</div>
+                    <div class="field-hint" style="margin-top: var(--sp-1);">로그인을 차단합니다. (BLOCK)</div>
+                </div>
+                <button class="btn btn-outline-secondary text-danger" data-action="block" type="button">정지</button>
+            </div>
+
+            <div class="settings-field" style="flex-direction:row; align-items:center; justify-content:space-between; gap: var(--sp-4);"
+                 data-action-row="sleep">
+                <div>
+                    <div style="font-weight:500;">휴면 전환</div>
+                    <div class="field-hint" style="margin-top: var(--sp-1);">계정을 휴면 상태로 전환합니다. 재인증이 필요해집니다. (SLEEP)</div>
+                </div>
+                <button class="btn btn-outline-secondary" data-action="sleep" type="button">휴면</button>
+            </div>
+
+            <div class="settings-field" style="flex-direction:row; align-items:center; justify-content:space-between; gap: var(--sp-4);"
+                 data-action-row="activate">
+                <div>
+                    <div style="font-weight:500;">계정 활성화</div>
+                    <div class="field-hint" style="margin-top: var(--sp-1);">정지·휴면 계정을 다시 활성 상태로 복구합니다. (ACTIVE)</div>
+                </div>
+                <button class="btn btn-outline-secondary" data-action="activate" type="button">활성화</button>
+            </div>
+
+            <div class="settings-field" style="flex-direction:row; align-items:center; justify-content:space-between; gap: var(--sp-4);">
+                <div>
+                    <div style="font-weight:500;">강제 로그아웃</div>
+                    <div class="field-hint" style="margin-top: var(--sp-1);">이 회원의 모든 세션을 즉시 만료시킵니다.</div>
+                </div>
+                <button class="btn btn-outline-secondary" data-action="force-logout" type="button">강제 로그아웃</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="landing-footer">
+    © InsightOn — AIOT 빌딩 통합 관제
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    const USER_ID = document.querySelector('[data-user-id]').dataset.userId;
+
+    const STATUS_META = {
+        ACTIVE:   { label: '활성', cls: 'success' },
+        SLEEP:    { label: '휴면', cls: 'warning' },
+        BLOCK:    { label: '정지', cls: 'danger' },
+        WITHDRAW: { label: '탈퇴', cls: 'neutral' }
+    };
+
+    /* 상태별로 의미 없는 액션은 숨긴다 */
+    const ACTIONS_BY_STATUS = {
+        ACTIVE:   ['block', 'sleep'],
+        SLEEP:    ['block', 'activate'],
+        BLOCK:    ['activate'],
+        WITHDRAW: []
+    };
+
+    const CONFIRM_TEXT = {
+        block:          '이 회원의 계정을 정지할까요? 로그인이 차단됩니다.',
+        sleep:          '이 회원을 휴면 상태로 전환할까요?',
+        activate:       '이 회원의 계정을 다시 활성화할까요?',
+        'force-logout': '이 회원을 강제 로그아웃할까요?'
+    };
+
+    const detailBody = document.getElementById('detailBody');
+    const loadError = document.getElementById('loadError');
+    const actionError = document.getElementById('actionError');
+
+    function escapeHtml(s) {
+        return (s == null ? '' : String(s)).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function badge(status) {
+        const m = STATUS_META[status] || { label: status, cls: 'neutral' };
+        return `<span class="status-badge ${m.cls}" style="margin-top:0;">${m.label}</span>`;
+    }
+
+    function showActionError(msg) {
+        actionError.textContent = msg;
+        actionError.style.display = '';
+    }
+
+    function render(user) {
+        document.getElementById('dAvatar').textContent = (user.userName || user.email || '?').charAt(0);
+        document.getElementById('dName').textContent = user.userName || '-';
+        document.getElementById('dStatusBadge').innerHTML = badge(user.status);
+        document.getElementById('dEmail').value = user.email || '-';
+        document.getElementById('dNameField').value = user.userName || '-';
+        const meta = STATUS_META[user.status];
+        document.getElementById('dStatus').value = meta ? `${meta.label} (${user.status})` : user.status;
+        document.getElementById('dRoles').value = (user.roles && user.roles.length) ? user.roles.join(', ') : '-';
+
+        const userRoles = user.roles || [];
+        roleInputs().forEach(c => { c.checked = userRoles.includes(c.value); });
+        applyRoleRules();
+
+        const allowed = ACTIONS_BY_STATUS[user.status] || [];
+        document.querySelectorAll('[data-action-row]').forEach(row => {
+            row.style.display = allowed.includes(row.dataset.actionRow) ? '' : 'none';
+        });
+
+        detailBody.style.display = '';
+    }
+
+    function loadDetail() {
+        fetch(`/admin/api/users/${USER_ID}`, { headers: { 'Accept': 'application/json' } })
+            .then(res => {
+                if (!res.ok) throw new Error('status ' + res.status);
+                return res.json();
+            })
+            .then(render)
+            .catch(() => {
+                detailBody.style.display = 'none';
+                loadError.style.display = '';
+            });
+    }
+
+    /* 권한 체크박스 — 목록은 auth(GET /admin/api/roles)에서 받아 렌더.
+       exclusive: 선택 시 다른 권한 불가 / base: 배타 역할이 없을 때 항상 켜두는 기본 권한 */
+    const roleChecksEl = document.getElementById('roleChecks');
+
+    function buildRoleChecks(roles) {
+        roleChecksEl.innerHTML = roles.map(r => `
+            <label style="display:flex; align-items:center; gap: var(--sp-2); font-weight:400;">
+                <input type="checkbox" class="role-check" value="${escapeHtml(r.name)}"
+                       ${r.base ? 'data-base="true"' : ''} ${r.exclusive ? 'data-exclusive="true"' : ''}>
+                ${escapeHtml(r.label || r.name)}${
+                    r.exclusive ? ' <span class="field-hint" style="margin:0;">(선택 시 다른 권한 불가)</span>'
+                  : r.base     ? ' <span class="field-hint" style="margin:0;">(기본 권한)</span>' : ''}
+            </label>`).join('');
+    }
+
+    const roleInputs = () => [...roleChecksEl.querySelectorAll('.role-check')];
+    const checkedExclusiveRole = () => roleInputs().find(c => c.checked && c.dataset.exclusive === 'true');
+
+    function applyRoleRules() {
+        const ex = checkedExclusiveRole();
+        roleInputs().forEach(c => {
+            if (ex && c !== ex) {
+                c.checked = false;
+                c.disabled = true;
+            } else {
+                // 배타 역할이 없을 때: 기본 권한은 항상 켜고 고정, 그 외는 자유
+                const isBase = c.dataset.base === 'true';
+                c.disabled = !ex && isBase;
+                if (!ex && isBase) c.checked = true;
+            }
+        });
+    }
+
+    roleChecksEl.addEventListener('change', applyRoleRules);
+
+    /* 권한 전체 교체 저장 */
+    document.getElementById('btnSaveRoles').addEventListener('click', () => {
+        const roleError = document.getElementById('roleError');
+        const roleSaved = document.getElementById('roleSaved');
+        roleError.style.display = 'none';
+        roleSaved.style.display = 'none';
+
+        // 배타 역할이 켜져 있으면 그것만, 아니면 체크된 권한 전부 (기본 권한은 disabled 지만 checked)
+        const ex = checkedExclusiveRole();
+        const roles = ex ? [ex.value] : roleInputs().filter(c => c.checked).map(c => c.value);
+
+        const btn = document.getElementById('btnSaveRoles');
+        btn.disabled = true;
+        fetch(`/admin/api/users/${USER_ID}/roles`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roles })
+        })
+            .then(res => {
+                if (res.status === 400) throw new Error('bad-request');
+                if (!res.ok) throw new Error('status ' + res.status);
+                roleSaved.style.display = '';
+                loadDetail();
+            })
+            .catch(err => {
+                roleError.textContent = err.message === 'bad-request'
+                    ? '권한은 1개 이상 선택해야 해요.'
+                    : '권한 저장에 실패했어요. 잠시 후 다시 시도해주세요.';
+                roleError.style.display = '';
+            })
+            .finally(() => { btn.disabled = false; });
+    });
+
+    document.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const action = btn.dataset.action;
+            if (!confirm(CONFIRM_TEXT[action])) return;
+            actionError.style.display = 'none';
+            btn.disabled = true;
+            fetch(`/admin/api/users/${USER_ID}/${action}`, { method: 'POST' })
+                .then(res => {
+                    if (!res.ok) throw new Error('status ' + res.status);
+                    location.reload();
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    showActionError('처리하지 못했어요. 잠시 후 다시 시도해주세요.');
+                });
+        });
+    });
+
+    // 권한 목록 먼저 받아서 체크박스 렌더 → 그 다음 상세 조회
+    fetch('/admin/api/roles', { headers: { 'Accept': 'application/json' } })
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(roles => { buildRoleChecks(roles); })
+        .catch(() => {
+            const roleError = document.getElementById('roleError');
+            roleError.textContent = '권한 목록을 불러오지 못했어요.';
+            roleError.style.display = '';
+            document.getElementById('btnSaveRoles').disabled = true;
+        })
+        .finally(() => { loadDetail(); });
+</script>
+</body>
+</html>

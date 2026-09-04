@@ -62,6 +62,11 @@ public class ChatController {
                            @RequestParam(required = false) Long locationId,
                            @RequestBody ChatMessageRequest request) {
         if (accessToken == null || groupId == null) {
+            // AccessTokenPreloadFilter가 갱신을 시도했는데도 이 시점에 accessToken이 없다는 뜻 -
+            // AI/Gateway를 호출하기도 전에 여기서 즉시 401로 끝난다. "챗봇이 응답 없이 바로
+            // 실패한다"는 증상의 원인이 라우팅/AI 쪽이 아니라 여기였는지 로그로 바로 확인 가능하게.
+            log.warn("[ChatController] 챗봇 요청 인증 정보 없음 - accessToken={}, groupId={}",
+                    accessToken != null, groupId != null);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
