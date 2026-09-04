@@ -3994,7 +3994,8 @@ button:focus-visible,
   gap: var(--sp-2);
 }
 
-@media (max-width: 1200px) {
+/* 사이드바와 카드 내부 여백을 제외한 실제 편집 폭이 4단계를 수용할 때만 가로로 배치한다. */
+@media (max-width: 1440px) {
   .flow-chain {
     grid-template-columns: 1fr;
     gap: 0;
@@ -4764,6 +4765,16 @@ button:focus-visible,
   color: var(--danger);
 }
 
+@media (max-width: 1200px) {
+  .flow-detail-node-path {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-detail-node-column {
+    grid-column: 1;
+  }
+}
+
 @media (max-width: 900px) {
   .flow-page .app-header {
     gap: var(--sp-2) !important;
@@ -4824,14 +4835,6 @@ button:focus-visible,
 
   .flow-detail-panel {
     width: 100%;
-  }
-
-  .flow-detail-node-path {
-    grid-template-columns: 1fr;
-  }
-
-  .flow-detail-node-column {
-    grid-column: 1;
   }
 
 }
