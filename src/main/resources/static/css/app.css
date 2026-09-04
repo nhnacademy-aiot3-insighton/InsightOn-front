@@ -218,12 +218,6 @@
   --bs-btn-active-bg: var(--surface-alt);
 }
 
-/* input-group 의 마지막 요소가 <form>(display:contents)으로 감싼 버튼이면
-   부트스트랩 :last-child 라운딩이 안 먹어 우측이 직각으로 남는다 (초대 코드 칸) */
-.input-group > form:last-child > .btn {
-  border-top-right-radius: var(--bs-border-radius);
-  border-bottom-right-radius: var(--bs-border-radius);
-}
 
 /* ---------- 팝업(모달) 통일 스킨 — 위치 추가 / 액추에이터 추가 / 위젯 설정 등
    앱 안의 모든 부트스트랩 모달이 같은 톤을 공유하도록. ---------- */
@@ -1253,9 +1247,10 @@ button:focus-visible,
 
 /* Tabler의 .offcanvas.offcanvas-end(클래스 2개, 우선순위 0,2,0)가 .chat-offcanvas(0,1,0)보다
    우선순위가 높아서 width가 안 먹혔음 - id 선택자로 확실히 이기게 함 */
-#aiChatPanel.chat-offcanvas {
-  --bs-offcanvas-width: 880px;
-  width: 880px;
+#aiChatPanel.chat-offcanvas,
+#aiChatPanel.offcanvas.chat-offcanvas {
+  --bs-offcanvas-width: min(1080px, 96vw);
+  width: min(1080px, 96vw) !important;
   max-width: 96vw;
 }
 

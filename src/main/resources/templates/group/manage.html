@@ -72,12 +72,12 @@
                     <div class="form-section-label"><i class="ti ti-ticket"></i>초대 코드</div>
                     <div class="settings-field">
                         <p class="field-hint">이 코드로 신규 멤버를 그룹에 초대할 수 있어요. 새로 발급하면 이전 코드는 못 씁니다.</p>
+                        <!-- 세 요소 모두 .input-group 의 직접 자식이어야 부트스트랩 모서리 라운딩이 먹는다.
+                             "새로 발급"을 <form> 으로 감싸면 :last-child 가 <form> 이 돼서 버튼 우측이 직각으로 남았음. -->
                         <div class="input-group">
                             <input type="text" id="inviteToken" class="form-control" th:value="${myGroup.inviteToken()}" readonly>
                             <button type="button" id="btnCopyInviteToken" class="btn btn-outline-secondary">복사</button>
-                            <form th:action="@{/my-group/invite-token/new}" method="post" style="display:contents;">
-                                <button type="submit" class="btn btn-outline-secondary">새로 발급</button>
-                            </form>
+                            <button type="button" id="btnNewInviteToken" class="btn btn-outline-secondary">새로 발급</button>
                         </div>
                     </div>
                 </div>
@@ -269,6 +269,17 @@
     document.getElementById('btnCopyInviteToken').addEventListener('click', () => {
         const input = document.getElementById('inviteToken');
         navigator.clipboard.writeText(input.value);
+    });
+
+    document.getElementById('btnNewInviteToken').addEventListener('click', function () {
+        if (!confirm('초대 코드를 새로 발급할까요? 기존 코드는 더 이상 쓸 수 없어요.')) return;
+        this.disabled = true;
+        fetch('/my-group/invite-token/new', { method: 'POST' })
+            .then((r) => {
+                if (r.ok || r.redirected) { location.reload(); }
+                else { alert('새 코드 발급에 실패했어요.'); this.disabled = false; }
+            })
+            .catch(() => { alert('새 코드 발급 중 오류가 발생했어요.'); this.disabled = false; });
     });
 
     document.getElementById('btnCancelGroupInfo').addEventListener('click', () => location.reload());
