@@ -18,69 +18,90 @@
 <header th:replace="~{fragments/layout :: groupHeader}"></header>
 
 <div class="d-flex">
-    <aside th:replace="~{fragments/layout :: manageSidebar(${section})}"></aside>
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
 
     <main class="app-main">
 
         <div th:if="${section == 'info'}"
              th:with="prevRegion=${myGroup.groupRegion() != null ? #strings.arraySplit(myGroup.groupRegion(), ' ') : null}">
             <p class="section-label">그룹 정보</p>
-            <div class="settings-card settings-card-wide">
-                <div class="row g-3">
-                    <div class="col-6 settings-field">
+
+            <div class="form-panel form-panel-wide" style="max-width: 720px;">
+                <div class="form-panel-head">
+                    <span class="form-medallion"><i class="ti ti-building"></i></span>
+                    <div>
+                        <h1 th:text="${myGroup.name()}">그룹명</h1>
+                        <p th:text="${'생성일 ' + #temporals.format(myGroup.createdAt(), 'yyyy-MM-dd')}">생성일</p>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-label"><i class="ti ti-id-badge-2"></i>기본 정보</div>
+                    <div class="settings-field">
                         <label for="groupName">그룹명</label>
                         <input type="text" id="groupName" class="form-control" th:value="${myGroup.name()}">
                     </div>
-                    <div class="col-6 settings-field">
-                        <label for="createdAt">생성일</label>
-                        <input type="text" id="createdAt" class="form-control"
-                               th:value="${#temporals.format(myGroup.createdAt(), 'yyyy-MM-dd')}" disabled>
+                    <div class="row g-3">
+                        <div class="col-6 settings-field">
+                            <label for="state">시/도</label>
+                            <select class="form-select" id="state">
+                                <option value="">선택하세요</option>
+                                <option th:each="s : ${states}" th:selected="${prevRegion != null and prevRegion[0] == s}"
+                                        th:text="${s}" th:value="${s}"></option>
+                            </select>
+                        </div>
+                        <div class="col-6 settings-field">
+                            <label for="city">시/군/구</label>
+                            <select class="form-select" id="city">
+                                <option value="">선택하세요</option>
+                                <option th:each="c : ${cities}"
+                                        th:selected="${prevRegion != null and #lists.size(prevRegion) > 1 and #strings.trim(prevRegion[1]) == c}"
+                                        th:text="${c}" th:value="${c}"></option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="col-6 settings-field">
-                        <label for="state">시/도</label>
-                        <select class="form-select" id="state">
-                            <option value="">선택하세요</option>
-                            <option th:each="s : ${states}" th:selected="${prevRegion != null and prevRegion[0] == s}"
-                                    th:text="${s}"
-                                    th:value="${s}"></option>
-                        </select>
-                    </div>
-                    <div class="col-6 settings-field">
-                        <label for="city">시/군/구</label>
-                        <select class="form-select" id="city">
-                            <option value="">선택하세요</option>
-                            <option th:each="c : ${cities}"
-                                    th:selected="${prevRegion != null and #lists.size(prevRegion) > 1 and #strings.trim(prevRegion[1]) == c}"
-                                    th:text="${c}"
-                                    th:value="${c}"></option>
-                        </select>
+                    <div class="settings-field">
+                        <label for="description">설명</label>
+                        <textarea id="description" class="form-control" rows="4" th:text="${myGroup.description()}"></textarea>
                     </div>
                 </div>
-                <div class="settings-field">
-                    <label for="description">설명</label>
-                    <textarea id="description" class="form-control" rows="4" th:text="${myGroup.description()}"></textarea>
-                </div>
-                <div class="settings-field">
-                    <label for="inviteToken">초대 코드</label>
-                    <div class="input-group">
-                        <input type="text" id="inviteToken" class="form-control" th:value="${myGroup.inviteToken()}" readonly>
-                        <button type="button" id="btnCopyInviteToken" class="btn btn-outline-secondary">복사</button>
-                        <form th:action="@{/my-group/invite-token/new}" method="post" style="display:contents;">
-                            <button type="submit" class="btn btn-outline-secondary">새로 발급</button>
-                        </form>
+
+                <div class="wave-divider"></div>
+
+                <div class="form-section">
+                    <div class="form-section-label"><i class="ti ti-ticket"></i>초대 코드</div>
+                    <div class="settings-field">
+                        <p class="field-hint">이 코드로 신규 멤버를 그룹에 초대할 수 있어요. 새로 발급하면 이전 코드는 못 씁니다.</p>
+                        <!-- 세 요소 모두 .input-group 의 직접 자식이어야 부트스트랩 모서리 라운딩이 먹는다.
+                             "새로 발급"을 <form> 으로 감싸면 :last-child 가 <form> 이 돼서 버튼 우측이 직각으로 남았음. -->
+                        <div class="input-group">
+                            <input type="text" id="inviteToken" class="form-control" th:value="${myGroup.inviteToken()}" readonly>
+                            <button type="button" id="btnCopyInviteToken" class="btn btn-outline-secondary">복사</button>
+                            <button type="button" id="btnNewInviteToken" class="btn btn-outline-secondary">새로 발급</button>
+                        </div>
                     </div>
-                    <p class="form-text">이 코드로 신규 멤버를 그룹에 초대할 수 있습니다. 새로 발급하면 이전 코드는 더 이상 쓸 수 없어요.</p>
                 </div>
+
                 <div id="groupInfoSaveStatus" class="field-hint danger" style="display:none;"></div>
-                <div class="settings-actions">
-                    <button type="button" id="btnCancelGroupInfo" class="btn btn-outline-secondary">취소</button>
-                    <button type="button" id="btnSaveGroupInfo" class="btn btn-primary">저장</button>
+                <div class="form-actions">
+                    <span class="spacer"></span>
+                    <button type="button" id="btnCancelGroupInfo" class="btn-landing-secondary">취소</button>
+                    <button type="button" id="btnSaveGroupInfo" class="btn-landing-primary">저장</button>
                 </div>
             </div>
 
-            <!-- 위험 영역: 그룹 탈퇴 -->
-            <div class="settings-card settings-card-wide mt-4" style="border: 1px solid rgba(255, 107, 107, 0.3); background: rgba(255, 107, 107, 0.03);">
-                <div class="d-flex align-items-center justify-content-between">
+            <!-- 위험 영역 — SUPER_MANAGER(그룹 소유자)는 그룹 삭제, 그 외는 그룹 탈퇴 -->
+            <div class="form-panel form-panel-wide danger-zone mt-4" style="max-width: 720px;">
+                <div class="d-flex align-items-center justify-content-between" th:if="${isSuperManager}">
+                    <div>
+                        <p class="mb-1 font-weight-bold" style="color: var(--danger); font-size: 1rem;">그룹 삭제</p>
+                        <p class="mb-0 text-muted" style="font-size: 0.85rem;">그룹과 모든 위치·센서·액추에이터·대시보드가 영구 삭제됩니다. 되돌릴 수 없어요.</p>
+                    </div>
+                    <button type="button" id="btnDeleteGroup" class="btn btn-outline-danger">
+                        <i class="ti ti-trash"></i> 그룹 삭제
+                    </button>
+                </div>
+                <div class="d-flex align-items-center justify-content-between" th:unless="${isSuperManager}">
                     <div>
                         <p class="mb-1 font-weight-bold" style="color: var(--danger); font-size: 1rem;">그룹 탈퇴</p>
                         <p class="mb-0 text-muted" style="font-size: 0.85rem;">현재 소속된 그룹에서 탈퇴합니다. 탈퇴 시 해당 그룹의 관제 및 접근 권한이 모두 삭제됩니다.</p>
@@ -250,6 +271,17 @@
         navigator.clipboard.writeText(input.value);
     });
 
+    document.getElementById('btnNewInviteToken').addEventListener('click', function () {
+        if (!confirm('초대 코드를 새로 발급할까요? 기존 코드는 더 이상 쓸 수 없어요.')) return;
+        this.disabled = true;
+        fetch('/my-group/invite-token/new', { method: 'POST' })
+            .then((r) => {
+                if (r.ok || r.redirected) { location.reload(); }
+                else { alert('새 코드 발급에 실패했어요.'); this.disabled = false; }
+            })
+            .catch(() => { alert('새 코드 발급 중 오류가 발생했어요.'); this.disabled = false; });
+    });
+
     document.getElementById('btnCancelGroupInfo').addEventListener('click', () => location.reload());
 
     document.getElementById('btnSaveGroupInfo').addEventListener('click', () => {
@@ -315,6 +347,29 @@
 
             // 3단계 확인 통과 시 그룹 탈퇴 제출
             document.getElementById('leaveGroupForm').submit();
+        });
+    }
+
+    // SUPER_MANAGER 전용 — 그룹 자체를 삭제 (DELETE /my-group/delete)
+    const btnDeleteGroup = document.getElementById('btnDeleteGroup');
+    if (btnDeleteGroup) {
+        btnDeleteGroup.addEventListener('click', function () {
+            if (!confirm("그룹을 삭제하시겠습니까? 모든 위치·센서·액추에이터·대시보드가 함께 삭제됩니다.")) return;
+            if (!confirm("정말 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+            btnDeleteGroup.disabled = true;
+            fetch('/my-group/delete', { method: 'DELETE' })
+                .then(function (res) {
+                    if (res.ok || res.redirected) {
+                        window.location.href = '/';
+                    } else {
+                        alert('그룹 삭제에 실패했어요. 잠시 후 다시 시도해주세요.');
+                        btnDeleteGroup.disabled = false;
+                    }
+                })
+                .catch(function () {
+                    alert('그룹 삭제 중 오류가 발생했어요.');
+                    btnDeleteGroup.disabled = false;
+                });
         });
     }
 </script>
