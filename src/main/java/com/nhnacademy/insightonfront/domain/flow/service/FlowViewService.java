@@ -155,13 +155,8 @@ public class FlowViewService {
                     "현재 시간이 설정한 범위에 포함되는지 확인합니다.", "ti-clock",
                     fields(new FlowStepFieldViewModel("시간", text(configuration, "startTime", "-")
                             + " ~ " + text(configuration, "endTime", "-"))));
-            case TIMER -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "조건", "반복 간격 확인",
-                    "같은 동작이 너무 자주 실행되지 않도록 간격을 둡니다.", "ti-hourglass",
-                    fields(new FlowStepFieldViewModel("간격", duration(number(configuration, "intervalSeconds", 0)))));
+            case EVENT_GATE -> eventGateStep(node, configuration);
             case ACTUATOR_CONTROL -> actuatorControlStep(node, configuration);
-            case EXTERNAL_NOTIFICATION -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "동작", "외부 알림 보내기",
-                    "이메일 또는 Telegram으로 알림을 보냅니다.", "ti-send",
-                    fields(new FlowStepFieldViewModel("채널", text(configuration, "channel", "알림"))));
         };
     }
 
@@ -215,22 +210,27 @@ public class FlowViewService {
     private FlowStepViewModel alertStep(FlowNodeResponse node, Map<String, Object> configuration) {
         List<FlowStepFieldViewModel> fields = new ArrayList<>();
         fields.add(new FlowStepFieldViewModel("중요도", severity(text(configuration, "severity", "INFO"))));
-        int requiredCount = (int) number(configuration, "requiredCount", 3);
-        fields.add(new FlowStepFieldViewModel("확인 횟수", requiredCount <= 1
-                ? "조건을 한 번 만족하면"
-                : "조건을 " + requiredCount + "회 만족하면"));
-        int timeout = (int) number(configuration, "countTimeoutSeconds", 300);
-        if (requiredCount >= 2 && timeout > 0) {
-            fields.add(new FlowStepFieldViewModel("확인 시간", duration(timeout) + " 안에"));
-        }
-        int cooldown = (int) number(configuration, "cooldownSeconds", 1800);
-        fields.add(new FlowStepFieldViewModel("재알림 대기", cooldown <= 0
-                ? "제한 없음"
-                : "알림 후 " + duration(cooldown) + " 동안 다시 보내지 않음"));
         return new FlowStepViewModel(node.nodeId(), node.nodeType(), "동작",
                 text(configuration, "title", "알림 보내기"),
                 text(configuration, "message", "조건을 만족하면 담당자에게 알립니다."),
                 "ti-bell", List.copyOf(fields));
+    }
+
+    private FlowStepViewModel eventGateStep(FlowNodeResponse node, Map<String, Object> configuration) {
+        int requiredCount = (int) number(configuration, "requiredCount", 1);
+        int countWindow = (int) number(configuration, "countWindowSeconds", 0);
+        int cooldown = (int) number(configuration, "cooldownSeconds", 0);
+        List<FlowStepFieldViewModel> fields = new ArrayList<>();
+        fields.add(new FlowStepFieldViewModel("반복 확인", requiredCount <= 1
+                ? "한 번 확인하면 실행"
+                : duration(countWindow) + " 안에 " + requiredCount + "번 확인"));
+        fields.add(new FlowStepFieldViewModel("최소 실행 간격", cooldown <= 0
+                ? "제한 없음"
+                : duration(cooldown)));
+        return new FlowStepViewModel(node.nodeId(), node.nodeType(), "실행 안전장치",
+                "반복 확인 및 최소 실행 간격",
+                "조건이 잠깐 흔들리거나 실행 시도가 너무 자주 반복되는 것을 막습니다.",
+                "ti-shield-check", List.copyOf(fields));
     }
 
     private List<FlowStepFieldViewModel> fields(FlowStepFieldViewModel... values) {

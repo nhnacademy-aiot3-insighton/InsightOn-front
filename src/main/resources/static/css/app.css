@@ -3662,7 +3662,11 @@ button:focus-visible,
 
 .flow-chain {
   display: grid;
-  grid-template-columns: minmax(240px, 0.9fr) 44px minmax(280px, 1.05fr) 44px minmax(300px, 1.15fr);
+  grid-template-columns:
+    minmax(210px, 0.9fr) 32px
+    minmax(250px, 1.05fr) 32px
+    minmax(220px, 0.9fr) 32px
+    minmax(280px, 1.15fr);
   align-items: stretch;
 }
 
@@ -3687,6 +3691,10 @@ button:focus-visible,
 
 .flow-node-action {
   border-left-color: var(--ink-soft);
+}
+
+.flow-node-gate {
+  border-left-color: var(--success);
 }
 
 .flow-node:focus-within {
@@ -3718,10 +3726,35 @@ button:focus-visible,
   font-size: var(--icon-sm);
 }
 
-.flow-node-filter .flow-node-icon {
+.flow-node-filter .flow-node-icon,
+.flow-node-gate .flow-node-icon {
   color: var(--ink-soft);
   background: var(--surface-alt);
   border-color: var(--line);
+}
+
+.flow-node-gate .flow-node-icon {
+  color: var(--success);
+  background: var(--success-tint);
+}
+
+.flow-gate-toggle {
+  margin-bottom: var(--sp-3);
+}
+
+.path-gate-fields {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.path-gate-fields .settings-field {
+  margin-bottom: 0;
+}
+
+.path-gate-summary {
+  margin: var(--sp-3) 0 0;
+  color: var(--ink-soft);
+  line-height: 1.5;
 }
 
 .flow-node-action .flow-node-icon {
@@ -3893,43 +3926,6 @@ button:focus-visible,
   grid-column: 1 / -1;
 }
 
-.flow-node-action .action-subfields {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--sp-2);
-  margin-top: 0;
-  padding-top: var(--sp-3);
-}
-
-.flow-node-action .action-subfields .settings-field {
-  margin-bottom: 0;
-}
-
-.flow-node-action .action-subfields label {
-  min-height: 30px;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.flow-action-safety-hint {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-2);
-  margin: var(--sp-3) 0 0;
-  padding: var(--sp-2);
-  color: var(--ink-soft);
-  background: var(--success-tint);
-  border-left: 2px solid var(--success);
-  font-size: var(--fs-meta);
-  line-height: 1.5;
-}
-
-.flow-action-safety-hint i {
-  flex-shrink: 0;
-  color: var(--success);
-  font-size: var(--icon-sm);
-}
-
 .flow-editor-actions {
   display: flex;
   align-items: center;
@@ -4020,8 +4016,7 @@ button:focus-visible,
   }
 
   .flow-meta-grid,
-  .flow-action-grid,
-  .flow-node-action .action-subfields {
+  .flow-action-grid {
     grid-template-columns: 1fr;
   }
 
@@ -4360,7 +4355,7 @@ button:focus-visible,
 
 .flow-detail-node-path {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--flow-detail-columns, 3), minmax(0, 1fr));
   align-items: start;
   gap: calc(var(--sp-8) + var(--sp-2));
 }
@@ -4412,14 +4407,6 @@ button:focus-visible,
   font-size: var(--fs-meta);
 }
 
-.flow-detail-node-column:empty {
-  display: none;
-}
-
-.flow-detail-node-column-condition:not(:has(.flow-detail-node)) {
-  display: none;
-}
-
 .flow-detail-node {
   position: relative;
   width: 100%;
@@ -4444,15 +4431,6 @@ button:focus-visible,
   font-weight: 600;
   content: "AND";
   transform: translateX(-50%);
-}
-
-.flow-detail-node-path:not(:has(.flow-detail-node-column-condition .flow-detail-node)) {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.flow-detail-node-path:not(:has(.flow-detail-node-column-condition .flow-detail-node))
-  .flow-detail-node-column-action {
-  grid-column: 2;
 }
 
 .flow-detail-step-heading {
@@ -4520,14 +4498,13 @@ button:focus-visible,
 }
 
 .flow-detail-node[data-node-type="THRESHOLD"],
-.flow-detail-node[data-node-type="TIME_WINDOW"],
-.flow-detail-node[data-node-type="TIMER"] {
+.flow-detail-node[data-node-type="TIME_WINDOW"] {
   border-left-color: var(--warning);
 }
 
+.flow-detail-node[data-node-type="EVENT_GATE"],
 .flow-detail-node[data-node-type="ACTUATOR_CONTROL"],
-.flow-detail-node[data-node-type="ALERT"],
-.flow-detail-node[data-node-type="EXTERNAL_NOTIFICATION"] {
+.flow-detail-node[data-node-type="ALERT"] {
   border-left-color: var(--success);
 }
 
@@ -4818,14 +4795,11 @@ button:focus-visible,
     width: 100%;
   }
 
-  .flow-detail-node-path,
-  .flow-detail-node-path:not(:has(.flow-detail-node-column-condition .flow-detail-node)) {
+  .flow-detail-node-path {
     grid-template-columns: 1fr;
   }
 
-  .flow-detail-node-column,
-  .flow-detail-node-path:not(:has(.flow-detail-node-column-condition .flow-detail-node))
-    .flow-detail-node-column-action {
+  .flow-detail-node-column {
     grid-column: 1;
   }
 
