@@ -123,15 +123,6 @@
     </script>
 </div>
 
-<div th:fragment="manageSidebar(activeSection)" class="app-sidebar d-flex flex-column">
-    <p class="sidebar-label">그룹 관리</p>
-    <div class="location-links">
-        <a th:href="@{/my-group/manage}" class="location-link" th:classappend="${activeSection == 'info'} ? 'active'">그룹 정보</a>
-        <a th:href="@{/my-group/members}" class="location-link" th:classappend="${activeSection == 'members'} ? 'active'">멤버 관리</a>
-        <a th:href="@{/manage/gateway}" class="location-link" th:classappend="${activeSection == 'gateway'} ? 'active'">게이트웨이 관리</a>
-    </div>
-</div>
-
 <header th:fragment="groupHeader" class="app-header d-flex align-items-center px-4 gap-4">
     <a th:href="@{/my-group}" class="brand text-decoration-none d-flex align-items-center gap-2">
         <span th:replace="~{fragments/layout :: brandMark}"></span>

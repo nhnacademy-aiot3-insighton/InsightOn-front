@@ -13,6 +13,7 @@ import com.nhnacademy.insightonfront.adapter.core.region.RegionClient;
 import com.nhnacademy.insightonfront.adapter.core.sensor.SensorClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.WeatherClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.dto.WeatherDataDto;
+import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,7 @@ public class GroupController {
     private final WeatherClient weatherClient;
     private final GatewayClient gatewayClient;
     private final RegionClient regionClient;
+    private final GroupPermissionService groupPermissionService;
 
     @PostMapping("/create")
     public String createGroup(@RequestBody GroupRequest request) {
@@ -81,6 +83,7 @@ public class GroupController {
      */
     @GetMapping("/manage")
     public String manageInfo(@CookieValue(value = "groupId", required = false) Long groupId,
+                             @CookieValue(value = "userId", required = false) Long userId,
                              Model model) {
         if (groupId == null) {
             return "redirect:/group-registration";
@@ -91,6 +94,8 @@ public class GroupController {
             model.addAttribute("states", regionClient.getStates());
             model.addAttribute("cities", safeCitiesForCurrentRegion(myGroup.groupRegion()));
             model.addAttribute("section", "info");
+            // SUPER_MANAGER(그룹 소유자)면 "그룹 탈퇴" 대신 "그룹 삭제" 를 노출
+            model.addAttribute("isSuperManager", groupPermissionService.isSuperManager(groupId, userId));
         } catch (Exception e) {
             log.warn("그룹 관리 정보 조회 실패 - groupId:{}", groupId, e);
             return "redirect:/group-registration";
