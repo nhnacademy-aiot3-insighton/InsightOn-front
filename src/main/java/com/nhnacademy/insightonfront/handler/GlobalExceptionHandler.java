@@ -1,11 +1,14 @@
 package com.nhnacademy.insightonfront.handler;
 
+import com.nhnacademy.insightonfront.adapter.auth.auth.exception.SessionExpiredException;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -64,6 +67,26 @@ public class GlobalExceptionHandler {
         model.addAttribute("status", 500);
         model.addAttribute("errorMessage", "서비스 이용 중 일시적인 오류가 발생했습니다.");
         return "error";
+    }
+
+    // 예외 발생시 쿠키 무효화
+    @ExceptionHandler(SessionExpiredException.class)
+    public String handleSessionExpired(HttpServletRequest req, HttpServletResponse res) {
+        boolean secure = req.isSecure();
+        expireCookie(res, "accessToken", secure);
+        expireCookie(res, "refreshToken", secure);
+        expireCookie(res, "userId", secure);
+        expireCookie(res, "userName", secure);
+        expireCookie(res, "groupId", secure);
+        return "redirect:/login?expired=1";
+    }
+
+    private void expireCookie(HttpServletResponse res, String name, boolean secure) {
+        res.addHeader(HttpHeaders.SET_COOKIE,
+                ResponseCookie.from(name, "")
+                        .httpOnly(true).secure(secure).path("/").sameSite("Lax")
+                        .maxAge(0)
+                        .build().toString());
     }
 
     private String extractDownstreamMessage(FeignException e) {
