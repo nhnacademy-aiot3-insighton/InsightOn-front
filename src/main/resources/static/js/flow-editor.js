@@ -11,11 +11,12 @@
     const presetLocationId = init.presetLocationId;
     const sensors = init.sensors || [];
     const actuatorCommandRules = init.actuatorCommandRules || {};
+    const editorCore = window.FlowEditorCore;
+    if (!editorCore) throw new Error('Flow 편집기 핵심 모듈을 불러오지 못했습니다.');
     const defaultRequiredCount = 3;
     const defaultCountWindowMinutes = 5;
     const defaultCooldownMinutes = 30;
     const secondsPerMinute = 60;
-    const backendIntegerMax = 2147483647;
     // 대시보드 액추에이터 조작 화면(actuator-panel.js)·제안 로그(SuggestionLogViewService)와 같은 한글 표기를 쓴다.
     const actuatorTypeLabels = {AIRCON: '에어컨', AIR_PURIFIER: '공기청정기', VENTILATION_FAN: '환풍기'};
     const commandLabels = {POWER_STATUS: '전원', OPERATION_MODE: '모드', SET_TEMPERATURE: '온도'};
@@ -56,13 +57,6 @@
         option.value = String(value);
         option.textContent = label;
         return option;
-    }
-
-    function minutesToSeconds(minutes) {
-        const seconds = Math.round(minutes * secondsPerMinute);
-        return Number.isSafeInteger(seconds) && seconds >= 0 && seconds <= backendIntegerMax
-            ? seconds
-            : null;
     }
 
     // 화면에서 고른 반복 규칙을 Rule Engine이 이해하는 Spring 6필드(초 분 시 일 월 요일) cron 문자열로 바꾼다.
@@ -407,7 +401,8 @@
 
     function updateGateFields(path) {
         const enabled = path.querySelector('.path-gate-enabled').checked;
-        const requiredCount = Number(path.querySelector('.path-gate-required-count').value || defaultRequiredCount);
+        const requiredCountValue = path.querySelector('.path-gate-required-count').value.trim();
+        const requiredCount = Number(requiredCountValue);
         path.querySelector('.path-gate-fields').style.display = enabled ? '' : 'none';
         path.querySelector('.path-gate-window-field').style.display = enabled && requiredCount >= 2 ? '' : 'none';
 
@@ -416,8 +411,21 @@
             summary.textContent = '조건을 만족할 때마다 바로 실행합니다.';
             return;
         }
-        const windowMinutes = path.querySelector('.path-gate-window').value || defaultCountWindowMinutes;
-        const cooldownMinutes = Number(path.querySelector('.path-gate-cooldown').value || 0);
+        if (!requiredCountValue || !Number.isInteger(requiredCount) || requiredCount < 1) {
+            summary.textContent = '확인 횟수를 1 이상의 정수로 입력해주세요.';
+            return;
+        }
+        const windowMinutes = path.querySelector('.path-gate-window').value.trim();
+        if (requiredCount >= 2 && !windowMinutes) {
+            summary.textContent = '여러 번 확인할 시간을 입력해주세요.';
+            return;
+        }
+        const cooldownValue = path.querySelector('.path-gate-cooldown').value.trim();
+        if (!cooldownValue) {
+            summary.textContent = '최소 실행 간격을 입력해주세요. 제한하지 않으려면 0을 입력해주세요.';
+            return;
+        }
+        const cooldownMinutes = Number(cooldownValue);
         const countSummary = requiredCount >= 2
             ? `${windowMinutes}분 안에 ${requiredCount}번 확인한 뒤 실행합니다.`
             : '한 번 확인하면 실행합니다.';
@@ -443,7 +451,9 @@
         }
 
         path.querySelector('.path-gate-enabled').checked = enabled;
-        path.querySelector('.path-gate-required-count').value = String(Math.max(1, requiredCount));
+        const requiredCountInput = path.querySelector('.path-gate-required-count');
+        requiredCountInput.max = String(editorCore.BACKEND_INTEGER_MAX);
+        requiredCountInput.value = String(Math.max(1, requiredCount));
         path.querySelector('.path-gate-window').value = String(secondsToMinutes(
             countWindowSeconds,
             defaultCountWindowMinutes
@@ -733,92 +743,6 @@
         return path;
     }
 
-    function combineEditorActions(actions) {
-        if (actions.length === 1) {
-            return actions[0].nodeType === 'ALERT' || actions[0].nodeType === 'ACTUATOR_CONTROL'
-                ? actions[0]
-                : null;
-        }
-        if (actions.length !== 2 || actions.some((node) => node.nodeType !== 'ACTUATOR_CONTROL')) {
-            return null;
-        }
-
-        for (const primary of actions) {
-            const supplemental = actions.find((candidate) => candidate !== primary);
-            const primaryConfig = primary.configuration || {};
-            const supplementalConfig = supplemental.configuration || {};
-            const temperatureWidget = findRangeCommandWidget(primaryConfig.actuatorType);
-            if (primaryConfig.command === 'power'
-                && String(primaryConfig.commandValue) === 'ON'
-                && temperatureWidget
-                && supplementalConfig.actuatorType === primaryConfig.actuatorType
-                && supplementalConfig.command === temperatureWidget.stateKey) {
-                return {
-                    ...primary,
-                    supplementalTemperatureValue: supplementalConfig.commandValue
-                };
-            }
-        }
-        return null;
-    }
-
-    function parseFlow(nodes, links) {
-        const nodeByKey = new Map(nodes.map((node) => [node.clientNodeKey, node]));
-        const outgoing = new Map();
-        links.forEach((link) => {
-            const key = `${link.sourceClientNodeKey}:${link.sourcePort}`;
-            if (!outgoing.has(key)) outgoing.set(key, []);
-            outgoing.get(key).push(link);
-        });
-
-        const triggers = nodes.filter((node) =>
-            node.nodeType === 'SENSOR' || node.nodeType === 'LOCATION' || node.nodeType === 'SCHEDULE');
-        if (triggers.length !== 1) return null;
-        const usedKeys = new Set();
-        const trigger = triggers[0];
-        const filters = [];
-        let gate = null;
-        let action = null;
-        usedKeys.add(trigger.clientNodeKey);
-        let sourceKey = trigger.clientNodeKey;
-        let sourcePort = 'out';
-
-        for (let guard = 0; guard <= nodes.length; guard++) {
-            const nextLinks = outgoing.get(`${sourceKey}:${sourcePort}`) || [];
-            if (!nextLinks.length) return null;
-            const targets = nextLinks.map((link) => nodeByKey.get(link.targetClientNodeKey));
-            if (targets.some((target) => !target || usedKeys.has(target.clientNodeKey))) return null;
-            if (new Set(targets.map((target) => target.clientNodeKey)).size !== targets.length) return null;
-
-            const combinedAction = combineEditorActions(targets);
-            if (combinedAction) {
-                targets.forEach((target) => usedKeys.add(target.clientNodeKey));
-                action = combinedAction;
-                break;
-            }
-            if (targets.length !== 1) return null;
-            const target = targets[0];
-            usedKeys.add(target.clientNodeKey);
-            if (target.nodeType === 'THRESHOLD') {
-                if (gate) return null;
-                filters.push(target);
-                sourceKey = target.clientNodeKey;
-                sourcePort = 'true';
-                continue;
-            }
-            if (target.nodeType === 'EVENT_GATE') {
-                if (gate) return null;
-                gate = target;
-                sourceKey = target.clientNodeKey;
-                sourcePort = 'true';
-                continue;
-            }
-            return null;
-        }
-
-        return action && usedKeys.size === nodes.length ? {trigger, filters, gate, action} : null;
-    }
-
     locationSelect.addEventListener('change', () => {
         refreshAllSensorOptions();
         updateLocationTriggerLabel();
@@ -890,7 +814,11 @@
         locationSelect.value = String(flow.locationId);
         locationSelect.disabled = true;
 
-        const parsedFlow = parseFlow(flow.nodes || [], flow.links || []);
+        const parsedFlow = editorCore.parseFlow(
+            flow.nodes || [],
+            flow.links || [],
+            actuatorCommandRules
+        );
         if (!parsedFlow) {
             showError('이 자동화에는 현재 화면에서 수정할 수 없는 복잡한 연결이 있습니다. 기존 내용을 보호하기 위해 저장하지 않았어요. 상세 화면에서 작동 순서를 확인해주세요.');
             addPath();
@@ -976,7 +904,9 @@
 
             if (triggerType !== 'SCHEDULE' && path.querySelector('.path-gate-enabled').checked) {
                 const requiredCount = Number(path.querySelector('.path-gate-required-count').value);
-                if (!Number.isInteger(requiredCount) || requiredCount < 1 || requiredCount > backendIntegerMax) {
+                if (!Number.isInteger(requiredCount)
+                    || requiredCount < 1
+                    || requiredCount > editorCore.BACKEND_INTEGER_MAX) {
                     return showError('안전장치의 확인 횟수는 1 이상의 올바른 정수로 입력해주세요.');
                 }
                 const countWindowMinutes = requiredCount >= 2
@@ -986,16 +916,20 @@
                     return showError('여러 번 확인할 시간을 분 단위로 입력해주세요.');
                 }
                 const countWindowSeconds = requiredCount >= 2
-                    ? minutesToSeconds(countWindowMinutes)
+                    ? editorCore.minutesToSeconds(countWindowMinutes)
                     : null;
                 if (requiredCount >= 2 && (!countWindowSeconds || countWindowSeconds < 1)) {
                     return showError('여러 번 확인할 시간은 1초 이상이며 저장 가능한 범위여야 합니다.');
                 }
-                const cooldownMinutes = Number(path.querySelector('.path-gate-cooldown').value);
+                const cooldownValue = path.querySelector('.path-gate-cooldown').value.trim();
+                if (!cooldownValue) {
+                    return showError('최소 실행 간격을 입력해주세요. 제한하지 않으려면 0을 입력해주세요.');
+                }
+                const cooldownMinutes = Number(cooldownValue);
                 if (!Number.isFinite(cooldownMinutes) || cooldownMinutes < 0) {
                     return showError('최소 실행 간격은 0분 이상으로 입력해주세요.');
                 }
-                const cooldownSeconds = minutesToSeconds(cooldownMinutes);
+                const cooldownSeconds = editorCore.minutesToSeconds(cooldownMinutes);
                 if (cooldownSeconds == null || (cooldownMinutes > 0 && cooldownSeconds < 1)) {
                     return showError('최소 실행 간격은 0초 또는 1초 이상이며 저장 가능한 범위여야 합니다.');
                 }
