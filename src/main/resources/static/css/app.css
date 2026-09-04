@@ -5412,6 +5412,83 @@ button:focus-visible,
   margin-bottom: 0;
 }
 
+.form-panel.danger-zone {
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
+  background: color-mix(in srgb, var(--danger) 4%, var(--surface));
+}
+
+/* ---------- 멤버 목록 ---------- */
+.member-list {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  text-decoration: none;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.member-row:last-child { border-bottom: none; }
+.member-row:hover { background: var(--surface-alt); border-left-color: var(--rule-coral); }
+
+.member-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: var(--fs-body);
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+}
+
+.member-row.is-owner .member-avatar { background: rgba(224, 138, 47, 0.16); color: var(--amber); }
+.member-row.is-manager .member-avatar { background: var(--primary-tint); color: var(--primary); }
+
+.member-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.member-name {
+  font-weight: 600;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-meta);
+  color: var(--ink-faint);
+}
+
+.member-row.is-owner .member-role { color: var(--amber); }
+.member-row.is-manager .member-role { color: var(--primary); }
+
+.member-go {
+  margin-left: auto;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+
 .form-section > .form-section-label {
   display: flex;
   align-items: center;
