@@ -1,7 +1,8 @@
 /**
  * Flow 생성/수정 화면.
- * Rule Engine 검증 계약에 맞춰 Trigger 1개 → THRESHOLD 0..N개 → ALERT 1개를
- * 직렬 연결한다. 저장 전 화면 상태를 Node/Link 목록과 clientNodeKey로 변환한다.
+ * Rule Engine 검증 계약에 맞춰 Trigger 1개 → THRESHOLD 0..N개 → EVENT_GATE 0..1개
+ * → Action 1개를 연결한다. 전원 켜기와 온도를 함께 설정할 때만 Action 2개로 분기한다.
+ * 저장 전 화면 상태를 Node/Link 목록으로 변환한다.
  */
 (function () {
     const init = window.FLOW_EDITOR_INIT || {};
@@ -11,9 +12,10 @@
     const sensors = init.sensors || [];
     const actuatorCommandRules = init.actuatorCommandRules || {};
     const defaultRequiredCount = 3;
-    const defaultCountTimeoutMinutes = 5;
+    const defaultCountWindowMinutes = 5;
     const defaultCooldownMinutes = 30;
     const secondsPerMinute = 60;
+    const backendIntegerMax = 2147483647;
     // 대시보드 액추에이터 조작 화면(actuator-panel.js)·제안 로그(SuggestionLogViewService)와 같은 한글 표기를 쓴다.
     const actuatorTypeLabels = {AIRCON: '에어컨', AIR_PURIFIER: '공기청정기', VENTILATION_FAN: '환풍기'};
     const allActuatorTypes = Object.keys(actuatorTypeLabels);
@@ -55,6 +57,13 @@
         option.value = String(value);
         option.textContent = label;
         return option;
+    }
+
+    function minutesToSeconds(minutes) {
+        const seconds = Math.round(minutes * secondsPerMinute);
+        return Number.isSafeInteger(seconds) && seconds >= 0 && seconds <= backendIntegerMax
+            ? seconds
+            : null;
     }
 
     // 화면에서 고른 반복 규칙을 Rule Engine이 이해하는 Spring 6필드(초 분 시 일 월 요일) cron 문자열로 바꾼다.
@@ -397,9 +406,51 @@
         refreshPathConditionMetrics(path);
     }
 
-    function updateCountTimeout(action) {
-        const requiredCount = Number(action.querySelector('.action-required-count').value || defaultRequiredCount);
-        action.querySelector('.action-count-timeout-field').style.display = requiredCount >= 2 ? '' : 'none';
+    function updateGateFields(path) {
+        const enabled = path.querySelector('.path-gate-enabled').checked;
+        const requiredCount = Number(path.querySelector('.path-gate-required-count').value || defaultRequiredCount);
+        path.querySelector('.path-gate-fields').style.display = enabled ? '' : 'none';
+        path.querySelector('.path-gate-window-field').style.display = enabled && requiredCount >= 2 ? '' : 'none';
+
+        const summary = path.querySelector('.path-gate-summary');
+        if (!enabled) {
+            summary.textContent = '조건을 만족할 때마다 바로 실행합니다.';
+            return;
+        }
+        const windowMinutes = path.querySelector('.path-gate-window').value || defaultCountWindowMinutes;
+        const cooldownMinutes = Number(path.querySelector('.path-gate-cooldown').value || 0);
+        const countSummary = requiredCount >= 2
+            ? `${windowMinutes}분 안에 ${requiredCount}번 확인한 뒤 실행합니다.`
+            : '한 번 확인하면 실행합니다.';
+        const cooldownSummary = cooldownMinutes > 0
+            ? ` 안전장치를 통과한 뒤 ${cooldownMinutes}분 동안 다시 실행을 시도하지 않습니다.`
+            : '';
+        summary.textContent = countSummary + cooldownSummary;
+    }
+
+    function configureGate(path, gate, isNewFlow) {
+        const gateType = gate ? gate.nodeType : null;
+        const gateConfig = gate && gate.configuration ? gate.configuration : {};
+        let requiredCount = defaultRequiredCount;
+        let countWindowSeconds = defaultCountWindowMinutes * secondsPerMinute;
+        let cooldownSeconds = defaultCooldownMinutes * secondsPerMinute;
+        let enabled = isNewFlow;
+
+        if (gateType === 'EVENT_GATE') {
+            requiredCount = Number(gateConfig.requiredCount == null ? 1 : gateConfig.requiredCount);
+            countWindowSeconds = Number(gateConfig.countWindowSeconds || 0);
+            cooldownSeconds = Number(gateConfig.cooldownSeconds || 0);
+            enabled = true;
+        }
+
+        path.querySelector('.path-gate-enabled').checked = enabled;
+        path.querySelector('.path-gate-required-count').value = String(Math.max(1, requiredCount));
+        path.querySelector('.path-gate-window').value = String(secondsToMinutes(
+            countWindowSeconds,
+            defaultCountWindowMinutes
+        ));
+        path.querySelector('.path-gate-cooldown').value = String(secondsToMinutes(cooldownSeconds, 0));
+        updateGateFields(path);
     }
 
     // ActuatorCommandPreset.forTemplate()이 보내는 모양: {AIRCON: {POWER_STATUS: {stateKey:'power', kind:'SELECT', values:[...]}, ...}, ...}
@@ -561,21 +612,6 @@
                         <textarea class="form-control action-message" rows="2" aria-label="알림 메시지" placeholder="예: 온도가 30도를 초과했습니다."></textarea>
                     </div>
                 </div>
-                <div class="action-subfields">
-                    <div class="settings-field">
-                        <label>확인 횟수</label>
-                        <input type="number" class="form-control action-required-count" min="1" aria-label="알림 전 확인 횟수" value="3">
-                    </div>
-                    <div class="settings-field action-count-timeout-field" style="display:none;">
-                        <label>확인 시간(분)</label>
-                        <input type="number" class="form-control action-count-timeout" min="0.01" step="any" aria-label="확인 시간(분)" value="5">
-                    </div>
-                    <div class="settings-field">
-                        <label>재알림 대기(분)</label>
-                        <input type="number" class="form-control action-cooldown" min="0" step="any" aria-label="재알림 대기(분)" value="30">
-                    </div>
-                </div>
-                <p class="flow-action-safety-hint"><i class="ti ti-shield-check"></i> 권장 시작값은 5분 안에 3회 확인하고, 알림 후 30분 동안 다시 보내지 않도록 설정됩니다.</p>
             </div>
             <div class="action-actuator-fields">
                 <div class="flow-action-grid">
@@ -609,22 +645,14 @@
         item.querySelector('.action-title').value = config.title || '';
         item.querySelector('.action-severity').value = config.severity || 'WARNING';
         item.querySelector('.action-message').value = config.message || '';
-        item.querySelector('.action-required-count').value = config.requiredCount == null
-            ? defaultRequiredCount
-            : config.requiredCount;
-        item.querySelector('.action-count-timeout').value = secondsToMinutes(
-            config.countTimeoutSeconds,
-            defaultCountTimeoutMinutes
-        );
-        item.querySelector('.action-cooldown').value = secondsToMinutes(
-            config.cooldownSeconds,
-            defaultCooldownMinutes
-        );
         item.querySelector('.action-actuator-type').value = config.actuatorType || 'AIRCON';
         refreshActuatorFields(item, config.command, config.commandValue);
+        if (actionData.supplementalTemperatureValue != null) {
+            item.querySelector('.action-actuator-temp-value').value = String(actionData.supplementalTemperatureValue);
+            updateActuatorSummary(item);
+        }
         updateActionTypeVisibility(item);
         path.querySelector('.path-action-list').appendChild(item);
-        updateCountTimeout(item);
     }
 
     // 기기 제어 카드가 2개 이상이면 위→아래 순서가 곧 실행 순서다.
@@ -695,9 +723,11 @@
         path.querySelector('.path-trigger-schedule-field').style.display = type === 'SCHEDULE' ? '' : 'none';
         if (type === 'SCHEDULE') updateScheduleSummary(path);
 
-        // 예약 시작(SCHEDULE)은 엔진 규칙상 동작 노드에 직접 연결해야 하므로 조건 노드를 숨긴다.
+        // 예약 시작(SCHEDULE)은 엔진 규칙상 동작 노드에 직접 연결해야 하므로 조건과 안전장치를 숨긴다.
         path.querySelector('.flow-node-filter').style.display = type === 'SCHEDULE' ? 'none' : '';
+        path.querySelector('.flow-node-gate').style.display = type === 'SCHEDULE' ? 'none' : '';
         path.querySelectorAll('.flow-connector')[1].style.display = type === 'SCHEDULE' ? 'none' : '';
+        path.querySelectorAll('.flow-connector')[2].style.display = type === 'SCHEDULE' ? 'none' : '';
 
         // 같은 이유로 동작도 기기 제어만 허용하고, 알림 보내기는 선택하지 못하게 막는다.
         setActionTypeRestricted(path, type === 'SCHEDULE');
@@ -766,12 +796,44 @@
 
         const actionsData = data && data.actions && data.actions.length
             ? data.actions
-            : [{nodeType: 'ALERT', configuration: {}}];
+            : (data && data.action
+                ? [data.action]
+                : [{nodeType: 'ALERT', configuration: {}}]);
         actionsData.forEach((action) => addAction(path, action));
+        configureGate(path, data && data.gate ? data.gate : null, !data);
         // 동작 노드는 addAction 이후에야 존재하므로, 예약 시작 제약을 다시 적용한다.
         setActionTypeRestricted(path, triggerType === 'SCHEDULE');
         refreshActionList(path);
         return path;
+    }
+
+    function combineEditorActions(actions) {
+        if (actions.length === 1) {
+            return actions[0].nodeType === 'ALERT' || actions[0].nodeType === 'ACTUATOR_CONTROL'
+                ? actions[0]
+                : null;
+        }
+        if (actions.length !== 2 || actions.some((node) => node.nodeType !== 'ACTUATOR_CONTROL')) {
+            return null;
+        }
+
+        for (const primary of actions) {
+            const supplemental = actions.find((candidate) => candidate !== primary);
+            const primaryConfig = primary.configuration || {};
+            const supplementalConfig = supplemental.configuration || {};
+            const temperatureWidget = findRangeCommandWidget(primaryConfig.actuatorType);
+            if (primaryConfig.command === 'power'
+                && String(primaryConfig.commandValue) === 'ON'
+                && temperatureWidget
+                && supplementalConfig.actuatorType === primaryConfig.actuatorType
+                && supplementalConfig.command === temperatureWidget.stateKey) {
+                return {
+                    ...primary,
+                    supplementalTemperatureValue: supplementalConfig.commandValue
+                };
+            }
+        }
+        return null;
     }
 
     function parseFlow(nodes, links) {
@@ -789,6 +851,7 @@
         const usedKeys = new Set();
         const trigger = triggers[0];
         const filters = [];
+        let gate = null;
         let actions = null;
         usedKeys.add(trigger.clientNodeKey);
         let sourceKey = trigger.clientNodeKey;
@@ -803,7 +866,14 @@
             if (!nextLinks.length) return null;
             const targets = nextLinks.map((link) => nodeByKey.get(link.targetClientNodeKey));
             if (targets.some((target) => !target || usedKeys.has(target.clientNodeKey))) return null;
+            if (new Set(targets.map((target) => target.clientNodeKey)).size !== targets.length) return null;
 
+            const combinedAction = combineEditorActions(targets);
+            if (combinedAction) {
+                targets.forEach((target) => usedKeys.add(target.clientNodeKey));
+                actions = [combinedAction];
+                break;
+            }
             const isActionFanOut = targets.every((target) =>
                 target.nodeType === 'ALERT' || target.nodeType === 'ACTUATOR_CONTROL');
             if (isActionFanOut) {
@@ -811,15 +881,29 @@
                 actions = targets;
                 break;
             }
-
-            if (nextLinks.length !== 1 || targets[0].nodeType !== 'THRESHOLD') return null;
-            usedKeys.add(targets[0].clientNodeKey);
-            filters.push(targets[0]);
-            sourceKey = targets[0].clientNodeKey;
-            sourcePort = 'true';
+            if (targets.length !== 1) return null;
+            const target = targets[0];
+            usedKeys.add(target.clientNodeKey);
+            if (target.nodeType === 'THRESHOLD') {
+                if (gate) return null;
+                filters.push(target);
+                sourceKey = target.clientNodeKey;
+                sourcePort = 'true';
+                continue;
+            }
+            if (target.nodeType === 'EVENT_GATE') {
+                if (gate) return null;
+                gate = target;
+                sourceKey = target.clientNodeKey;
+                sourcePort = 'true';
+                continue;
+            }
+            return null;
         }
 
-        return actions && actions.length && usedKeys.size === nodes.length ? {trigger, filters, actions} : null;
+        return actions && actions.length && usedKeys.size === nodes.length
+            ? {trigger, filters, gate, actions}
+            : null;
     }
 
     locationSelect.addEventListener('change', () => {
@@ -832,7 +916,9 @@
         if (!path) return;
         if (event.target.matches('.path-trigger-type')) updateTriggerVisibility(path);
         if (event.target.matches('.path-trigger-sensor')) refreshPathConditionMetrics(path);
-        if (event.target.matches('.action-required-count')) updateCountTimeout(event.target.closest('.flow-action-item'));
+        if (event.target.matches('.path-gate-enabled, .path-gate-required-count, .path-gate-window, .path-gate-cooldown')) {
+            updateGateFields(path);
+        }
         if (event.target.matches('.path-schedule-repeat, .path-schedule-time, .path-schedule-day, .path-schedule-weekday')) {
             updateScheduleSummary(path);
         }
@@ -856,7 +942,10 @@
     });
 
     pathList.addEventListener('input', (event) => {
-        if (event.target.matches('.action-required-count')) updateCountTimeout(event.target.closest('.flow-action-item'));
+        const path = event.target.closest('.flow-path');
+        if (path && event.target.matches('.path-gate-required-count, .path-gate-window, .path-gate-cooldown')) {
+            updateGateFields(path);
+        }
         if (event.target.matches('.action-actuator-value, .action-actuator-temp-value')) {
             updateActuatorSummary(event.target.closest('.flow-action-item'));
         }
@@ -989,6 +1078,55 @@
                 sourcePort = 'true';
             });
 
+            if (triggerType !== 'SCHEDULE' && path.querySelector('.path-gate-enabled').checked) {
+                const requiredCount = Number(path.querySelector('.path-gate-required-count').value);
+                if (!Number.isInteger(requiredCount) || requiredCount < 1 || requiredCount > backendIntegerMax) {
+                    return showError('안전장치의 확인 횟수는 1 이상의 올바른 정수로 입력해주세요.');
+                }
+                const countWindowMinutes = requiredCount >= 2
+                    ? Number(path.querySelector('.path-gate-window').value)
+                    : null;
+                if (requiredCount >= 2 && (!Number.isFinite(countWindowMinutes) || countWindowMinutes <= 0)) {
+                    return showError('여러 번 확인할 시간을 분 단위로 입력해주세요.');
+                }
+                const countWindowSeconds = requiredCount >= 2
+                    ? minutesToSeconds(countWindowMinutes)
+                    : null;
+                if (requiredCount >= 2 && (!countWindowSeconds || countWindowSeconds < 1)) {
+                    return showError('여러 번 확인할 시간은 1초 이상이며 저장 가능한 범위여야 합니다.');
+                }
+                const cooldownMinutes = Number(path.querySelector('.path-gate-cooldown').value);
+                if (!Number.isFinite(cooldownMinutes) || cooldownMinutes < 0) {
+                    return showError('최소 실행 간격은 0분 이상으로 입력해주세요.');
+                }
+                const cooldownSeconds = minutesToSeconds(cooldownMinutes);
+                if (cooldownSeconds == null || (cooldownMinutes > 0 && cooldownSeconds < 1)) {
+                    return showError('최소 실행 간격은 0초 또는 1초 이상이며 저장 가능한 범위여야 합니다.');
+                }
+                if (requiredCount === 1 && cooldownSeconds === 0) {
+                    return showError('확인 횟수가 1회이고 최소 실행 간격이 0분이면 안전장치를 꺼주세요.');
+                }
+
+                const gateKey = `${prefix}-event-gate`;
+                nodes.push({
+                    clientNodeKey: gateKey,
+                    nodeType: 'EVENT_GATE',
+                    configuration: {
+                        requiredCount,
+                        countWindowSeconds,
+                        cooldownSeconds
+                    }
+                });
+                links.push({
+                    sourceClientNodeKey: sourceKey,
+                    targetClientNodeKey: gateKey,
+                    sourcePort,
+                    targetPort: 'in'
+                });
+                sourceKey = gateKey;
+                sourcePort = 'true';
+            }
+
             const actions = Array.from(path.querySelectorAll('.flow-action-item'));
             if (actions.length < 1) return showError('조건을 만족했을 때 실행할 동작이 최소 1개 필요합니다.');
 
@@ -1043,38 +1181,13 @@
                 } else {
                     const title = action.querySelector('.action-title').value.trim();
                     const message = action.querySelector('.action-message').value.trim();
-                    const requiredCount = Number(
-                        action.querySelector('.action-required-count').value || defaultRequiredCount
-                    );
-                    if (!Number.isInteger(requiredCount) || requiredCount < 1) {
-                        return showError('알림을 보내기 전 확인할 횟수는 1 이상의 정수로 입력해주세요.');
-                    }
-                    const countTimeoutMinutes = requiredCount >= 2
-                        ? Number(action.querySelector('.action-count-timeout').value || 0)
-                        : null;
                     if (!title || !message) {
                         return showError('받는 사람이 이해할 수 있도록 알림 제목과 내용을 입력해주세요.');
                     }
-                    if (requiredCount >= 2 && (!countTimeoutMinutes || countTimeoutMinutes <= 0)) {
-                        return showError('여러 번 확인할 시간을 분 단위로 입력해주세요.');
-                    }
-                    const cooldownMinutes = Number(
-                        action.querySelector('.action-cooldown').value || defaultCooldownMinutes
-                    );
-                    if (!Number.isFinite(cooldownMinutes) || cooldownMinutes < 0) {
-                        return showError('재알림 대기 시간은 0분 이상으로 입력해주세요.');
-                    }
-                    const countTimeoutSeconds = requiredCount >= 2
-                        ? Math.round(countTimeoutMinutes * secondsPerMinute)
-                        : null;
-                    const cooldownSeconds = Math.round(cooldownMinutes * secondsPerMinute);
                     configuration = {
                         title,
                         severity: action.querySelector('.action-severity').value,
-                        message,
-                        requiredCount,
-                        countTimeoutSeconds,
-                        cooldownSeconds
+                        message
                     };
                 }
 

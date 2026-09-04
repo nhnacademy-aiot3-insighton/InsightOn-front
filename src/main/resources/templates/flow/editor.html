@@ -32,7 +32,7 @@
                 <div>
                     <p class="flow-editor-eyebrow" th:text="${mode == 'edit'} ? '자동화 다듬기' : '새 자동화'">새 자동화</p>
                     <h2 th:text="${mode == 'edit'} ? '자동화 수정' : '새 자동화 만들기'">새 자동화 만들기</h2>
-                    <p>언제 시작해서, 무엇을 확인하고, 어떤 알림을 보낼지 순서대로 설정하세요.</p>
+                    <p>언제 시작해서, 무엇을 확인하고, 얼마나 신중하게 실행할지 순서대로 설정하세요.</p>
                 </div>
                 <span class="status-badge neutral" th:if="${mode == 'edit'}">새 버전으로 저장</span>
             </div>
@@ -73,7 +73,7 @@
                         <span class="flow-card-index">02</span>
                         <div>
                             <h3 id="flowBuilderTitle">자동화 흐름</h3>
-                        <p>시작 하나와 필요한 조건, 마지막에 실행할 알림을 설정합니다.</p>
+                        <p>시작 하나와 필요한 조건, 실행 안전장치, 마지막 동작을 설정합니다.</p>
                         </div>
                     </div>
                 </div>
@@ -180,6 +180,41 @@
                                 <i class="ti ti-plus"></i> 조건 추가
                             </button>
                             <p class="flow-expression-example flow-metric-status" aria-live="polite">센서에 실제 등록된 측정 항목과 단위를 자동으로 불러옵니다.</p>
+                            <span class="flow-port flow-port-out" aria-hidden="true"></span>
+                        </article>
+
+                        <div class="flow-connector" aria-hidden="true"><span></span><i class="ti ti-chevron-right"></i></div>
+
+                        <article class="flow-node flow-node-gate">
+                            <span class="flow-port flow-port-in" aria-hidden="true"></span>
+                            <div class="flow-node-header">
+                                <span class="flow-node-icon"><i class="ti ti-shield-check"></i></span>
+                                <div><span class="flow-node-kind">실행 안전장치 · 선택</span><h4>반복 실행을 어떻게 막을까요?</h4></div>
+                            </div>
+                            <p class="flow-node-help">값이 잠깐 흔들리거나 같은 명령을 너무 자주 시도하는 것을 막습니다.</p>
+                            <div class="form-check form-switch flow-gate-toggle">
+                                <input class="form-check-input path-gate-enabled" type="checkbox" role="switch"
+                                       aria-label="실행 안전장치 사용">
+                                <label class="form-check-label">안전장치 사용</label>
+                            </div>
+                            <div class="path-gate-fields">
+                                <div class="settings-field">
+                                    <label>확인 횟수</label>
+                                    <input type="number" class="form-control path-gate-required-count" min="1"
+                                           max="2147483647" value="3" aria-label="안전장치 확인 횟수">
+                                </div>
+                                <div class="settings-field path-gate-window-field">
+                                    <label>확인 시간(분)</label>
+                                    <input type="number" class="form-control path-gate-window" min="0.01" step="any"
+                                           value="5" aria-label="안전장치 확인 시간(분)">
+                                </div>
+                                <div class="settings-field">
+                                    <label>최소 실행 간격(분)</label>
+                                    <input type="number" class="form-control path-gate-cooldown" min="0" step="any"
+                                           value="30" aria-label="안전장치 최소 실행 간격(분)">
+                                </div>
+                            </div>
+                            <p class="field-hint path-gate-summary" aria-live="polite"></p>
                             <span class="flow-port flow-port-out" aria-hidden="true"></span>
                         </article>
 
