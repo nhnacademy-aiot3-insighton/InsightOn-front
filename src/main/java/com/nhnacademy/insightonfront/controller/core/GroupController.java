@@ -60,7 +60,14 @@ public class GroupController {
     public String getMyGroup(@CookieValue(value = "groupId", required = false) Long groupId,
                              Model model) {
 
-        GroupResponse myGroup = groupClient.getMyGroup(groupId);
+        GroupResponse myGroup;
+        if (groupId == null) {
+            Long myGroupId = groupClient.getMyGroupId().groupId();
+            myGroup = groupClient.getMyGroup(myGroupId);
+        } else {
+            myGroup = groupClient.getMyGroup(groupId);
+        }
+
         List<LocationSummary> locationSummaries = safeLocationSummaries(groupId);
 
         model.addAttribute("myGroup", myGroup);
