@@ -201,17 +201,17 @@
                                 <div class="settings-field">
                                     <label>확인 횟수</label>
                                     <input type="number" class="form-control path-gate-required-count" min="1"
-                                           max="2147483647" value="3" aria-label="안전장치 확인 횟수">
+                                           aria-label="안전장치 확인 횟수">
                                 </div>
                                 <div class="settings-field path-gate-window-field">
                                     <label>확인 시간(분)</label>
                                     <input type="number" class="form-control path-gate-window" min="0.01" step="any"
-                                           value="5" aria-label="안전장치 확인 시간(분)">
+                                           aria-label="안전장치 확인 시간(분)">
                                 </div>
                                 <div class="settings-field">
                                     <label>최소 실행 간격(분)</label>
                                     <input type="number" class="form-control path-gate-cooldown" min="0" step="any"
-                                           value="30" aria-label="안전장치 최소 실행 간격(분)">
+                                           aria-label="안전장치 최소 실행 간격(분)">
                                 </div>
                             </div>
                             <p class="field-hint path-gate-summary" aria-live="polite"></p>
@@ -263,6 +263,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
+<script th:src="@{/js/flow-editor-core.js}"></script>
 <script th:src="@{/js/flow-editor.js}"></script>
 </body>
 </html>
