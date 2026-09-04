@@ -56,17 +56,25 @@ public class NotificationSseController {
         return emitter;
     }
 
+    /**
+     * "data:"만 릴레이하면 AI 백엔드가 보내는 SSE 하트비트 주석(":"로 시작)이 여기서 죽어 브라우저까지
+     * 전달되지 않는다 - 그 사이 브라우저/중간 프록시가 진짜 침묵으로 보고 연결을 끊을 수 있다.
+     * data:는 내용을 릴레이하고, 하트비트는 SSE 주석 그대로 릴레이해 연결이 계속 "살아있다"는 신호가
+     * 브라우저까지 도달하게 한다(ChatController와 동일 패턴).
+     */
     private void relay(SseEmitter emitter, Stream<String> lines) {
         try (lines) {
-            lines.filter(line -> line.startsWith("data:"))
-                    .map(this::stripDataPrefix)
-                    .forEach(token -> {
-                        try {
-                            emitter.send(token);
-                        } catch (IOException e) {
-                            throw new UncheckedIOException(e);
-                        }
-                    });
+            lines.forEach(line -> {
+                try {
+                    if (line.startsWith("data:")) {
+                        emitter.send(stripDataPrefix(line));
+                    } else if (line.startsWith(":")) {
+                        emitter.send(SseEmitter.event().comment(line.substring(1)));
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
             emitter.complete();
         } catch (Exception e) {
             emitter.completeWithError(e);
