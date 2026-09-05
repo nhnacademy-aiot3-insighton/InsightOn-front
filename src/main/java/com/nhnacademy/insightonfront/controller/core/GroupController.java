@@ -15,14 +15,18 @@ import com.nhnacademy.insightonfront.adapter.core.weather.WeatherClient;
 import com.nhnacademy.insightonfront.adapter.core.weather.dto.WeatherDataDto;
 import com.nhnacademy.insightonfront.common.service.GroupPermissionService;
 import feign.FeignException;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -60,12 +64,22 @@ public class GroupController {
      */
     @GetMapping
     public String getMyGroup(@CookieValue(value = "groupId", required = false) Long groupId,
-                             Model model) {
+                             Model model,
+                             HttpServletResponse response) {
 
         GroupResponse myGroup;
         if (groupId == null) {
-            Long myGroupId = groupClient.getMyGroupId().groupId();
-            myGroup = groupClient.getMyGroup(myGroupId);
+            groupId = groupClient.getMyGroupId().groupId();
+            myGroup = groupClient.getMyGroup(groupId);
+
+            ResponseCookie cookie = ResponseCookie.from("groupId", groupId.toString())
+                    .httpOnly(true)
+                    .path("/")
+                    .sameSite("Lax")
+                    .maxAge(Duration.ofDays(15))
+                    .build();
+
+            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         } else {
             myGroup = groupClient.getMyGroup(groupId);
         }
