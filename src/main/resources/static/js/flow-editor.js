@@ -16,6 +16,7 @@
     const secondsPerMinute = 60;
     // 대시보드 액추에이터 조작 화면(actuator-panel.js)·제안 로그(SuggestionLogViewService)와 같은 한글 표기를 쓴다.
     const actuatorTypeLabels = {AIRCON: '에어컨', AIR_PURIFIER: '공기청정기', VENTILATION_FAN: '환풍기'};
+    const allActuatorTypes = Object.keys(actuatorTypeLabels);
     const commandLabels = {POWER_STATUS: '전원', OPERATION_MODE: '모드', SET_TEMPERATURE: '온도'};
     const commandValueLabels = {
         ON: '켜기', OFF: '끄기',
@@ -526,8 +527,13 @@
         item.className = 'flow-action-item';
         item.innerHTML = `
             <div class="flow-action-item-heading">
-                <span class="flow-action-number"></span>
-                <span class="status-badge neutral">필수</span>
+                <div class="flow-action-item-heading-label">
+                    <span class="flow-action-number"></span>
+                    <span class="status-badge neutral action-required-badge">필수</span>
+                </div>
+                <div class="flow-action-item-heading-controls">
+                    <button type="button" class="btn-remove-action" aria-label="기기 제어 삭제" style="display:none;"><i class="ti ti-x"></i></button>
+                </div>
             </div>
             <div class="settings-field">
                 <label>동작 종류</label>
@@ -621,6 +627,65 @@
         updateCountTimeout(item);
     }
 
+    // 기기 제어 카드가 2개 이상이면 위→아래 순서가 곧 실행 순서다.
+    // 번호/화살표/삭제·드래그 버튼을 다시 그리고, 마지막 카드가 기기 제어일 때만 추가 버튼을 보여준다.
+    function refreshActionList(path) {
+        const list = path.querySelector('.path-action-list');
+        list.querySelectorAll('.action-order-label').forEach((el) => el.remove());
+        const items = Array.from(list.querySelectorAll('.flow-action-item'));
+        const multiple = items.length > 1;
+
+        items.forEach((item, index) => {
+            const type = item.querySelector('.action-type').value;
+            item.querySelector('.btn-remove-action').style.display = multiple ? '' : 'none';
+            item.querySelector('.action-required-badge').style.display = multiple ? 'none' : '';
+            item.querySelector('.flow-action-number').textContent = multiple
+                ? `${type === 'ACTUATOR_CONTROL' ? '기기 제어' : '알림'} ${index + 1}`
+                : (type === 'ACTUATOR_CONTROL' ? '제어할 기기' : '보낼 알림');
+            if (index > 0) {
+                const connector = document.createElement('div');
+                connector.className = 'action-order-label';
+                connector.innerHTML = '<i class="ti ti-arrow-down"></i> 다음 실행';
+                list.insertBefore(connector, item);
+            }
+        });
+
+        refreshActuatorTypeAvailability(path);
+
+        // 마지막 카드가 기기 제어일 때만, 그리고 아직 안 쓴 기기 종류가 남아 있을 때만 추가 버튼을 보여준다.
+        const addBtn = path.querySelector('.btn-add-path-action');
+        const lastType = items.length ? items[items.length - 1].querySelector('.action-type').value : null;
+        const hasAvailableType = items
+            .filter((item) => item.querySelector('.action-type').value === 'ACTUATOR_CONTROL')
+            .length < allActuatorTypes.length;
+        addBtn.style.display = lastType === 'ACTUATOR_CONTROL' && hasAvailableType ? '' : 'none';
+    }
+
+    // 같은 기기 종류를 두 카드에서 동시에 고르지 못하게 막는다("에어컨 두 대 실행" 같은 의도치 않은 중복 방지).
+    // 각 카드는 자기 자신이 이미 고른 값은 그대로 두고, 다른 카드가 쓰고 있는 종류만 비활성화한다.
+    function refreshActuatorTypeAvailability(path) {
+        const actuatorItems = Array.from(path.querySelectorAll('.flow-action-item'))
+            .filter((item) => item.querySelector('.action-type').value === 'ACTUATOR_CONTROL');
+        const usedTypes = actuatorItems.map((item) => item.querySelector('.action-actuator-type').value);
+        actuatorItems.forEach((item) => {
+            const select = item.querySelector('.action-actuator-type');
+            const ownValue = select.value;
+            Array.from(select.options).forEach((option) => {
+                option.disabled = option.value !== ownValue && usedTypes.includes(option.value);
+            });
+        });
+    }
+
+    // 새 기기 제어 카드를 추가할 때, 이미 다른 카드가 쓰고 있지 않은 기기 종류를 기본값으로 고른다.
+    function nextAvailableActuatorType(path) {
+        const usedTypes = new Set(
+            Array.from(path.querySelectorAll('.flow-action-item'))
+                .filter((item) => item.querySelector('.action-type').value === 'ACTUATOR_CONTROL')
+                .map((item) => item.querySelector('.action-actuator-type').value)
+        );
+        return allActuatorTypes.find((type) => !usedTypes.has(type)) || allActuatorTypes[0];
+    }
+
     function updateTriggerVisibility(path) {
         const type = path.querySelector('.path-trigger-type').value;
         path.querySelector('.path-trigger-sensor-field').style.display = type === 'SENSOR' ? '' : 'none';
@@ -633,23 +698,24 @@
 
         // 같은 이유로 동작도 기기 제어만 허용하고, 알림 보내기는 선택하지 못하게 막는다.
         setActionTypeRestricted(path, type === 'SCHEDULE');
+        refreshActionList(path);
 
         refreshPathConditionMetrics(path);
     }
 
     function setActionTypeRestricted(path, restricted) {
-        const action = path.querySelector('.flow-action-item');
-        if (!action) return;
-        const select = action.querySelector('.action-type');
-        const alertOption = select.querySelector('option[value="ALERT"]');
-        if (restricted && alertOption) {
-            if (select.value === 'ALERT') select.value = 'ACTUATOR_CONTROL';
-            alertOption.remove();
-            updateActionTypeVisibility(action);
-        }
-        if (!restricted && !alertOption) {
-            select.insertBefore(createOption('ALERT', '알림 보내기'), select.firstChild);
-        }
+        path.querySelectorAll('.flow-action-item').forEach((action) => {
+            const select = action.querySelector('.action-type');
+            const alertOption = select.querySelector('option[value="ALERT"]');
+            if (restricted && alertOption) {
+                if (select.value === 'ALERT') select.value = 'ACTUATOR_CONTROL';
+                alertOption.remove();
+                updateActionTypeVisibility(action);
+            }
+            if (!restricted && !alertOption) {
+                select.insertBefore(createOption('ALERT', '알림 보내기'), select.firstChild);
+            }
+        });
     }
 
     function setSensorTriggerAdvanced(path, advanced) {
@@ -695,9 +761,13 @@
         });
         refreshConditionList(path.querySelector('.path-condition-list'));
 
-        addAction(path, data && data.action ? data.action : {nodeType: 'ALERT', configuration: {}});
+        const actionsData = data && data.actions && data.actions.length
+            ? data.actions
+            : [{nodeType: 'ALERT', configuration: {}}];
+        actionsData.forEach((action) => addAction(path, action));
         // 동작 노드는 addAction 이후에야 존재하므로, 예약 시작 제약을 다시 적용한다.
         setActionTypeRestricted(path, triggerType === 'SCHEDULE');
+        refreshActionList(path);
         return path;
     }
 
@@ -716,28 +786,37 @@
         const usedKeys = new Set();
         const trigger = triggers[0];
         const filters = [];
-        let action = null;
+        let actions = null;
         usedKeys.add(trigger.clientNodeKey);
         let sourceKey = trigger.clientNodeKey;
         let sourcePort = 'out';
 
+        // 룰 엔진은 ACTION 노드가 출력이 없는 종착점이라 액션끼리는 체인이 안 되고,
+        // 대신 같은 조건 출력에 여러 ACTION 노드를 나란히 연결(팬아웃)해 링크 순서대로 순차 실행한다.
+        // 그래서 THRESHOLD 체인은 기존처럼 1개씩만 따라가되, 마지막에 ACTION 노드로만 향하는
+        // 링크를 만나면 그 개수만큼 배열로 복원한다.
         for (let guard = 0; guard <= nodes.length; guard++) {
             const nextLinks = outgoing.get(`${sourceKey}:${sourcePort}`) || [];
-            if (nextLinks.length !== 1) return null;
-            const target = nodeByKey.get(nextLinks[0].targetClientNodeKey);
-            if (!target || usedKeys.has(target.clientNodeKey)) return null;
-            usedKeys.add(target.clientNodeKey);
-            if (target.nodeType === 'THRESHOLD') {
-                filters.push(target);
-                sourceKey = target.clientNodeKey;
-                sourcePort = 'true';
-                continue;
+            if (!nextLinks.length) return null;
+            const targets = nextLinks.map((link) => nodeByKey.get(link.targetClientNodeKey));
+            if (targets.some((target) => !target || usedKeys.has(target.clientNodeKey))) return null;
+
+            const isActionFanOut = targets.every((target) =>
+                target.nodeType === 'ALERT' || target.nodeType === 'ACTUATOR_CONTROL');
+            if (isActionFanOut) {
+                targets.forEach((target) => usedKeys.add(target.clientNodeKey));
+                actions = targets;
+                break;
             }
-            if (target.nodeType === 'ALERT' || target.nodeType === 'ACTUATOR_CONTROL') action = target;
-            break;
+
+            if (nextLinks.length !== 1 || targets[0].nodeType !== 'THRESHOLD') return null;
+            usedKeys.add(targets[0].clientNodeKey);
+            filters.push(targets[0]);
+            sourceKey = targets[0].clientNodeKey;
+            sourcePort = 'true';
         }
 
-        return action && usedKeys.size === nodes.length ? {trigger, filters, action} : null;
+        return actions && actions.length && usedKeys.size === nodes.length ? {trigger, filters, actions} : null;
     }
 
     locationSelect.addEventListener('change', () => {
@@ -754,9 +833,13 @@
         if (event.target.matches('.path-schedule-repeat, .path-schedule-time, .path-schedule-day, .path-schedule-weekday')) {
             updateScheduleSummary(path);
         }
-        if (event.target.matches('.action-type')) updateActionTypeVisibility(event.target.closest('.flow-action-item'));
+        if (event.target.matches('.action-type')) {
+            updateActionTypeVisibility(event.target.closest('.flow-action-item'));
+            refreshActionList(path);
+        }
         if (event.target.matches('.action-actuator-type')) {
             refreshActuatorFields(event.target.closest('.flow-action-item'), null, null);
+            refreshActionList(path);
         }
         if (event.target.matches('.action-actuator-command')) {
             renderActuatorValueControl(event.target.closest('.flow-action-item'), null);
@@ -796,6 +879,20 @@
             const list = path.querySelector('.path-condition-list');
             removeCondition.closest('.condition-row').remove();
             refreshConditionList(list);
+            return;
+        }
+        if (event.target.closest('.btn-add-path-action')) {
+            addAction(path, {
+                nodeType: 'ACTUATOR_CONTROL',
+                configuration: {actuatorType: nextAvailableActuatorType(path)}
+            });
+            refreshActionList(path);
+            return;
+        }
+        const removeAction = event.target.closest('.btn-remove-action');
+        if (removeAction) {
+            removeAction.closest('.flow-action-item').remove();
+            refreshActionList(path);
             return;
         }
     });
@@ -891,7 +988,20 @@
             });
 
             const actions = Array.from(path.querySelectorAll('.flow-action-item'));
-            if (actions.length !== 1) return showError('조건을 만족했을 때 실행할 동작이 하나 필요합니다.');
+            if (actions.length < 1) return showError('조건을 만족했을 때 실행할 동작이 최소 1개 필요합니다.');
+
+            const actuatorTypeCounts = new Map();
+            actions.forEach((action) => {
+                if (action.querySelector('.action-type').value !== 'ACTUATOR_CONTROL') return;
+                const type = action.querySelector('.action-actuator-type').value;
+                actuatorTypeCounts.set(type, (actuatorTypeCounts.get(type) || 0) + 1);
+            });
+            const duplicateType = Array.from(actuatorTypeCounts.entries()).find(([, count]) => count > 1);
+            if (duplicateType) {
+                const typeLabel = actuatorTypeLabels[duplicateType[0]] || duplicateType[0];
+                return showError(`같은 기기 종류(${typeLabel})를 두 개 이상의 기기 제어 카드에서 선택할 수 없어요. 서로 다른 기기로 바꿔주세요.`);
+            }
+
             for (let actionIndex = 0; actionIndex < actions.length; actionIndex++) {
                 const action = actions[actionIndex];
                 const actionType = action.querySelector('.action-type').value;
