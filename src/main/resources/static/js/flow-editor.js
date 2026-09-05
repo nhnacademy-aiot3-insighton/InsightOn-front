@@ -535,7 +535,7 @@
                     <button type="button" class="btn-remove-action" aria-label="기기 제어 삭제" style="display:none;"><i class="ti ti-x"></i></button>
                 </div>
             </div>
-            <div class="settings-field">
+            <div class="settings-field action-type-field">
                 <label>동작 종류</label>
                 <select class="form-select action-type" aria-label="동작 종류">
                     <option value="ALERT">알림 보내기</option>
@@ -639,6 +639,9 @@
             const type = item.querySelector('.action-type').value;
             item.querySelector('.btn-remove-action').style.display = multiple ? '' : 'none';
             item.querySelector('.action-required-badge').style.display = multiple ? 'none' : '';
+            // 카드가 여러 개면 번호("기기 제어 N")로 이미 기기 제어라는 걸 알 수 있으니,
+            // 중복되는 "동작 종류" 선택 줄을 접어서 카드 높이를 줄인다.
+            item.querySelector('.action-type-field').style.display = multiple ? 'none' : '';
             item.querySelector('.flow-action-number').textContent = multiple
                 ? `${type === 'ACTUATOR_CONTROL' ? '기기 제어' : '알림'} ${index + 1}`
                 : (type === 'ACTUATOR_CONTROL' ? '제어할 기기' : '보낼 알림');
