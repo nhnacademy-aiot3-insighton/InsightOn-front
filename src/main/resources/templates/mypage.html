@@ -92,10 +92,7 @@
             <div class="form-section-label"><i class="ti ti-link"></i>연동된 계정</div>
             <p id="socialError" class="field-hint danger" style="display:none;"></p>
             <p th:if="${param.linked}" class="field-hint">계정을 연동했어요.</p>
-            <p th:if="${param.linkError}" class="field-hint danger"
-               th:text="${param.linkError[0] == 'already'} ? '이미 연동된 계정이에요.'
-                      : (${param.linkError[0] == 'other_account'} ? '다른 계정에 연동된 소셜 계정이에요.'
-                      : '연동에 실패했어요. 잠시 후 다시 시도해주세요.')"></p>
+            <p th:if="${param.merged}" class="field-hint">계정을 병합했어요. 기존에 쓰던 계정은 삭제됐어요.</p>
 
             <div id="socialList">
                 <div class="social-account-row" th:each="oauth : ${oauths}" th:data-oauth-id="${oauth.oauthId}">
@@ -140,7 +137,66 @@
     </div>
 </main>
 
+<!-- 소셜 계정 연동/병합 오류 팝업 -->
+<div th:if="${param.linkError != null}" class="modal fade" id="oauthErrorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">연동 실패</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p th:if="${param.linkError[0] == 'already'}">이미 연동된 계정이에요.</p>
+                <p th:if="${param.linkError[0] == 'manager_account'}">그룹 관리자 계정은 병합할 수 없어요.</p>
+                <p th:if="${param.linkError[0] == 'other_account'}">
+                    이 소셜 계정은 이미 다른 계정에 연동돼 있어요. 병합하면 그 계정은 삭제되고 지금 계정에 합쳐져요.
+                </p>
+                <p th:if="${param.linkError[0] != 'already' and param.linkError[0] != 'manager_account' and param.linkError[0] != 'other_account'}">
+                    연동에 실패했어요. 잠시 후 다시 시도해주세요.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <a th:if="${param.linkError[0] == 'other_account' and param.conflictUserId != null and param.provider != null}"
+                   th:href="@{/oauth/link/{provider}(provider=${param.provider[0]}, mergeWith=${param.conflictUserId[0]})}"
+                   class="btn btn-outline-secondary">병합하기</a>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 소셜 연동 이동 중 로딩 표시 (provider 동의 화면까지 브라우저가 리다이렉트되는 동안) -->
+<div id="oauthLoadingOverlay"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2000; flex-direction:column; align-items:center; justify-content:center; gap: var(--sp-3);">
+    <div class="spinner-border text-light" role="status" style="width:3rem; height:3rem;">
+        <span class="visually-hidden">이동 중...</span>
+    </div>
+    <p style="color:#fff; margin:0;">이동 중이에요...</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/mypage/mypage.js}"></script>
+<script>
+    (function () {
+        var overlay = document.getElementById('oauthLoadingOverlay');
+        var showOverlay = function () { overlay.style.display = 'flex'; };
+        document.querySelectorAll('form[action*="/oauth/link/"]').forEach(function (form) {
+            form.addEventListener('submit', showOverlay);
+        });
+        var mergeLink = document.querySelector('a[href*="/oauth/link/"]');
+        if (mergeLink) {
+            mergeLink.addEventListener('click', showOverlay);
+        }
+    })();
+</script>
+<script>
+    (function () {
+        var modalEl = document.getElementById('oauthErrorModal');
+        if (modalEl && window.bootstrap) {
+            new bootstrap.Modal(modalEl).show();
+        }
+    })();
+</script>
 <script>
     (function () {
         var group = document.getElementById('themeChoiceGroup');
