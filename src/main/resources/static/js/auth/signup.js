@@ -106,19 +106,46 @@ const GATEWAY = ''; // 같은 오리진(insighton.store)의 /api 는 ingress가 
     });
 
     // 2. 인증코드 발송
+    const btnSendCodeDefaultText = btnSendCode.textContent;
+
+    // 재전송 쿨다운(백엔드 60초와 동일) — 버튼에 남은 시간을 보여주고 그동안 재클릭을 막는다
+    function startResendCooldown(seconds) {
+        let remaining = seconds;
+        btnSendCode.disabled = true;
+        const timer = setInterval(() => {
+            if (remaining <= 0) {
+                clearInterval(timer);
+                btnSendCode.textContent = btnSendCodeDefaultText;
+                btnSendCode.disabled = false;
+                return;
+            }
+            btnSendCode.textContent = `재전송 (${remaining}초)`;
+            remaining -= 1;
+        }, 1000);
+    }
+
     btnSendCode.addEventListener('click', async () => {
         const email = emailInput.value.trim();
         if (!emailChecked) { setHint(codeStatus, '이메일 중복 확인을 먼저 하세요.', 'error'); return; }
+        btnSendCode.disabled = true;
         try {
             const res = await postJson('/signup/send-code', { email });
             if (res.ok) {
                 codeSection.style.display = 'block';
                 setHint(codeStatus, '인증코드를 발송했습니다. 메일함을 확인하세요.', 'success');
+                startResendCooldown(60);
+            } else if (res.status === 429) {
+                setHint(codeStatus, '너무 빨리 재요청했어요. 잠시 후 다시 시도해주세요.', 'error');
+                btnSendCode.disabled = false;
+            } else if (res.status === 423) {
+                setHint(codeStatus, '재전송 시도가 초과되어 15분간 잠겼습니다.', 'error');
             } else {
                 setHint(codeStatus, '발송에 실패했습니다.', 'error');
+                btnSendCode.disabled = false;
             }
         } catch (e) {
             setHint(codeStatus, '서버에 연결할 수 없습니다.', 'error');
+            btnSendCode.disabled = false;
         }
     });
 
