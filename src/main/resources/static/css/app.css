@@ -3943,6 +3943,33 @@ button:focus-visible,
   overflow-wrap: anywhere;
 }
 
+.flow-schedule-invalid {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  color: var(--warning);
+  background: var(--warning-tint);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-meta);
+}
+
+.flow-schedule-invalid[hidden] {
+  display: none;
+}
+
+.flow-schedule-invalid strong {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.flow-schedule-invalid p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
 .flow-action-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 110px;
@@ -3967,6 +3994,31 @@ button:focus-visible,
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+}
+
+.flow-edit-activation {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-4);
+  margin-top: var(--sp-4);
+  background: var(--primary-tint);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+}
+
+.flow-edit-activation .form-check {
+  margin: 0;
+}
+
+.flow-edit-activation .form-check-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.flow-edit-activation p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-meta);
 }
 
 .flow-editor-actions > p {

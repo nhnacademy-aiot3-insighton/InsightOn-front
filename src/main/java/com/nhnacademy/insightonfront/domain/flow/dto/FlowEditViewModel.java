@@ -2,6 +2,7 @@ package com.nhnacademy.insightonfront.domain.flow.dto;
 
 import com.nhnacademy.insightonfront.adapter.ruleengine.flow.dto.FlowLinkRequest;
 import com.nhnacademy.insightonfront.adapter.ruleengine.flow.dto.FlowNodeRequest;
+import com.nhnacademy.insightonfront.adapter.ruleengine.flow.dto.FlowStatus;
 import java.util.List;
 
 /**
@@ -13,6 +14,7 @@ public record FlowEditViewModel(
         Long locationId,
         String name,
         String description,
+        FlowStatus status,
         List<FlowNodeRequest> nodes,
         List<FlowLinkRequest> links
 ) {

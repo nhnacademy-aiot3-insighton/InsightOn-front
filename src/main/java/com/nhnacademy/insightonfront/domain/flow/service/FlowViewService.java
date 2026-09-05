@@ -392,6 +392,7 @@ public class FlowViewService {
                         link.targetPort()))
                 .toList();
 
-        return new FlowEditViewModel(flow.flowId(), flow.locationId(), flow.name(), flow.description(), nodes, links);
+        return new FlowEditViewModel(
+                flow.flowId(), flow.locationId(), flow.name(), flow.description(), flow.status(), nodes, links);
     }
 }
