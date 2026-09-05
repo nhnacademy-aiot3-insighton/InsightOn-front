@@ -17,6 +17,8 @@ import com.nhnacademy.insightonfront.domain.flow.dto.FlowEditViewModel;
 import com.nhnacademy.insightonfront.domain.flow.dto.FlowStepFieldViewModel;
 import com.nhnacademy.insightonfront.domain.flow.dto.FlowStepViewModel;
 import com.nhnacademy.insightonfront.domain.flow.dto.FlowViewModel;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -151,10 +153,7 @@ public class FlowViewService {
             case SCHEDULE -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "시작", "예약한 시간에 시작",
                     "설정한 일정에 맞춰 Flow를 시작합니다.", "ti-calendar-time",
                     fields(new FlowStepFieldViewModel("일정", cronSummary(text(configuration, "cron", "")))));
-            case TIME_WINDOW -> new FlowStepViewModel(node.nodeId(), node.nodeType(), "조건", "운영 시간 확인",
-                    "현재 시간이 설정한 범위에 포함되는지 확인합니다.", "ti-clock",
-                    fields(new FlowStepFieldViewModel("시간", text(configuration, "startTime", "-")
-                            + " ~ " + text(configuration, "endTime", "-"))));
+            case TIME_WINDOW -> timeWindowStep(node, configuration);
             case EVENT_GATE -> eventGateStep(node, configuration);
             case ACTUATOR_CONTROL -> actuatorControlStep(node, configuration);
         };
@@ -183,6 +182,22 @@ public class FlowViewService {
                 + OPERATOR_LABELS.getOrDefault(matcher.group(2), matcher.group(2));
         return new FlowStepViewModel(node.nodeId(), node.nodeType(), "조건", condition,
                 "이 조건을 만족하면 다음 단계로 진행합니다.", "ti-adjustments-horizontal", List.of());
+    }
+
+    private FlowStepViewModel timeWindowStep(FlowNodeResponse node, Map<String, Object> configuration) {
+        String startText = text(configuration, "startTime", "-");
+        String endText = text(configuration, "endTime", "-");
+        String range = startText + " ~ " + endText;
+        try {
+            LocalTime startTime = LocalTime.parse(startText);
+            LocalTime endTime = LocalTime.parse(endText);
+            range = startTime + " ~ " + (startTime.isAfter(endTime) ? "다음 날 " : "") + endTime;
+        } catch (DateTimeParseException ignored) {
+            // 과거의 비정상 설정도 상세 화면 자체는 열 수 있도록 원문을 표시한다.
+        }
+        return new FlowStepViewModel(node.nodeId(), node.nodeType(), "조건", "운영 시간 확인",
+                "측정값 기록 시각이 시작 시간부터 종료 시간 직전까지인지 확인합니다.", "ti-clock",
+                fields(new FlowStepFieldViewModel("운영 시간", range)));
     }
 
     private FlowStepViewModel actuatorControlStep(FlowNodeResponse node, Map<String, Object> configuration) {

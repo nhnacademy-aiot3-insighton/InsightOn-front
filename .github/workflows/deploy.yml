@@ -7,7 +7,23 @@ on:
     branches: [main, dev-deploy, dev]
 
 jobs:
+  flow-editor-contract-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify flow editor scripts
+        run: |
+          node --check src/main/resources/static/js/flow-editor-core.js
+          node --check src/main/resources/static/js/flow-editor.js
+          node src/test/js/flow-editor-core.test.js
+
   call-reusable:
+    needs: flow-editor-contract-test
     uses: nhnacademy-aiot3-insighton/InsightOn-infra/.github/workflows/front-ci-cd.yml@main
     permissions:
       contents: read

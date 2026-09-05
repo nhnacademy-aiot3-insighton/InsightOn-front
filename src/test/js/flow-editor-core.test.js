@@ -51,6 +51,39 @@
     assert(parsed.actions[0].supplementalTemperatureValue === '24', '보조 온도 동작을 편집 값으로 병합해야 한다.');
     assert(parsed.actions[1].configuration.actuatorType === 'AIR_PURIFIER', '추가 기기 동작의 순서를 유지해야 한다.');
 
+    const timeWindow = {
+        clientNodeKey: 'time-window',
+        nodeType: 'TIME_WINDOW',
+        configuration: {startTime: '09:00:00', endTime: '18:00:00'}
+    };
+    const nodesWithTimeWindow = [nodes[0], timeWindow].concat(nodes.slice(1));
+    const linksWithTimeWindow = [
+        {sourceClientNodeKey: 'trigger', targetClientNodeKey: 'time-window', sourcePort: 'out', targetPort: 'in'},
+        {sourceClientNodeKey: 'time-window', targetClientNodeKey: 'filter', sourcePort: 'true', targetPort: 'in'}
+    ].concat(links.slice(1));
+    const parsedWithTimeWindow = core.parseFlow(nodesWithTimeWindow, linksWithTimeWindow, rules);
+    assert(parsedWithTimeWindow !== null, '운영 시간부터 시작하는 정규 조건 경로를 해석해야 한다.');
+    assert(parsedWithTimeWindow.timeWindow.clientNodeKey === 'time-window',
+        'TIME_WINDOW를 측정값 조건과 구분해 편집 값으로 유지해야 한다.');
+    assert(parsedWithTimeWindow.filters.length === 1 && parsedWithTimeWindow.gate.clientNodeKey === 'gate',
+        'TIME_WINDOW 뒤의 측정값 조건과 안전장치를 모두 유지해야 한다.');
+
+    const normalWindow = core.parseTimeWindowConfiguration({startTime: '09:00:00', endTime: '18:00'});
+    assert(normalWindow !== null && normalWindow.startTime === '09:00' && normalWindow.endTime === '18:00',
+        '분 단위와 0초 표기를 같은 LocalTime 값으로 정규화해야 한다.');
+    assert(normalWindow.overnight === false, '시작이 빠른 운영 시간은 당일 범위여야 한다.');
+
+    const overnightWindow = core.parseTimeWindowConfiguration({startTime: '22:00', endTime: '06:00:30'});
+    assert(overnightWindow !== null && overnightWindow.overnight === true,
+        '종료가 더 이른 운영 시간은 자정을 지나는 정상 범위여야 한다.');
+    assert(overnightWindow.endTime === '06:00:30', '0이 아닌 기존 초 단위 시각을 보존해야 한다.');
+    assert(core.parseTimeWindowConfiguration({startTime: '09:00', endTime: '09:00:00'}) === null,
+        '표기만 다른 동일 시각은 24시간 범위로 해석하지 않고 거절해야 한다.');
+    assert(core.parseTimeWindowConfiguration({startTime: '24:00', endTime: '06:00'}) === null,
+        'LocalTime 범위를 벗어나는 시각을 거절해야 한다.');
+    assert(core.parseTimeWindowConfiguration({startTime: '', endTime: '06:00'}) === null,
+        '시작 또는 종료 시각이 비어 있으면 거절해야 한다.');
+
     const hiddenBranch = links.concat({
         sourceClientNodeKey: 'filter',
         targetClientNodeKey: 'power',
@@ -59,6 +92,41 @@
     });
     assert(core.parseFlow(nodes, hiddenBranch, rules) === null,
         '화면에서 표현하지 못하는 추가 분기가 있으면 편집을 차단해야 한다.');
+
+    const duplicateTimeWindow = {
+        clientNodeKey: 'time-window-2',
+        nodeType: 'TIME_WINDOW',
+        configuration: {startTime: '10:00', endTime: '17:00'}
+    };
+    assert(core.parseFlow(
+        [nodes[0], timeWindow, duplicateTimeWindow, nodes[3]],
+        [
+            {sourceClientNodeKey: 'trigger', targetClientNodeKey: 'time-window', sourcePort: 'out', targetPort: 'in'},
+            {sourceClientNodeKey: 'time-window', targetClientNodeKey: 'time-window-2', sourcePort: 'true', targetPort: 'in'},
+            {sourceClientNodeKey: 'time-window-2', targetClientNodeKey: 'power', sourcePort: 'true', targetPort: 'in'}
+        ],
+        rules
+    ) === null, '폼이 표현하지 못하는 TIME_WINDOW 중복은 편집을 차단해야 한다.');
+
+    assert(core.parseFlow(
+        [nodes[0], nodes[1], timeWindow, nodes[3]],
+        [
+            {sourceClientNodeKey: 'trigger', targetClientNodeKey: 'filter', sourcePort: 'out', targetPort: 'in'},
+            {sourceClientNodeKey: 'filter', targetClientNodeKey: 'time-window', sourcePort: 'true', targetPort: 'in'},
+            {sourceClientNodeKey: 'time-window', targetClientNodeKey: 'power', sourcePort: 'true', targetPort: 'in'}
+        ],
+        rules
+    ) === null, '저장 시 순서가 바뀌는 THRESHOLD 뒤 TIME_WINDOW는 편집을 차단해야 한다.');
+
+    assert(core.parseFlow(
+        [nodes[0], timeWindow, nodes[3]],
+        [
+            {sourceClientNodeKey: 'trigger', targetClientNodeKey: 'time-window', sourcePort: 'out', targetPort: 'in'},
+            {sourceClientNodeKey: 'time-window', targetClientNodeKey: 'power', sourcePort: 'true', targetPort: 'in'},
+            {sourceClientNodeKey: 'time-window', targetClientNodeKey: 'power', sourcePort: 'false', targetPort: 'in'}
+        ],
+        rules
+    ) === null, '폼이 표시하지 않는 TIME_WINDOW false 분기를 삭제하지 않도록 편집을 차단해야 한다.');
 
     function parseActionFanOut(actionNodes) {
         const fanOutNodes = [{clientNodeKey: 'trigger', nodeType: 'LOCATION', configuration: {}}]
@@ -108,6 +176,8 @@
         '예약 폼이 표현할 수 없는 조건 노드가 있으면 편집을 차단해야 한다.');
     assert(parseScheduleFlow([nodes[2]], [nodes[5]]) === null,
         '예약 폼이 표현할 수 없는 안전장치 노드가 있으면 편집을 차단해야 한다.');
+    assert(parseScheduleFlow([timeWindow], [nodes[5]]) === null,
+        '엔진에서 허용하지 않는 예약 시작과 TIME_WINDOW 조합을 편집하지 않아야 한다.');
     assert(parseScheduleFlow([], [{
         clientNodeKey: 'alert',
         nodeType: 'ALERT',

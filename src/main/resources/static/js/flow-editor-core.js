@@ -17,6 +17,39 @@
             : null;
     }
 
+    /**
+     * Rule Engine의 LocalTime과 HTML time input이 함께 표현할 수 있는 시각을 정규화한다.
+     * 분 단위 값은 HH:mm, 초가 있는 값은 HH:mm:ss로 유지한다.
+     */
+    function parseTimeOfDay(value) {
+        const match = String(value == null ? '' : value).trim()
+            .match(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/);
+        if (!match) return null;
+
+        const hour = Number(match[1]);
+        const minute = Number(match[2]);
+        const second = Number(match[3] || 0);
+        const normalized = second === 0
+            ? `${match[1]}:${match[2]}`
+            : `${match[1]}:${match[2]}:${match[3]}`;
+        return {
+            value: normalized,
+            secondsOfDay: (hour * 60 * 60) + (minute * 60) + second
+        };
+    }
+
+    function parseTimeWindowConfiguration(configuration) {
+        const config = configuration || {};
+        const start = parseTimeOfDay(config.startTime);
+        const end = parseTimeOfDay(config.endTime);
+        if (!start || !end || start.secondsOfDay === end.secondsOfDay) return null;
+        return {
+            startTime: start.value,
+            endTime: end.value,
+            overnight: start.secondsOfDay > end.secondsOfDay
+        };
+    }
+
     // 화면에서 선택한 반복 규칙을 Rule Engine의 Spring 6필드 cron으로 변환한다.
     function buildCron(schedule) {
         const minute = String(schedule.minute);
@@ -198,6 +231,7 @@
         const consumedLinkIndexes = new Set();
         const trigger = triggers[0];
         const filters = [];
+        let timeWindow = null;
         let gate = null;
         let actions = null;
         usedKeys.add(trigger.clientNodeKey);
@@ -230,6 +264,18 @@
                 sourcePort = 'true';
                 continue;
             }
+            if (target.nodeType === 'TIME_WINDOW') {
+                // 편집기는 운영 시간을 측정값 조건보다 먼저 저장한다. 이미 뒤에 있는 유효 Flow를
+                // 조용히 재정렬하지 않고, 이 정규 순서와 TIME_WINDOW 1개만 손실 없이 편집한다.
+                if (gate || timeWindow || filters.length
+                    || !parseTimeWindowConfiguration(target.configuration)) {
+                    return null;
+                }
+                timeWindow = target;
+                sourceKey = target.clientNodeKey;
+                sourcePort = 'true';
+                continue;
+            }
             if (target.nodeType === 'EVENT_GATE') {
                 if (gate) return null;
                 gate = target;
@@ -242,6 +288,7 @@
 
         const scheduleShapeSupported = trigger.nodeType !== 'SCHEDULE'
             || (filters.length === 0
+                && timeWindow === null
                 && gate === null
                 && actions
                 && actions.every((action) => action.nodeType === 'ACTUATOR_CONTROL'));
@@ -249,7 +296,7 @@
             && scheduleShapeSupported
             && usedKeys.size === nodes.length
             && consumedLinkIndexes.size === links.length
-            ? {trigger, filters, gate, actions}
+            ? {trigger, filters, timeWindow, gate, actions}
             : null;
     }
 
@@ -258,6 +305,8 @@
         buildCron,
         minutesToSeconds,
         parseCron,
-        parseFlow
+        parseFlow,
+        parseTimeOfDay,
+        parseTimeWindowConfiguration
     };
 });

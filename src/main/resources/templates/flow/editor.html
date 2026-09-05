@@ -179,7 +179,27 @@
                                 <span class="flow-node-icon"><i class="ti ti-filter"></i></span>
                                 <div><span class="flow-node-kind">조건 · 선택</span><h4>무엇을 확인할까요?</h4></div>
                             </div>
-                            <p class="flow-node-help">선택한 센서의 온도·습도·CO₂·조도 중 측정 항목과 기준값을 설정합니다.</p>
+                            <p class="flow-node-help">운영 시간과 측정값 중 필요한 조건을 설정합니다. 추가한 조건은 모두 만족해야 합니다.</p>
+                            <div class="flow-time-window">
+                                <div class="form-check form-switch flow-time-window-toggle">
+                                    <input id="timeWindowEnabled" class="form-check-input path-time-window-enabled" type="checkbox" role="switch"
+                                           aria-label="운영 시간 제한 사용">
+                                    <label class="form-check-label" for="timeWindowEnabled">운영 시간 제한 사용</label>
+                                </div>
+                                <div class="path-time-window-fields">
+                                    <div class="settings-field">
+                                        <label for="timeWindowStart">시작 시간</label>
+                                        <input id="timeWindowStart" type="time" step="60" class="form-control path-time-window-start"
+                                               aria-label="운영 시작 시간" value="09:00">
+                                    </div>
+                                    <div class="settings-field">
+                                        <label for="timeWindowEnd">종료 시간</label>
+                                        <input id="timeWindowEnd" type="time" step="60" class="form-control path-time-window-end"
+                                               aria-label="운영 종료 시간" value="18:00">
+                                    </div>
+                                </div>
+                                <p class="field-hint path-time-window-summary" aria-live="polite">사용하지 않으면 하루 종일 확인합니다.</p>
+                            </div>
                             <div class="condition-list path-condition-list"></div>
                             <button type="button" class="btn-add-widget btn-add-path-condition">
                                 <i class="ti ti-plus"></i> 조건 추가
