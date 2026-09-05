@@ -69,8 +69,8 @@ public class GroupController {
 
         GroupResponse myGroup;
         if (groupId == null) {
-            Long myGroupId = groupClient.getMyGroupId().groupId();
-            myGroup = groupClient.getMyGroup(myGroupId);
+            groupId = groupClient.getMyGroupId().groupId();
+            myGroup = groupClient.getMyGroup(groupId);
 
             ResponseCookie cookie = ResponseCookie.from("groupId", groupId.toString())
                     .httpOnly(true)
