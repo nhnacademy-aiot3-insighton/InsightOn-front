@@ -893,7 +893,6 @@
         if (removeAction) {
             removeAction.closest('.flow-action-item').remove();
             refreshActionList(path);
-            return;
         }
     });
 
