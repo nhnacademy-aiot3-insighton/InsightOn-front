@@ -100,7 +100,7 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-end mb-3">
-                    <button type="button" class="btn-link-quiet" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">비밀번호를 잊으셨나요?</button>
+                    <button type="button" class="btn-link-quiet" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">비밀번호 재설정</button>
                 </div>
                 <button type="submit" class="btn-landing-primary w-100 justify-content-center">
                     로그인<i class="ti ti-arrow-right"></i>
@@ -130,6 +130,7 @@
                     </button>
                 </form>
             </div>
+            <p class="field-hint" style="text-align:center;">계정이 없으면 자동으로 회원가입돼요.</p>
 
             <p class="auth-footer-note">
                 계정이 없으신가요? <a th:href="@{/signup}">회원가입</a>
@@ -217,7 +218,24 @@
     </div>
 </div>
 
+<!-- 소셜 로그인 이동 중 로딩 표시 (provider 동의 화면까지 브라우저가 리다이렉트되는 동안) -->
+<div id="oauthLoadingOverlay"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2000; flex-direction:column; align-items:center; justify-content:center; gap: var(--sp-3);">
+    <div class="spinner-border text-light" role="status" style="width:3rem; height:3rem;">
+        <span class="visually-hidden">이동 중...</span>
+    </div>
+    <p style="color:#fff; margin:0;">이동 중이에요...</p>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/auth/login.js}"></script>
+<script>
+    (function () {
+        var overlay = document.getElementById('oauthLoadingOverlay');
+        document.querySelectorAll('form[action*="/oauth/authorize/"]').forEach(function (form) {
+            form.addEventListener('submit', function () { overlay.style.display = 'flex'; });
+        });
+    })();
+</script>
 </body>
 </html>
