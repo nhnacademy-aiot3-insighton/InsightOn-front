@@ -72,7 +72,8 @@
                 if (res.ok) {
                     window.location.href = '/login?withdrawn=1';
                 } else {
-                    alert('탈퇴 처리에 실패했어요. 잠시 후 다시 시도해주세요.');
+                    const message = await res.text();
+                    alert(message || '탈퇴 처리에 실패했어요. 잠시 후 다시 시도해주세요.');
                     btnWithdraw.disabled = false;
                 }
             } catch (err) {

@@ -56,7 +56,8 @@
                 </div>
                 <div class="settings-field">
                     <label for="phone">연락처</label>
-                    <input type="tel" id="phone" name="phone" class="form-control" th:value="${phone}" required>
+                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="01012345678" th:value="${phone}" required>
+                    <p class="field-hint">'-' 없이 숫자만 입력해 주세요.</p>
                 </div>
             </div>
 

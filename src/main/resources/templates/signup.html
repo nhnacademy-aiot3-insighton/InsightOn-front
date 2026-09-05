@@ -112,8 +112,8 @@
 
                 <div class="settings-field">
                     <label for="phone">전화번호</label>
-                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="010-1234-5678" th:value="${phone}" required>
-                    <p id="phoneHint" class="field-hint" data-default="전화번호를 입력해 주세요">전화번호를 입력해 주세요</p>
+                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="01012345678" th:value="${phone}" required>
+                    <p id="phoneHint" class="field-hint" data-default="'-' 없이 숫자만 입력해 주세요.">'-' 없이 숫자만 입력해 주세요.</p>
                 </div>
 
                 <button type="submit" id="btnSubmitSignup" class="btn-landing-primary w-100 justify-content-center" disabled>
