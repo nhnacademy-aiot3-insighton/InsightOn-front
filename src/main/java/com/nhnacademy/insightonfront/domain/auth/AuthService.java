@@ -178,8 +178,8 @@ public class AuthService {
         authClient.passwordReset(new PasswordResetRequest(email));
     }
 
-    public void confirmPasswordReset(String token, String password) {
-        authClient.passwordResetConfirm(new PasswordResetConfirmRequest(token, password));
+    public void confirmPasswordReset(String password, String token) {
+        authClient.passwordResetConfirm(new PasswordResetConfirmRequest(password, token));
     }
 
     public boolean hasAdminRole(String accessToken) {
