@@ -112,9 +112,14 @@
                                 <select class="form-select path-trigger-sensor" aria-label="시작 센서"></select>
                             </div>
                             <div class="path-trigger-schedule-field">
+                                <div class="flow-schedule-invalid path-schedule-invalid" role="alert" hidden>
+                                    <strong><i class="ti ti-alert-triangle"></i> 예약을 다시 지정해주세요.</strong>
+                                    <p>기존 예약은 현재 화면에서 편집할 수 없는 형식입니다. 아래에서 반복이나 시간을 한 번 선택하면 새 예약으로 바뀝니다.</p>
+                                </div>
                                 <div class="settings-field">
                                     <label>반복</label>
                                     <select class="form-select path-schedule-repeat" aria-label="반복 주기">
+                                        <option value="" disabled>반복 주기를 선택해주세요</option>
                                         <option value="DAILY">매일</option>
                                         <option value="WEEKLY">매주</option>
                                         <option value="MONTHLY">매월</option>
@@ -235,6 +240,14 @@
                     </div>
                 </section>
             </template>
+
+            <div class="flow-edit-activation" th:if="${mode == 'edit' and flow != null and flow.status().name() == 'ACTIVE'}">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="reactivateAfterSave" checked>
+                    <label class="form-check-label" for="reactivateAfterSave">저장 후 바로 활성화</label>
+                </div>
+                <p>수정하면 기존 버전은 보관되고 새 버전이 만들어집니다. 이 옵션을 끄면 새 버전은 비활성 상태로 저장됩니다.</p>
+            </div>
 
             <div class="flow-editor-actions">
                 <p><i class="ti ti-info-circle"></i> 필요한 내용을 모두 설정하면 하나의 자동화로 저장됩니다.</p>

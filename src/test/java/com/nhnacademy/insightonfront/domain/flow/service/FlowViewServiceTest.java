@@ -70,6 +70,8 @@ class FlowViewServiceTest {
         assertThat(gate.fields())
                 .extracting(field -> field.label() + ": " + field.value())
                 .containsExactly("반복 확인: 5분 안에 3번 확인", "최소 실행 간격: 30분");
+
+        assertThat(flowViewService.getFlowForEdit(flowId, groupId).status()).isEqualTo(FlowStatus.ACTIVE);
     }
 
     private FlowLinkResponse link(long linkId, long flowId, long sourceNodeId, long targetNodeId,
