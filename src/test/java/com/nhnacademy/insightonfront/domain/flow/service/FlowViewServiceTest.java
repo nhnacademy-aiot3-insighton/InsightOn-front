@@ -74,6 +74,49 @@ class FlowViewServiceTest {
         assertThat(flowViewService.getFlowForEdit(flowId, groupId).status()).isEqualTo(FlowStatus.ACTIVE);
     }
 
+    @Test
+    void timeWindow를_측정_시각_기준의_자정_통과_운영_시간으로_표시한다() {
+        long flowId = 11L;
+        long groupId = 20L;
+        long locationId = 30L;
+        List<FlowNodeResponse> nodes = List.of(
+                new FlowNodeResponse(1L, NodeType.LOCATION, Map.of()),
+                new FlowNodeResponse(2L, NodeType.TIME_WINDOW,
+                        Map.of("startTime", "22:00:00", "endTime", "06:00:00")),
+                new FlowNodeResponse(3L, NodeType.ALERT,
+                        Map.of("title", "야간", "severity", "INFO", "message", "운영 시간입니다."))
+        );
+        List<FlowLinkResponse> links = List.of(
+                link(1L, flowId, 1L, 2L, "out"),
+                link(2L, flowId, 2L, 3L, "true")
+        );
+        FlowDefinitionResponse definition = new FlowDefinitionResponse(
+                flowId, groupId, locationId, "야간 운영", null, FlowStatus.INACTIVE,
+                OffsetDateTime.parse("2026-09-04T10:00:00+09:00"), nodes, links);
+        FlowClient flowClient = proxy(FlowClient.class,
+                (method, arguments) -> method.getName().equals("getFlow") ? definition : null);
+        SensorClient sensorClient = proxy(SensorClient.class,
+                (method, arguments) -> method.getName().equals("search") ? List.of() : null);
+        LocationNameResolver locationNameResolver = new LocationNameResolver(null) {
+            @Override
+            public Map<Long, String> resolve(Long requestedGroupId) {
+                return Map.of(locationId, "강의실");
+            }
+        };
+
+        FlowDetailViewModel detail = new FlowViewService(flowClient, locationNameResolver, sensorClient)
+                .getFlow(flowId, groupId);
+        FlowStepViewModel timeWindow = detail.steps().stream()
+                .filter(step -> step.nodeType() == NodeType.TIME_WINDOW)
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(timeWindow.description()).contains("측정값 기록 시각");
+        assertThat(timeWindow.fields())
+                .extracting(field -> field.label() + ": " + field.value())
+                .containsExactly("운영 시간: 22:00 ~ 다음 날 06:00");
+    }
+
     private FlowLinkResponse link(long linkId, long flowId, long sourceNodeId, long targetNodeId,
                                   String sourcePort) {
         return new FlowLinkResponse(linkId, flowId, sourceNodeId, targetNodeId, sourcePort, "in");

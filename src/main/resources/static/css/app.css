@@ -3769,6 +3769,32 @@ button:focus-visible,
   background: var(--success-tint);
 }
 
+.flow-time-window {
+  padding-bottom: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.flow-time-window-toggle {
+  margin-bottom: var(--sp-3);
+}
+
+.path-time-window-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.path-time-window-fields .settings-field {
+  margin-bottom: 0;
+}
+
+.path-time-window-summary {
+  margin: var(--sp-3) 0 0;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
 .flow-gate-toggle {
   margin-bottom: var(--sp-3);
 }
@@ -3884,6 +3910,12 @@ button:focus-visible,
   border-radius: var(--radius);
   font-size: var(--fs-meta);
   text-align: center;
+}
+
+.flow-condition-empty.with-time-window {
+  color: var(--primary);
+  background: var(--primary-tint);
+  border-color: var(--primary);
 }
 
 .condition-list:has(.condition-row) .flow-condition-empty {
@@ -4100,7 +4132,8 @@ button:focus-visible,
   }
 
   .flow-meta-grid,
-  .flow-action-grid {
+  .flow-action-grid,
+  .path-time-window-fields {
     grid-template-columns: 1fr;
   }
 

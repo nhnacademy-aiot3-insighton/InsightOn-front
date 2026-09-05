@@ -1,6 +1,6 @@
 /**
  * Flow 생성/수정 화면.
- * Rule Engine 검증 계약에 맞춰 Trigger 1개 → THRESHOLD 0..N개 → EVENT_GATE 0..1개
+ * Rule Engine 검증 계약에 맞춰 Trigger 1개 → TIME_WINDOW 0..1개 → THRESHOLD 0..N개 → EVENT_GATE 0..1개
  * → Action 1개 이상을 팬아웃으로 연결한다. 전원 켜기와 온도를 함께 설정하면 한 카드가 Action 2개가 된다.
  * 저장 전 화면 상태를 Node/Link 목록으로 변환한다.
  */
@@ -16,6 +16,8 @@
     const defaultRequiredCount = 3;
     const defaultCountWindowMinutes = 5;
     const defaultCooldownMinutes = 30;
+    const defaultWindowStart = '09:00';
+    const defaultWindowEnd = '18:00';
     const secondsPerMinute = 60;
     // 대시보드 액추에이터 조작 화면(actuator-panel.js)·제안 로그(SuggestionLogViewService)와 같은 한글 표기를 쓴다.
     const actuatorTypeLabels = {AIRCON: '에어컨', AIR_PURIFIER: '공기청정기', VENTILATION_FAN: '환풍기'};
@@ -176,6 +178,58 @@
             : fallbackMinutes;
     }
 
+    function displayTimeOfDay(value) {
+        return String(value || '').endsWith(':00') ? String(value).slice(0, 5) : String(value || '');
+    }
+
+    function updateTimeWindowFields(path) {
+        const enabled = path.querySelector('.path-time-window-enabled').checked;
+        const fields = path.querySelector('.path-time-window-fields');
+        const summary = path.querySelector('.path-time-window-summary');
+        fields.style.display = enabled ? '' : 'none';
+        updateConditionEmptyMessage(path);
+
+        if (!enabled) {
+            summary.textContent = '사용하지 않으면 하루 종일 측정값을 확인합니다.';
+            return;
+        }
+
+        const startTime = path.querySelector('.path-time-window-start').value;
+        const endTime = path.querySelector('.path-time-window-end').value;
+        if (!startTime || !endTime) {
+            summary.textContent = '시작 시간과 종료 시간을 모두 선택해주세요.';
+            return;
+        }
+
+        const parsed = editorCore.parseTimeWindowConfiguration({startTime, endTime});
+        if (!parsed) {
+            summary.textContent = '시작 시간과 종료 시간은 달라야 합니다. 하루 종일 적용하려면 제한을 꺼주세요.';
+            return;
+        }
+
+        const startLabel = displayTimeOfDay(parsed.startTime);
+        const endLabel = displayTimeOfDay(parsed.endTime);
+        summary.textContent = parsed.overnight
+            ? `매일 ${startLabel}부터 다음 날 ${endLabel} 직전까지 측정값을 확인합니다.`
+            : `매일 ${startLabel}부터 ${endLabel} 직전까지 측정값을 확인합니다.`;
+    }
+
+    function configureTimeWindow(path, timeWindow) {
+        const parsed = timeWindow
+            ? editorCore.parseTimeWindowConfiguration(timeWindow.configuration)
+            : null;
+        const startInput = path.querySelector('.path-time-window-start');
+        const endInput = path.querySelector('.path-time-window-end');
+        const preservesSeconds = parsed
+            && (parsed.startTime.split(':').length > 2 || parsed.endTime.split(':').length > 2);
+        startInput.step = preservesSeconds ? '1' : '60';
+        endInput.step = preservesSeconds ? '1' : '60';
+        path.querySelector('.path-time-window-enabled').checked = Boolean(timeWindow);
+        startInput.value = parsed ? parsed.startTime : defaultWindowStart;
+        endInput.value = parsed ? parsed.endTime : defaultWindowEnd;
+        updateTimeWindowFields(path);
+    }
+
     function refreshSensorSelect(select, selectedValue) {
         const locationId = Number(locationSelect.value);
         select.replaceChildren();
@@ -211,8 +265,8 @@
         if (!rows.length) {
             const empty = document.createElement('p');
             empty.className = 'flow-condition-empty';
-            empty.innerHTML = '<i class="ti ti-alert-triangle"></i> 조건이 없으면 측정값이 들어올 때마다 확인해요. 보통은 조건을 하나 이상 추가하는 것이 안전합니다.';
             list.appendChild(empty);
+            updateConditionEmptyMessage(list.closest('.flow-path'));
             return;
         }
         rows.forEach((row, index) => {
@@ -223,6 +277,16 @@
             label.textContent = 'AND';
             list.insertBefore(label, row);
         });
+    }
+
+    function updateConditionEmptyMessage(path) {
+        const empty = path ? path.querySelector('.flow-condition-empty') : null;
+        if (!empty) return;
+        const hasTimeWindow = path.querySelector('.path-time-window-enabled').checked;
+        empty.classList.toggle('with-time-window', hasTimeWindow);
+        empty.innerHTML = hasTimeWindow
+            ? '<i class="ti ti-info-circle"></i> 측정값 조건을 추가하지 않으면 운영 시간 안의 모든 측정값이 다음 단계로 진행합니다.'
+            : '<i class="ti ti-alert-triangle"></i> 측정값 조건이 없으면 새 측정값이 들어올 때마다 다음 단계로 진행합니다. 필요한 경우 기준값 조건을 추가해주세요.';
     }
 
     function parseExpression(expression) {
@@ -766,6 +830,8 @@
         updateTriggerVisibility(path);
         updateLocationTriggerLabel();
 
+        configureTimeWindow(path, data && data.timeWindow ? data.timeWindow : null);
+
         (data && data.filters ? data.filters : []).forEach((filter) => {
             addCondition(path, filter.configuration ? filter.configuration.expression : '');
         });
@@ -797,6 +863,9 @@
         if (event.target.matches('.path-gate-enabled, .path-gate-required-count, .path-gate-window, .path-gate-cooldown')) {
             updateGateFields(path);
         }
+        if (event.target.matches('.path-time-window-enabled, .path-time-window-start, .path-time-window-end')) {
+            updateTimeWindowFields(path);
+        }
         if (event.target.matches('.path-schedule-repeat, .path-schedule-time, .path-schedule-day, .path-schedule-weekday')) {
             acceptScheduleFormInput(path);
             updateScheduleSummary(path);
@@ -824,6 +893,9 @@
         const path = event.target.closest('.flow-path');
         if (path && event.target.matches('.path-gate-required-count, .path-gate-window, .path-gate-cooldown')) {
             updateGateFields(path);
+        }
+        if (path && event.target.matches('.path-time-window-start, .path-time-window-end')) {
+            updateTimeWindowFields(path);
         }
         if (event.target.matches('.action-actuator-value, .action-actuator-temp-value')) {
             updateActuatorSummary(event.target.closest('.flow-action-item'));
@@ -940,7 +1012,42 @@
 
             let sourceKey = triggerKey;
             let sourcePort = 'out';
-            // SCHEDULE 트리거는 조건 노드를 숨겨서 못 만들게 하므로, 편집 모드에서 넘어온 잔여 행이 있어도 무시한다.
+            if (triggerType !== 'SCHEDULE' && path.querySelector('.path-time-window-enabled').checked) {
+                const startTime = path.querySelector('.path-time-window-start').value;
+                const endTime = path.querySelector('.path-time-window-end').value;
+                if (!startTime || !endTime) {
+                    return showError('운영 시작 시간과 종료 시간을 모두 선택해주세요.');
+                }
+                const parsedTimeWindow = editorCore.parseTimeWindowConfiguration({startTime, endTime});
+                if (!parsedTimeWindow) {
+                    const parsedStart = editorCore.parseTimeOfDay(startTime);
+                    const parsedEnd = editorCore.parseTimeOfDay(endTime);
+                    if (parsedStart && parsedEnd && parsedStart.secondsOfDay === parsedEnd.secondsOfDay) {
+                        return showError('운영 시작 시간과 종료 시간은 달라야 합니다. 하루 종일 적용하려면 운영 시간 제한을 꺼주세요.');
+                    }
+                    return showError('운영 시간을 올바른 시각으로 선택해주세요.');
+                }
+
+                const timeWindowKey = `${prefix}-time-window`;
+                nodes.push({
+                    clientNodeKey: timeWindowKey,
+                    nodeType: 'TIME_WINDOW',
+                    configuration: {
+                        startTime: parsedTimeWindow.startTime,
+                        endTime: parsedTimeWindow.endTime
+                    }
+                });
+                links.push({
+                    sourceClientNodeKey: sourceKey,
+                    targetClientNodeKey: timeWindowKey,
+                    sourcePort,
+                    targetPort: 'in'
+                });
+                sourceKey = timeWindowKey;
+                sourcePort = 'true';
+            }
+
+            // SCHEDULE 트리거는 모든 조건 노드를 숨겨서 못 만들게 하므로, 전환 전 입력값도 저장에서 제외한다.
             const conditionRows = triggerType === 'SCHEDULE'
                 ? []
                 : Array.from(path.querySelectorAll('.condition-row'));
