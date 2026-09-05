@@ -373,7 +373,7 @@ public class AuthController {
                                        @RequestParam String token,
                                        Model model) {
         try {
-            authService.confirmPasswordReset(token, password);
+            authService.confirmPasswordReset(password, token);
             model.addAttribute("done", true);      // HTML의 th:if="${done}" 완료화면
             return "reset-password";
         } catch (FeignException.BadRequest e) {
