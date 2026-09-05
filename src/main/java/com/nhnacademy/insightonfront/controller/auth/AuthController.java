@@ -32,6 +32,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 로그인/회원가입/이메일 인증/아이디 찾기/비밀번호 재설정/내 정보 — 인증·계정 관련 목업 페이지를
@@ -55,6 +57,7 @@ public class AuthController {
     private final AuthService authService;
     private final SignupService signupService;
     private final MypageService mypageService;
+    private final ObjectMapper objectMapper;
 
     /**
      * 소셜 로그인 authorize 요청을 보낼 auth(게이트웨이) 베이스 URL.
@@ -114,7 +117,7 @@ public class AuthController {
         return switch (status) {
             case 401, 400 -> "이메일 또는 비밀번호가 올바르지 않아요.";
             case 403 -> "이용이 제한된(정지) 계정이에요. 관리자에게 문의해주세요.";
-            case 423 -> "로그인이 일시적으로 잠겼어요. 잠시 후 다시 시도해주세요.";
+            case 423 -> "5회 연속 로그인 실패로 5분간 잠겼어요. 5분 후 다시 시도해주세요.";
             default -> "로그인에 실패했어요. 잠시 후 다시 시도해주세요.";
         };
     }
@@ -189,6 +192,21 @@ public class AuthController {
                         .build().toString());
     }
 
+    /** 탈퇴 실패 시 auth 응답 바디의 "message" 필드를 그대로 꺼내 보여주기 위한 파싱. */
+    private String extractDownstreamMessage(FeignException e) {
+        try {
+            String bodyStr = e.contentUTF8();
+            if (bodyStr != null && !bodyStr.isBlank()) {
+                JsonNode jsonNode = objectMapper.readTree(bodyStr);
+                if (jsonNode.has("message") && !jsonNode.get("message").isNull()) {
+                    return jsonNode.get("message").asString();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
     // ================================================================
     // 소셜 로그인 — authorize·code교환·토큰발급은 전부 auth 가 한다.
     //   /oauth/authorize/{provider} : auth 의 authorize 엔드포인트로 넘겨주는 얇은 리다이렉트
@@ -207,12 +225,19 @@ public class AuthController {
 
     // 마이페이지 소셜 계정 연동 — 로그인과 동일하게 auth 의 연동 authorize 엔드포인트로 넘겨주는 얇은 리다이렉트.
     // 이후 동의화면 → auth 콜백 → auth 가 연동까지 끝내고 /mypage?linked=1 (또는 ?linkError=..) 로 302.
+    // mergeWith 가 있으면(다른 계정에 이미 연동된 소셜 계정을 병합하겠다는 확인) auth 쪽에 그대로 전달한다 —
+    // 다시 provider 동의 화면을 거쳐야 auth 가 "지금도 그 계정을 통제하는지"를 재확인할 수 있다.
     @GetMapping("/oauth/link/{provider}")
-    public String oauthLink(@PathVariable String provider) {
+    public String oauthLink(@PathVariable String provider,
+                            @RequestParam(required = false) Long mergeWith) {
         if (!OAUTH_PROVIDERS.contains(provider)) {
             return "redirect:/mypage?linkError=1";
         }
-        return "redirect:" + oauthAuthBaseUrl + "/api/v1/auth/oauth/link/authorize/" + provider;
+        String target = oauthAuthBaseUrl + "/api/v1/auth/oauth/link/authorize/" + provider;
+        if (mergeWith != null) {
+            target += "?mergeWith=" + mergeWith;
+        }
+        return "redirect:" + target;
     }
 
     @GetMapping("/oauth/complete")
@@ -260,8 +285,14 @@ public class AuthController {
     @PostMapping("/signup/send-code")
     @ResponseBody
     public ResponseEntity<Void> sendVerificationCode(@RequestBody EmailVerifyRequest request) {
-        signupService.sendEmailVerify(request.email());
-        return ResponseEntity.noContent().build();
+        try {
+            signupService.sendEmailVerify(request.email());
+            return ResponseEntity.noContent().build();
+        } catch (FeignException e) {
+            log.warn("[Signup] 인증코드 발송 실패: status={}", e.status());
+            int status = e.status();               // 429 쿨다운 / 423 재전송 초과 잠금 / 그 외
+            return ResponseEntity.status(status >= 400 && status < 500 ? status : 502).build();
+        }
     }
 
     /**
@@ -528,8 +559,17 @@ public class AuthController {
 
     @PostMapping("/mypage/withdraw")
     @ResponseBody
-    public ResponseEntity<Void> withdraw(HttpServletRequest req, HttpServletResponse res) {
-        mypageService.withdraw();
+    public ResponseEntity<String> withdraw(HttpServletRequest req, HttpServletResponse res) {
+        try {
+            mypageService.withdraw();
+        } catch (FeignException e) {
+            // 그룹 관리자라 탈퇴 불가 / 이미 탈퇴한 계정 등 — auth 가 준 실제 사유를 그대로 보여준다
+            // (전역 FeignException 핸들러는 이 요청에서 에러 화면(html)을 만들어버려 fetch 쪽에서 못 씀).
+            log.warn("[MyPage] 탈퇴 실패: status={}", e.status());
+            String message = extractDownstreamMessage(e);
+            return ResponseEntity.status(e.status() > 0 ? e.status() : 500)
+                    .body(message != null ? message : "탈퇴 처리에 실패했어요. 잠시 후 다시 시도해주세요.");
+        }
         boolean secure = req.isSecure();
         expireCookie(res, "accessToken", secure);
         expireCookie(res, "refreshToken", secure);
