@@ -31,6 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * AuthAdminController HTTP 계약 테스트 — 관리자 메인 접근·로그인·로그아웃·회원관리 화면과
@@ -48,7 +49,8 @@ class AuthAdminControllerTest {
 
     @BeforeEach
     void setUp() {
-        mvc = MockMvcBuilders.standaloneSetup(new AuthAdminController(authService, adminService))
+        mvc = MockMvcBuilders.standaloneSetup(
+                        new AuthAdminController(authService, adminService, new ObjectMapper()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".jsp"))
                 .build();
     }
@@ -59,6 +61,16 @@ class AuthAdminControllerTest {
         Response response = Response.builder()
                 .status(status).reason("test").request(request).headers(Map.of()).build();
         return FeignException.errorStatus("AdminClient#login()", response);
+    }
+
+    private static FeignException feignStatusWithMessage(int status, String message) {
+        Request request = Request.create(Request.HttpMethod.POST, "http://localhost/api/v1/admin/users/1/block",
+                Map.of(), null, StandardCharsets.UTF_8, new RequestTemplate());
+        byte[] body = ("{\"status\":" + status + ",\"message\":\"" + message + "\"}")
+                .getBytes(StandardCharsets.UTF_8);
+        Response response = Response.builder()
+                .status(status).reason("test").request(request).headers(Map.of()).body(body).build();
+        return FeignException.errorStatus("AdminClient#block()", response);
     }
 
     // ================================================================
@@ -180,5 +192,17 @@ class AuthAdminControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(adminService).activate(5L);
+    }
+
+    @Test
+    @DisplayName("POST /admin/api/users/{userId}/block — auth가 403+메시지로 거부하면 그 메시지를 그대로 JSON으로 반환")
+    void block_selfTarget_relaysDownstreamMessage() throws Exception {
+        org.mockito.Mockito.doThrow(feignStatusWithMessage(403, "자기 자신을 차단할 수 없습니다."))
+                .when(adminService).block(1L);
+
+        mvc.perform(post("/admin/api/users/1/block"))
+                .andExpect(status().isForbidden())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.message").value("자기 자신을 차단할 수 없습니다."));
     }
 }

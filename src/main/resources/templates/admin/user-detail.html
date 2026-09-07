@@ -271,15 +271,20 @@
             body: JSON.stringify({ roles })
         })
             .then(res => {
-                if (res.status === 400) throw new Error('bad-request');
-                if (!res.ok) throw new Error('status ' + res.status);
-                roleSaved.style.display = '';
-                loadDetail();
+                if (res.ok) {
+                    roleSaved.style.display = '';
+                    loadDetail();
+                    return;
+                }
+                return res.json()
+                    .catch(() => ({}))
+                    .then(body => {
+                        roleError.textContent = body.message || '권한 저장에 실패했어요. 잠시 후 다시 시도해주세요.';
+                        roleError.style.display = '';
+                    });
             })
-            .catch(err => {
-                roleError.textContent = err.message === 'bad-request'
-                    ? '권한은 1개 이상 선택해야 해요.'
-                    : '권한 저장에 실패했어요. 잠시 후 다시 시도해주세요.';
+            .catch(() => {
+                roleError.textContent = '권한 저장에 실패했어요. 잠시 후 다시 시도해주세요.';
                 roleError.style.display = '';
             })
             .finally(() => { btn.disabled = false; });
@@ -293,8 +298,16 @@
             btn.disabled = true;
             fetch(`/admin/api/users/${USER_ID}/${action}`, { method: 'POST' })
                 .then(res => {
-                    if (!res.ok) throw new Error('status ' + res.status);
-                    location.reload();
+                    if (res.ok) {
+                        location.reload();
+                        return;
+                    }
+                    return res.json()
+                        .catch(() => ({}))
+                        .then(body => {
+                            btn.disabled = false;
+                            showActionError(body.message || '처리하지 못했어요. 잠시 후 다시 시도해주세요.');
+                        });
                 })
                 .catch(() => {
                     btn.disabled = false;
