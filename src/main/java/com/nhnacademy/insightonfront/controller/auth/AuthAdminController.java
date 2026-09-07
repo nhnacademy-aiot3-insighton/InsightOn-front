@@ -19,12 +19,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 관리자 회원관리 컨트롤러.
@@ -44,6 +47,7 @@ public class AuthAdminController {
 
     private final AuthService authService;
     private final AdminService adminService;
+    private final ObjectMapper objectMapper;
 
     // ================================================================
     // Admin 메인 페이지
@@ -245,17 +249,25 @@ public class AuthAdminController {
     /** 회원 계정 차단 */
     @PostMapping("/api/users/{userId}/block")
     @ResponseBody
-    public ResponseEntity<Void> block(@PathVariable Long userId) {
-        adminService.block(userId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> block(@PathVariable Long userId) {
+        try {
+            adminService.block(userId);
+            return ResponseEntity.noContent().build();
+        } catch (FeignException e) {
+            return adminActionError(e);
+        }
     }
 
     /** 회원 계정 휴면 전환 */
     @PostMapping("/api/users/{userId}/sleep")
     @ResponseBody
-    public ResponseEntity<Void> sleep(@PathVariable Long userId) {
-        adminService.sleep(userId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> sleep(@PathVariable Long userId) {
+        try {
+            adminService.sleep(userId);
+            return ResponseEntity.noContent().build();
+        } catch (FeignException e) {
+            return adminActionError(e);
+        }
     }
 
     /** 회원 계정 활성화 (복구) */
@@ -269,17 +281,45 @@ public class AuthAdminController {
     /** 회원 권한 전체 교체 (roles 목록이 최종 상태) */
     @PutMapping("/api/users/{userId}/roles")
     @ResponseBody
-    public ResponseEntity<Void> updateRoles(@PathVariable Long userId,
-                                            @RequestBody RolesUpdateRequest request) {
-        adminService.updateRoles(userId, request.roles());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> updateRoles(@PathVariable Long userId,
+                                         @RequestBody RolesUpdateRequest request) {
+        try {
+            adminService.updateRoles(userId, request.roles());
+            return ResponseEntity.ok().build();
+        } catch (FeignException e) {
+            return adminActionError(e);
+        }
     }
 
     /** 강제 로그아웃 */
     @PostMapping("/api/users/{userId}/force-logout")
     @ResponseBody
-    public ResponseEntity<Void> forceLogout(@PathVariable Long userId) {
-        adminService.forceLogout(userId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> forceLogout(@PathVariable Long userId) {
+        try {
+            adminService.forceLogout(userId);
+            return ResponseEntity.noContent().build();
+        } catch (FeignException e) {
+            return adminActionError(e);
+        }
+    }
+
+    /** 관리자 액션(차단/휴면/권한변경/강제로그아웃) 실패 시 auth가 보낸 메시지를 그대로 실어 응답 */
+    private ResponseEntity<Map<String, String>> adminActionError(FeignException e) {
+        int status = e.status() > 0 ? e.status() : 500;
+        return ResponseEntity.status(status).body(Map.of("message", extractDownstreamMessage(e)));
+    }
+
+    private String extractDownstreamMessage(FeignException e) {
+        try {
+            String body = e.contentUTF8();
+            if (body != null && !body.isBlank()) {
+                JsonNode node = objectMapper.readTree(body);
+                if (node.has("message") && !node.get("message").isNull()) {
+                    return node.get("message").asString();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return "처리하지 못했어요. 잠시 후 다시 시도해주세요.";
     }
 }
