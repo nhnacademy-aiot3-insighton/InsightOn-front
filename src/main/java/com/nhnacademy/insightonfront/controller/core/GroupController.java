@@ -156,13 +156,24 @@ public class GroupController {
     @PostMapping("/join")
     public String joinGroup(@CookieValue(value = "userId", required = false) Long userId,
                             @RequestParam("inviteToken") String inviteToken,
-                            RedirectAttributes redirectAttributes) {
+                            RedirectAttributes redirectAttributes,
+                            HttpServletResponse response) {
         if (userId == null) {
             return "redirect:/login";
         }
 
         try {
             groupClient.joinGroup(inviteToken);
+
+            Long myGroupId = groupClient.getMyGroupId().groupId();
+            ResponseCookie cookie = ResponseCookie.from("groupId", myGroupId.toString())
+                    .httpOnly(true)
+                    .path("/")
+                    .sameSite("Lax")
+                    .maxAge(Duration.ofDays(15))
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
             return "redirect:/my-group";
         } catch (FeignException.Conflict e) {
             log.warn("그룹 참가 실패(409) - 이미 처리 대기 중이거나 소속된 그룹이 있음. inviteToken:{}", inviteToken);
