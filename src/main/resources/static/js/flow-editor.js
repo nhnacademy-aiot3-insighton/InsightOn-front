@@ -355,6 +355,7 @@
         }
         if (selectedMetricKey) select.value = selectedMetricKey;
         select.disabled = false;
+        select.title = select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : '';
     }
 
     function refreshPathConditionMetrics(path) {
@@ -860,6 +861,11 @@
         if (!path) return;
         if (event.target.matches('.path-trigger-type')) updateTriggerVisibility(path);
         if (event.target.matches('.path-trigger-sensor')) refreshPathConditionMetrics(path);
+        if (event.target.matches('.condition-metric')) {
+            event.target.title = event.target.options[event.target.selectedIndex]
+                ? event.target.options[event.target.selectedIndex].text
+                : '';
+        }
         if (event.target.matches('.path-gate-enabled, .path-gate-required-count, .path-gate-window, .path-gate-cooldown')) {
             updateGateFields(path);
         }

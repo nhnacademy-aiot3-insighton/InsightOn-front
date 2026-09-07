@@ -3326,6 +3326,7 @@ button:focus-visible,
   grid-template-columns: 1.4fr 1fr 0.7fr 1fr auto;
   gap: var(--sp-2);
   align-items: center;
+  min-width: 0;
   background: var(--surface-alt);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -3335,6 +3336,14 @@ button:focus-visible,
 .condition-row select,
 .condition-row input {
   font-size: var(--fs-body);
+}
+
+.condition-row select {
+  min-width: 0;
+  padding-right: 2.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .condition-and-label {
@@ -3923,7 +3932,7 @@ button:focus-visible,
 }
 
 .flow-node-filter .condition-row {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px !important;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 30px !important;
   padding: var(--sp-2);
 }
 
