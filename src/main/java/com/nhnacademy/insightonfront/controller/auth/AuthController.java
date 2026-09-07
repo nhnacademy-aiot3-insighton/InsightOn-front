@@ -458,7 +458,9 @@ public class AuthController {
     // ================================================================
 
     @GetMapping("/mypage")
-    public String myPage(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
+    public String myPage(@CookieValue(value = "groupId", required = false) Long groupId,
+                         @CookieValue(value = "accessToken", required = false) String accessToken,
+                         Model model) {
         MyInfoResponse info = mypageService.findMyInfo();
         model.addAttribute("email", info.email());
         model.addAttribute("name", info.userName());
@@ -473,8 +475,8 @@ public class AuthController {
                         .map(o -> o.provider() == null ? "" : o.provider().toLowerCase())
                         .collect(java.util.stream.Collectors.toSet());
         model.addAttribute("linkedProviders", linkedProviders);
-        // 헤더 로고 클릭 시: 그룹 보유자는 대시보드로, 그 외에는 랜딩으로
         model.addAttribute("groupId", groupId);
+        model.addAttribute("brandHref", brandHref(accessToken, groupId));
         return "mypage";
     }
 
@@ -483,12 +485,15 @@ public class AuthController {
     // ================================================================
 
     @GetMapping("/mypage/edit")
-    public String myPageEditForm(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
+    public String myPageEditForm(@CookieValue(value = "groupId", required = false) Long groupId,
+                                 @CookieValue(value = "accessToken", required = false) String accessToken,
+                                 Model model) {
         MyInfoResponse info = mypageService.findMyInfo();
         model.addAttribute("email", info.email());
         model.addAttribute("name", info.userName());
         model.addAttribute("phone", info.phoneNumber());
         model.addAttribute("groupId", groupId);
+        model.addAttribute("brandHref", brandHref(accessToken, groupId));
         return "mypage/edit";
     }
 
@@ -512,9 +517,20 @@ public class AuthController {
     // ================================================================
 
     @GetMapping("/mypage/password")
-    public String passwordResetForm(@CookieValue(value = "groupId", required = false) Long groupId, Model model) {
+    public String passwordResetForm(@CookieValue(value = "groupId", required = false) Long groupId,
+                                    @CookieValue(value = "accessToken", required = false) String accessToken,
+                                    Model model) {
         model.addAttribute("groupId", groupId);
+        model.addAttribute("brandHref", brandHref(accessToken, groupId));
         return "mypage/password";
+    }
+
+    /** 마이페이지 헤더 로고 목적지: 관리자는 admin 콘솔, 그룹 보유자는 대시보드, 그 외 랜딩. */
+    private String brandHref(String accessToken, Long groupId) {
+        if (authService.hasAdminRole(accessToken)) {
+            return "/admin/main";
+        }
+        return groupId != null ? "/my-group" : "/";
     }
 
     @PostMapping("/mypage/password")
