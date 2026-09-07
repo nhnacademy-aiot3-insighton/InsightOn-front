@@ -16,7 +16,7 @@
 <body>
 
 <header class="landing-header">
-    <a th:href="${groupId != null} ? @{/my-group} : @{/}" class="brand">
+    <a th:href="@{${brandHref}}" class="brand">
         <span th:replace="~{fragments/layout :: brandMark}"></span>InsightOn
     </a>
     <div class="landing-header-actions" style="margin-left:auto;">
