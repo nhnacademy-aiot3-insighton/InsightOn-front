@@ -4794,7 +4794,7 @@ button:focus-visible,
 
 .flow-trash-list-item {
   position: relative;
-  flex: 1 0 300px;
+  flex: 0 0 auto;
   min-width: 300px;
   border-bottom: 1px solid var(--line);
 }
