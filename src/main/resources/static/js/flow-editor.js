@@ -1,7 +1,8 @@
 /**
  * Flow 생성/수정 화면.
- * Rule Engine 검증 계약에 맞춰 Trigger 1개 → THRESHOLD 0..N개 → ALERT 1개를
- * 직렬 연결한다. 저장 전 화면 상태를 Node/Link 목록과 clientNodeKey로 변환한다.
+ * Rule Engine 검증 계약에 맞춰 Trigger 1개 → TIME_WINDOW 0..1개 → THRESHOLD 0..N개 → EVENT_GATE 0..1개
+ * → Action 1개 이상을 팬아웃으로 연결한다. 전원 켜기와 온도를 함께 설정하면 한 카드가 Action 2개가 된다.
+ * 저장 전 화면 상태를 Node/Link 목록으로 변환한다.
  */
 (function () {
     const init = window.FLOW_EDITOR_INIT || {};
@@ -10,9 +11,13 @@
     const presetLocationId = init.presetLocationId;
     const sensors = init.sensors || [];
     const actuatorCommandRules = init.actuatorCommandRules || {};
+    const editorCore = window.FlowEditorCore;
+    if (!editorCore) throw new Error('Flow 편집기 핵심 모듈을 불러오지 못했습니다.');
     const defaultRequiredCount = 3;
-    const defaultCountTimeoutMinutes = 5;
+    const defaultCountWindowMinutes = 5;
     const defaultCooldownMinutes = 30;
+    const defaultWindowStart = '09:00';
+    const defaultWindowEnd = '18:00';
     const secondsPerMinute = 60;
     // 대시보드 액추에이터 조작 화면(actuator-panel.js)·제안 로그(SuggestionLogViewService)와 같은 한글 표기를 쓴다.
     const actuatorTypeLabels = {AIRCON: '에어컨', AIR_PURIFIER: '공기청정기', VENTILATION_FAN: '환풍기'};
@@ -40,14 +45,42 @@
     ];
     let metricRequestSequence = 0;
 
-    function showError(message) {
+    function showError(message, kind) {
         errorEl.textContent = message;
+        errorEl.dataset.errorKind = kind || '';
         errorEl.style.display = 'block';
         errorEl.scrollIntoView({behavior: 'smooth', block: 'center'});
     }
 
     function clearError() {
+        delete errorEl.dataset.errorKind;
         errorEl.style.display = 'none';
+    }
+
+    function showActivationStatusUnknown(flowId) {
+        errorEl.replaceChildren();
+        errorEl.append('새 버전은 저장됐지만 활성화 완료 여부를 확인하지 못했어요. ');
+        const detailLink = document.createElement('a');
+        detailLink.href = `/my-group/flows/${flowId}`;
+        detailLink.textContent = '저장된 버전의 현재 상태 확인하기';
+        errorEl.appendChild(detailLink);
+        errorEl.style.display = 'block';
+        errorEl.scrollIntoView({behavior: 'smooth', block: 'center'});
+        const label = saveBtn.querySelector('span');
+        if (label) label.textContent = '새 버전 저장 완료';
+    }
+
+    function showActivationFailure(flowId) {
+        errorEl.replaceChildren();
+        errorEl.append('새 버전은 저장됐지만 활성화하지 못했어요. 현재 비활성 상태입니다. ');
+        const detailLink = document.createElement('a');
+        detailLink.href = `/my-group/flows/${flowId}`;
+        detailLink.textContent = '저장된 버전에서 다시 활성화하기';
+        errorEl.appendChild(detailLink);
+        errorEl.style.display = 'block';
+        errorEl.scrollIntoView({behavior: 'smooth', block: 'center'});
+        const label = saveBtn.querySelector('span');
+        if (label) label.textContent = '새 버전 저장 완료';
     }
 
     function createOption(value, label) {
@@ -57,86 +90,8 @@
         return option;
     }
 
-    // 화면에서 고른 반복 규칙을 Rule Engine이 이해하는 Spring 6필드(초 분 시 일 월 요일) cron 문자열로 바꾼다.
-    // 백엔드 CronExpressionValidator가 초 필드는 반드시 "0"만 허용한다(분 단위 미만 스케줄은 지원하지 않음).
-    function buildCron(schedule) {
-        const minute = String(schedule.minute);
-        const hour = String(schedule.hour);
-        if (schedule.repeatType === 'WEEKLY') {
-            const days = schedule.weekdays.length ? schedule.weekdays.slice().sort().join(',') : '*';
-            return `0 ${minute} ${hour} * * ${days}`;
-        }
-        if (schedule.repeatType === 'MONTHLY') {
-            return `0 ${minute} ${hour} ${schedule.day} * *`;
-        }
-        return `0 ${minute} ${hour} * * *`;
-    }
-
-    // cron 요일 필드를 0(일)~6(토) 집합으로 정규화한다.
-    // 이 화면은 숫자 콤마열만 만들지만, AI가 생성하는 draft는 Spring CronExpression이
-    // 허용하는 이름(MON~SUN)과 범위(MON-FRI) 표기를 함께 쓰므로 둘 다 인식해야 한다.
-    const weekdayNameToIndex = {SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6};
-
-    function weekdayIndex(token) {
-        const value = token.trim().toUpperCase();
-        if (value === '7') return 0;
-        if (/^[0-6]$/.test(value)) return Number(value);
-        return Object.prototype.hasOwnProperty.call(weekdayNameToIndex, value) ? weekdayNameToIndex[value] : null;
-    }
-
-    function parseWeekdayField(field) {
-        const days = new Set();
-        for (const token of field.split(',')) {
-            const range = token.split('-');
-            if (range.length === 1) {
-                const value = weekdayIndex(range[0]);
-                if (value === null) return null;
-                days.add(value);
-            } else if (range.length === 2) {
-                const start = weekdayIndex(range[0]);
-                const end = weekdayIndex(range[1]);
-                if (start === null || end === null) return null;
-                for (let i = start; ; i = (i + 1) % 7) {
-                    days.add(i);
-                    if (i === end) break;
-                }
-            } else {
-                return null;
-            }
-        }
-        return Array.from(days);
-    }
-
-    // buildCron의 역변환. 화면에서 만들 수 있는 3가지 형태(매일/매주/매월)와
-    // AI가 draft로 만드는 요일 이름/범위 표기까지 인식하고,
-    // 그 외(다른 사람이 손으로 만든 복잡한 cron 등)는 null을 돌려줘 호출부가 기본값으로 대체하게 한다.
-    function parseCron(cron) {
-        const parts = String(cron || '').trim().split(/\s+/);
-        if (parts.length !== 6) return null;
-        const [second, minute, hour, day, month, weekday] = parts;
-        if (second !== '0' || !/^\d+$/.test(minute) || !/^\d+$/.test(hour) || month !== '*') return null;
-        const m = Number(minute);
-        const h = Number(hour);
-        if (m < 0 || m > 59 || h < 0 || h > 23) return null;
-        if (day !== '*' && weekday === '*') {
-            if (!/^\d+$/.test(day)) return null;
-            const d = Number(day);
-            if (d < 1 || d > 31) return null;
-            return {repeatType: 'MONTHLY', hour: h, minute: m, day: d, weekdays: []};
-        }
-        if (day === '*' && weekday !== '*') {
-            const weekdays = parseWeekdayField(weekday);
-            if (!weekdays || !weekdays.length) return null;
-            return {repeatType: 'WEEKLY', hour: h, minute: m, day: null, weekdays};
-        }
-        if (day === '*' && weekday === '*') {
-            return {repeatType: 'DAILY', hour: h, minute: m, day: null, weekdays: []};
-        }
-        return null;
-    }
-
     function cronToSummary(cron) {
-        const parsed = parseCron(cron);
+        const parsed = editorCore.parseCron(cron);
         if (!parsed) return null;
         const time = `${String(parsed.hour).padStart(2, '0')}:${String(parsed.minute).padStart(2, '0')}`;
         if (parsed.repeatType === 'WEEKLY') {
@@ -157,7 +112,9 @@
 
     function readSchedule(path) {
         const repeatType = path.querySelector('.path-schedule-repeat').value;
-        const [hour, minute] = path.querySelector('.path-schedule-time').value.split(':').map(Number);
+        const timeParts = path.querySelector('.path-schedule-time').value.split(':');
+        const hour = timeParts.length === 2 && timeParts[0] !== '' ? Number(timeParts[0]) : Number.NaN;
+        const minute = timeParts.length === 2 && timeParts[1] !== '' ? Number(timeParts[1]) : Number.NaN;
         const weekdays = Array.from(path.querySelectorAll('.path-schedule-weekday:checked')).map((box) => Number(box.value));
         const day = Number(path.querySelector('.path-schedule-day').value);
         return {repeatType, hour, minute, weekdays, day};
@@ -168,32 +125,49 @@
         path.querySelector('.path-schedule-weekday-field').style.display = schedule.repeatType === 'WEEKLY' ? '' : 'none';
         path.querySelector('.path-schedule-day-field').style.display = schedule.repeatType === 'MONTHLY' ? '' : 'none';
         const summary = path.querySelector('.path-schedule-summary');
-        if (Number.isNaN(schedule.hour) || Number.isNaN(schedule.minute)) {
-            summary.textContent = '반복 시간을 선택해주세요.';
+        if (!schedule.repeatType || !Number.isInteger(schedule.hour) || !Number.isInteger(schedule.minute)) {
+            summary.textContent = '반복 주기와 시간을 선택해주세요.';
             return;
         }
         if (schedule.repeatType === 'WEEKLY' && !schedule.weekdays.length) {
             summary.textContent = '반복할 요일을 선택해주세요.';
             return;
         }
-        summary.textContent = cronToSummary(buildCron(schedule));
+        summary.textContent = cronToSummary(editorCore.buildCron(schedule));
     }
 
-    function applyScheduleFromCron(path, cron) {
+    function applyScheduleFromCron(path, cron, existingSchedule) {
         const daySelect = path.querySelector('.path-schedule-day');
         if (!daySelect.options.length) populateScheduleDaySelect(daySelect);
 
-        const parsed = cron ? parseCron(cron) : null;
+        const parsed = cron ? editorCore.parseCron(cron) : null;
+        const invalidExistingSchedule = existingSchedule && !parsed;
         const schedule = parsed || {repeatType: 'DAILY', hour: 9, minute: 0, day: 1, weekdays: []};
-        path.querySelector('.path-schedule-repeat').value = schedule.repeatType;
-        path.querySelector('.path-schedule-time').value =
-            `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
+        path.querySelector('.path-schedule-repeat').value = invalidExistingSchedule ? '' : schedule.repeatType;
+        path.querySelector('.path-schedule-time').value = invalidExistingSchedule
+            ? ''
+            : `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
         path.querySelectorAll('.path-schedule-weekday').forEach((box) => {
-            box.checked = schedule.weekdays.includes(Number(box.value));
+            box.checked = !invalidExistingSchedule && schedule.weekdays.includes(Number(box.value));
         });
         daySelect.value = String(schedule.day || 1);
         updateScheduleSummary(path);
-        return cron && !parsed;
+        const invalidNotice = path.querySelector('.path-schedule-invalid');
+        if (invalidExistingSchedule) {
+            path.dataset.scheduleInvalid = 'true';
+            invalidNotice.hidden = false;
+            return true;
+        }
+        delete path.dataset.scheduleInvalid;
+        invalidNotice.hidden = true;
+        return false;
+    }
+
+    function acceptScheduleFormInput(path) {
+        if (path.dataset.scheduleInvalid !== 'true') return;
+        delete path.dataset.scheduleInvalid;
+        path.querySelector('.path-schedule-invalid').hidden = true;
+        if (errorEl.dataset.errorKind === 'schedule') clearError();
     }
 
     function secondsToMinutes(seconds, fallbackMinutes) {
@@ -202,6 +176,58 @@
         return Number.isFinite(value)
             ? Math.round((value / secondsPerMinute) * 100) / 100
             : fallbackMinutes;
+    }
+
+    function displayTimeOfDay(value) {
+        return String(value || '').endsWith(':00') ? String(value).slice(0, 5) : String(value || '');
+    }
+
+    function updateTimeWindowFields(path) {
+        const enabled = path.querySelector('.path-time-window-enabled').checked;
+        const fields = path.querySelector('.path-time-window-fields');
+        const summary = path.querySelector('.path-time-window-summary');
+        fields.style.display = enabled ? '' : 'none';
+        updateConditionEmptyMessage(path);
+
+        if (!enabled) {
+            summary.textContent = '사용하지 않으면 하루 종일 측정값을 확인합니다.';
+            return;
+        }
+
+        const startTime = path.querySelector('.path-time-window-start').value;
+        const endTime = path.querySelector('.path-time-window-end').value;
+        if (!startTime || !endTime) {
+            summary.textContent = '시작 시간과 종료 시간을 모두 선택해주세요.';
+            return;
+        }
+
+        const parsed = editorCore.parseTimeWindowConfiguration({startTime, endTime});
+        if (!parsed) {
+            summary.textContent = '시작 시간과 종료 시간은 달라야 합니다. 하루 종일 적용하려면 제한을 꺼주세요.';
+            return;
+        }
+
+        const startLabel = displayTimeOfDay(parsed.startTime);
+        const endLabel = displayTimeOfDay(parsed.endTime);
+        summary.textContent = parsed.overnight
+            ? `매일 ${startLabel}부터 다음 날 ${endLabel} 직전까지 측정값을 확인합니다.`
+            : `매일 ${startLabel}부터 ${endLabel} 직전까지 측정값을 확인합니다.`;
+    }
+
+    function configureTimeWindow(path, timeWindow) {
+        const parsed = timeWindow
+            ? editorCore.parseTimeWindowConfiguration(timeWindow.configuration)
+            : null;
+        const startInput = path.querySelector('.path-time-window-start');
+        const endInput = path.querySelector('.path-time-window-end');
+        const preservesSeconds = parsed
+            && (parsed.startTime.split(':').length > 2 || parsed.endTime.split(':').length > 2);
+        startInput.step = preservesSeconds ? '1' : '60';
+        endInput.step = preservesSeconds ? '1' : '60';
+        path.querySelector('.path-time-window-enabled').checked = Boolean(timeWindow);
+        startInput.value = parsed ? parsed.startTime : defaultWindowStart;
+        endInput.value = parsed ? parsed.endTime : defaultWindowEnd;
+        updateTimeWindowFields(path);
     }
 
     function refreshSensorSelect(select, selectedValue) {
@@ -239,8 +265,8 @@
         if (!rows.length) {
             const empty = document.createElement('p');
             empty.className = 'flow-condition-empty';
-            empty.innerHTML = '<i class="ti ti-alert-triangle"></i> 조건이 없으면 측정값이 들어올 때마다 확인해요. 보통은 조건을 하나 이상 추가하는 것이 안전합니다.';
             list.appendChild(empty);
+            updateConditionEmptyMessage(list.closest('.flow-path'));
             return;
         }
         rows.forEach((row, index) => {
@@ -251,6 +277,16 @@
             label.textContent = 'AND';
             list.insertBefore(label, row);
         });
+    }
+
+    function updateConditionEmptyMessage(path) {
+        const empty = path ? path.querySelector('.flow-condition-empty') : null;
+        if (!empty) return;
+        const hasTimeWindow = path.querySelector('.path-time-window-enabled').checked;
+        empty.classList.toggle('with-time-window', hasTimeWindow);
+        empty.innerHTML = hasTimeWindow
+            ? '<i class="ti ti-info-circle"></i> 측정값 조건을 추가하지 않으면 운영 시간 안의 모든 측정값이 다음 단계로 진행합니다.'
+            : '<i class="ti ti-alert-triangle"></i> 측정값 조건이 없으면 새 측정값이 들어올 때마다 다음 단계로 진행합니다. 필요한 경우 기준값 조건을 추가해주세요.';
     }
 
     function parseExpression(expression) {
@@ -397,9 +433,67 @@
         refreshPathConditionMetrics(path);
     }
 
-    function updateCountTimeout(action) {
-        const requiredCount = Number(action.querySelector('.action-required-count').value || defaultRequiredCount);
-        action.querySelector('.action-count-timeout-field').style.display = requiredCount >= 2 ? '' : 'none';
+    function updateGateFields(path) {
+        const enabled = path.querySelector('.path-gate-enabled').checked;
+        const requiredCountValue = path.querySelector('.path-gate-required-count').value.trim();
+        const requiredCount = Number(requiredCountValue);
+        path.querySelector('.path-gate-fields').style.display = enabled ? '' : 'none';
+        path.querySelector('.path-gate-window-field').style.display = enabled && requiredCount >= 2 ? '' : 'none';
+
+        const summary = path.querySelector('.path-gate-summary');
+        if (!enabled) {
+            summary.textContent = '조건을 만족할 때마다 바로 실행합니다.';
+            return;
+        }
+        if (!requiredCountValue || !Number.isInteger(requiredCount) || requiredCount < 1) {
+            summary.textContent = '확인 횟수를 1 이상의 정수로 입력해주세요.';
+            return;
+        }
+        const windowMinutes = path.querySelector('.path-gate-window').value.trim();
+        if (requiredCount >= 2 && !windowMinutes) {
+            summary.textContent = '여러 번 확인할 시간을 입력해주세요.';
+            return;
+        }
+        const cooldownValue = path.querySelector('.path-gate-cooldown').value.trim();
+        if (!cooldownValue) {
+            summary.textContent = '최소 실행 간격을 입력해주세요. 제한하지 않으려면 0을 입력해주세요.';
+            return;
+        }
+        const cooldownMinutes = Number(cooldownValue);
+        const countSummary = requiredCount >= 2
+            ? `${windowMinutes}분 안에 ${requiredCount}번 확인한 뒤 실행합니다.`
+            : '한 번 확인하면 실행합니다.';
+        const cooldownSummary = cooldownMinutes > 0
+            ? ` 안전장치를 통과한 뒤 ${cooldownMinutes}분 동안 다시 실행을 시도하지 않습니다.`
+            : '';
+        summary.textContent = countSummary + cooldownSummary;
+    }
+
+    function configureGate(path, gate, isNewFlow) {
+        const gateType = gate ? gate.nodeType : null;
+        const gateConfig = gate && gate.configuration ? gate.configuration : {};
+        let requiredCount = defaultRequiredCount;
+        let countWindowSeconds = defaultCountWindowMinutes * secondsPerMinute;
+        let cooldownSeconds = defaultCooldownMinutes * secondsPerMinute;
+        let enabled = isNewFlow;
+
+        if (gateType === 'EVENT_GATE') {
+            requiredCount = Number(gateConfig.requiredCount == null ? 1 : gateConfig.requiredCount);
+            countWindowSeconds = Number(gateConfig.countWindowSeconds || 0);
+            cooldownSeconds = Number(gateConfig.cooldownSeconds || 0);
+            enabled = true;
+        }
+
+        path.querySelector('.path-gate-enabled').checked = enabled;
+        const requiredCountInput = path.querySelector('.path-gate-required-count');
+        requiredCountInput.max = String(editorCore.BACKEND_INTEGER_MAX);
+        requiredCountInput.value = String(Math.max(1, requiredCount));
+        path.querySelector('.path-gate-window').value = String(secondsToMinutes(
+            countWindowSeconds,
+            defaultCountWindowMinutes
+        ));
+        path.querySelector('.path-gate-cooldown').value = String(secondsToMinutes(cooldownSeconds, 0));
+        updateGateFields(path);
     }
 
     // ActuatorCommandPreset.forTemplate()이 보내는 모양: {AIRCON: {POWER_STATUS: {stateKey:'power', kind:'SELECT', values:[...]}, ...}, ...}
@@ -561,21 +655,6 @@
                         <textarea class="form-control action-message" rows="2" aria-label="알림 메시지" placeholder="예: 온도가 30도를 초과했습니다."></textarea>
                     </div>
                 </div>
-                <div class="action-subfields">
-                    <div class="settings-field">
-                        <label>확인 횟수</label>
-                        <input type="number" class="form-control action-required-count" min="1" aria-label="알림 전 확인 횟수" value="3">
-                    </div>
-                    <div class="settings-field action-count-timeout-field" style="display:none;">
-                        <label>확인 시간(분)</label>
-                        <input type="number" class="form-control action-count-timeout" min="0.01" step="any" aria-label="확인 시간(분)" value="5">
-                    </div>
-                    <div class="settings-field">
-                        <label>재알림 대기(분)</label>
-                        <input type="number" class="form-control action-cooldown" min="0" step="any" aria-label="재알림 대기(분)" value="30">
-                    </div>
-                </div>
-                <p class="flow-action-safety-hint"><i class="ti ti-shield-check"></i> 권장 시작값은 5분 안에 3회 확인하고, 알림 후 30분 동안 다시 보내지 않도록 설정됩니다.</p>
             </div>
             <div class="action-actuator-fields">
                 <div class="flow-action-grid">
@@ -609,22 +688,14 @@
         item.querySelector('.action-title').value = config.title || '';
         item.querySelector('.action-severity').value = config.severity || 'WARNING';
         item.querySelector('.action-message').value = config.message || '';
-        item.querySelector('.action-required-count').value = config.requiredCount == null
-            ? defaultRequiredCount
-            : config.requiredCount;
-        item.querySelector('.action-count-timeout').value = secondsToMinutes(
-            config.countTimeoutSeconds,
-            defaultCountTimeoutMinutes
-        );
-        item.querySelector('.action-cooldown').value = secondsToMinutes(
-            config.cooldownSeconds,
-            defaultCooldownMinutes
-        );
         item.querySelector('.action-actuator-type').value = config.actuatorType || 'AIRCON';
         refreshActuatorFields(item, config.command, config.commandValue);
+        if (actionData.supplementalTemperatureValue != null) {
+            item.querySelector('.action-actuator-temp-value').value = String(actionData.supplementalTemperatureValue);
+            updateActuatorSummary(item);
+        }
         updateActionTypeVisibility(item);
         path.querySelector('.path-action-list').appendChild(item);
-        updateCountTimeout(item);
     }
 
     // 기기 제어 카드가 2개 이상이면 위→아래 순서가 곧 실행 순서다.
@@ -695,9 +766,11 @@
         path.querySelector('.path-trigger-schedule-field').style.display = type === 'SCHEDULE' ? '' : 'none';
         if (type === 'SCHEDULE') updateScheduleSummary(path);
 
-        // 예약 시작(SCHEDULE)은 엔진 규칙상 동작 노드에 직접 연결해야 하므로 조건 노드를 숨긴다.
+        // 예약 시작(SCHEDULE)은 엔진 규칙상 동작 노드에 직접 연결해야 하므로 조건과 안전장치를 숨긴다.
         path.querySelector('.flow-node-filter').style.display = type === 'SCHEDULE' ? 'none' : '';
+        path.querySelector('.flow-node-gate').style.display = type === 'SCHEDULE' ? 'none' : '';
         path.querySelectorAll('.flow-connector')[1].style.display = type === 'SCHEDULE' ? 'none' : '';
+        path.querySelectorAll('.flow-connector')[2].style.display = type === 'SCHEDULE' ? 'none' : '';
 
         // 같은 이유로 동작도 기기 제어만 허용하고, 알림 보내기는 선택하지 못하게 막는다.
         setActionTypeRestricted(path, type === 'SCHEDULE');
@@ -749,15 +822,15 @@
             path.querySelector('.path-trigger-sensor'),
             trigger && trigger.configuration ? trigger.configuration.sensorId : null
         );
-        const cronNotRecognized = applyScheduleFromCron(
+        applyScheduleFromCron(
             path,
-            trigger && trigger.configuration ? trigger.configuration.cron : null
+            trigger && trigger.configuration ? trigger.configuration.cron : null,
+            Boolean(trigger && triggerType === 'SCHEDULE')
         );
-        if (cronNotRecognized) {
-            showError('저장된 예약 주기를 새 화면 형식으로 옮기지 못해 기본값(매일 09:00)으로 표시했어요. 필요하면 다시 설정해주세요.');
-        }
         updateTriggerVisibility(path);
         updateLocationTriggerLabel();
+
+        configureTimeWindow(path, data && data.timeWindow ? data.timeWindow : null);
 
         (data && data.filters ? data.filters : []).forEach((filter) => {
             addCondition(path, filter.configuration ? filter.configuration.expression : '');
@@ -766,60 +839,15 @@
 
         const actionsData = data && data.actions && data.actions.length
             ? data.actions
-            : [{nodeType: 'ALERT', configuration: {}}];
+            : (data && data.action
+                ? [data.action]
+                : [{nodeType: 'ALERT', configuration: {}}]);
         actionsData.forEach((action) => addAction(path, action));
+        configureGate(path, data && data.gate ? data.gate : null, !data);
         // 동작 노드는 addAction 이후에야 존재하므로, 예약 시작 제약을 다시 적용한다.
         setActionTypeRestricted(path, triggerType === 'SCHEDULE');
         refreshActionList(path);
         return path;
-    }
-
-    function parseFlow(nodes, links) {
-        const nodeByKey = new Map(nodes.map((node) => [node.clientNodeKey, node]));
-        const outgoing = new Map();
-        links.forEach((link) => {
-            const key = `${link.sourceClientNodeKey}:${link.sourcePort}`;
-            if (!outgoing.has(key)) outgoing.set(key, []);
-            outgoing.get(key).push(link);
-        });
-
-        const triggers = nodes.filter((node) =>
-            node.nodeType === 'SENSOR' || node.nodeType === 'LOCATION' || node.nodeType === 'SCHEDULE');
-        if (triggers.length !== 1) return null;
-        const usedKeys = new Set();
-        const trigger = triggers[0];
-        const filters = [];
-        let actions = null;
-        usedKeys.add(trigger.clientNodeKey);
-        let sourceKey = trigger.clientNodeKey;
-        let sourcePort = 'out';
-
-        // 룰 엔진은 ACTION 노드가 출력이 없는 종착점이라 액션끼리는 체인이 안 되고,
-        // 대신 같은 조건 출력에 여러 ACTION 노드를 나란히 연결(팬아웃)해 링크 순서대로 순차 실행한다.
-        // 그래서 THRESHOLD 체인은 기존처럼 1개씩만 따라가되, 마지막에 ACTION 노드로만 향하는
-        // 링크를 만나면 그 개수만큼 배열로 복원한다.
-        for (let guard = 0; guard <= nodes.length; guard++) {
-            const nextLinks = outgoing.get(`${sourceKey}:${sourcePort}`) || [];
-            if (!nextLinks.length) return null;
-            const targets = nextLinks.map((link) => nodeByKey.get(link.targetClientNodeKey));
-            if (targets.some((target) => !target || usedKeys.has(target.clientNodeKey))) return null;
-
-            const isActionFanOut = targets.every((target) =>
-                target.nodeType === 'ALERT' || target.nodeType === 'ACTUATOR_CONTROL');
-            if (isActionFanOut) {
-                targets.forEach((target) => usedKeys.add(target.clientNodeKey));
-                actions = targets;
-                break;
-            }
-
-            if (nextLinks.length !== 1 || targets[0].nodeType !== 'THRESHOLD') return null;
-            usedKeys.add(targets[0].clientNodeKey);
-            filters.push(targets[0]);
-            sourceKey = targets[0].clientNodeKey;
-            sourcePort = 'true';
-        }
-
-        return actions && actions.length && usedKeys.size === nodes.length ? {trigger, filters, actions} : null;
     }
 
     locationSelect.addEventListener('change', () => {
@@ -832,8 +860,14 @@
         if (!path) return;
         if (event.target.matches('.path-trigger-type')) updateTriggerVisibility(path);
         if (event.target.matches('.path-trigger-sensor')) refreshPathConditionMetrics(path);
-        if (event.target.matches('.action-required-count')) updateCountTimeout(event.target.closest('.flow-action-item'));
+        if (event.target.matches('.path-gate-enabled, .path-gate-required-count, .path-gate-window, .path-gate-cooldown')) {
+            updateGateFields(path);
+        }
+        if (event.target.matches('.path-time-window-enabled, .path-time-window-start, .path-time-window-end')) {
+            updateTimeWindowFields(path);
+        }
         if (event.target.matches('.path-schedule-repeat, .path-schedule-time, .path-schedule-day, .path-schedule-weekday')) {
+            acceptScheduleFormInput(path);
             updateScheduleSummary(path);
         }
         if (event.target.matches('.action-type')) {
@@ -856,7 +890,13 @@
     });
 
     pathList.addEventListener('input', (event) => {
-        if (event.target.matches('.action-required-count')) updateCountTimeout(event.target.closest('.flow-action-item'));
+        const path = event.target.closest('.flow-path');
+        if (path && event.target.matches('.path-gate-required-count, .path-gate-window, .path-gate-cooldown')) {
+            updateGateFields(path);
+        }
+        if (path && event.target.matches('.path-time-window-start, .path-time-window-end')) {
+            updateTimeWindowFields(path);
+        }
         if (event.target.matches('.action-actuator-value, .action-actuator-temp-value')) {
             updateActuatorSummary(event.target.closest('.flow-action-item'));
         }
@@ -905,7 +945,11 @@
         locationSelect.value = String(flow.locationId);
         locationSelect.disabled = true;
 
-        const parsedFlow = parseFlow(flow.nodes || [], flow.links || []);
+        const parsedFlow = editorCore.parseFlow(
+            flow.nodes || [],
+            flow.links || [],
+            actuatorCommandRules
+        );
         if (!parsedFlow) {
             showError('이 자동화에는 현재 화면에서 수정할 수 없는 복잡한 연결이 있습니다. 기존 내용을 보호하기 위해 저장하지 않았어요. 상세 화면에서 작동 순서를 확인해주세요.');
             addPath();
@@ -942,9 +986,13 @@
             }
             let schedule = null;
             if (triggerType === 'SCHEDULE') {
+                if (path.dataset.scheduleInvalid === 'true') {
+                    return showError('기존 예약을 그대로 저장할 수 없어요. 반복이나 시간을 다시 지정해주세요.', 'schedule');
+                }
                 schedule = readSchedule(path);
-                if (Number.isNaN(schedule.hour) || Number.isNaN(schedule.minute)) {
-                    return showError('예약 시간을 선택해주세요.');
+                if (!schedule.repeatType || !Number.isInteger(schedule.hour) || !Number.isInteger(schedule.minute)
+                    || schedule.hour < 0 || schedule.hour > 23 || schedule.minute < 0 || schedule.minute > 59) {
+                    return showError('예약 반복 주기와 시간을 선택해주세요.');
                 }
                 if (schedule.repeatType === 'WEEKLY' && !schedule.weekdays.length) {
                     return showError('예약할 요일을 하나 이상 선택해주세요.');
@@ -958,13 +1006,48 @@
             const triggerConfiguration = triggerType === 'SENSOR'
                 ? {sensorId: Number(sensorSelect.value)}
                 : triggerType === 'SCHEDULE'
-                    ? {cron: buildCron(schedule)}
+                    ? {cron: editorCore.buildCron(schedule)}
                     : {};
             nodes.push({clientNodeKey: triggerKey, nodeType: triggerType, configuration: triggerConfiguration});
 
             let sourceKey = triggerKey;
             let sourcePort = 'out';
-            // SCHEDULE 트리거는 조건 노드를 숨겨서 못 만들게 하므로, 편집 모드에서 넘어온 잔여 행이 있어도 무시한다.
+            if (triggerType !== 'SCHEDULE' && path.querySelector('.path-time-window-enabled').checked) {
+                const startTime = path.querySelector('.path-time-window-start').value;
+                const endTime = path.querySelector('.path-time-window-end').value;
+                if (!startTime || !endTime) {
+                    return showError('운영 시작 시간과 종료 시간을 모두 선택해주세요.');
+                }
+                const parsedTimeWindow = editorCore.parseTimeWindowConfiguration({startTime, endTime});
+                if (!parsedTimeWindow) {
+                    const parsedStart = editorCore.parseTimeOfDay(startTime);
+                    const parsedEnd = editorCore.parseTimeOfDay(endTime);
+                    if (parsedStart && parsedEnd && parsedStart.secondsOfDay === parsedEnd.secondsOfDay) {
+                        return showError('운영 시작 시간과 종료 시간은 달라야 합니다. 하루 종일 적용하려면 운영 시간 제한을 꺼주세요.');
+                    }
+                    return showError('운영 시간을 올바른 시각으로 선택해주세요.');
+                }
+
+                const timeWindowKey = `${prefix}-time-window`;
+                nodes.push({
+                    clientNodeKey: timeWindowKey,
+                    nodeType: 'TIME_WINDOW',
+                    configuration: {
+                        startTime: parsedTimeWindow.startTime,
+                        endTime: parsedTimeWindow.endTime
+                    }
+                });
+                links.push({
+                    sourceClientNodeKey: sourceKey,
+                    targetClientNodeKey: timeWindowKey,
+                    sourcePort,
+                    targetPort: 'in'
+                });
+                sourceKey = timeWindowKey;
+                sourcePort = 'true';
+            }
+
+            // SCHEDULE 트리거는 모든 조건 노드를 숨겨서 못 만들게 하므로, 전환 전 입력값도 저장에서 제외한다.
             const conditionRows = triggerType === 'SCHEDULE'
                 ? []
                 : Array.from(path.querySelectorAll('.condition-row'));
@@ -988,6 +1071,61 @@
                 sourceKey = filterKey;
                 sourcePort = 'true';
             });
+
+            if (triggerType !== 'SCHEDULE' && path.querySelector('.path-gate-enabled').checked) {
+                const requiredCount = Number(path.querySelector('.path-gate-required-count').value);
+                if (!Number.isInteger(requiredCount)
+                    || requiredCount < 1
+                    || requiredCount > editorCore.BACKEND_INTEGER_MAX) {
+                    return showError('안전장치의 확인 횟수는 1 이상의 올바른 정수로 입력해주세요.');
+                }
+                const countWindowMinutes = requiredCount >= 2
+                    ? Number(path.querySelector('.path-gate-window').value)
+                    : null;
+                if (requiredCount >= 2 && (!Number.isFinite(countWindowMinutes) || countWindowMinutes <= 0)) {
+                    return showError('여러 번 확인할 시간을 분 단위로 입력해주세요.');
+                }
+                const countWindowSeconds = requiredCount >= 2
+                    ? editorCore.minutesToSeconds(countWindowMinutes)
+                    : null;
+                if (requiredCount >= 2 && (!countWindowSeconds || countWindowSeconds < 1)) {
+                    return showError('여러 번 확인할 시간은 1초 이상이며 저장 가능한 범위여야 합니다.');
+                }
+                const cooldownValue = path.querySelector('.path-gate-cooldown').value.trim();
+                if (!cooldownValue) {
+                    return showError('최소 실행 간격을 입력해주세요. 제한하지 않으려면 0을 입력해주세요.');
+                }
+                const cooldownMinutes = Number(cooldownValue);
+                if (!Number.isFinite(cooldownMinutes) || cooldownMinutes < 0) {
+                    return showError('최소 실행 간격은 0분 이상으로 입력해주세요.');
+                }
+                const cooldownSeconds = editorCore.minutesToSeconds(cooldownMinutes);
+                if (cooldownSeconds == null || (cooldownMinutes > 0 && cooldownSeconds < 1)) {
+                    return showError('최소 실행 간격은 0초 또는 1초 이상이며 저장 가능한 범위여야 합니다.');
+                }
+                if (requiredCount === 1 && cooldownSeconds === 0) {
+                    return showError('확인 횟수가 1회이고 최소 실행 간격이 0분이면 안전장치를 꺼주세요.');
+                }
+
+                const gateKey = `${prefix}-event-gate`;
+                nodes.push({
+                    clientNodeKey: gateKey,
+                    nodeType: 'EVENT_GATE',
+                    configuration: {
+                        requiredCount,
+                        countWindowSeconds,
+                        cooldownSeconds
+                    }
+                });
+                links.push({
+                    sourceClientNodeKey: sourceKey,
+                    targetClientNodeKey: gateKey,
+                    sourcePort,
+                    targetPort: 'in'
+                });
+                sourceKey = gateKey;
+                sourcePort = 'true';
+            }
 
             const actions = Array.from(path.querySelectorAll('.flow-action-item'));
             if (actions.length < 1) return showError('조건을 만족했을 때 실행할 동작이 최소 1개 필요합니다.');
@@ -1043,38 +1181,13 @@
                 } else {
                     const title = action.querySelector('.action-title').value.trim();
                     const message = action.querySelector('.action-message').value.trim();
-                    const requiredCount = Number(
-                        action.querySelector('.action-required-count').value || defaultRequiredCount
-                    );
-                    if (!Number.isInteger(requiredCount) || requiredCount < 1) {
-                        return showError('알림을 보내기 전 확인할 횟수는 1 이상의 정수로 입력해주세요.');
-                    }
-                    const countTimeoutMinutes = requiredCount >= 2
-                        ? Number(action.querySelector('.action-count-timeout').value || 0)
-                        : null;
                     if (!title || !message) {
                         return showError('받는 사람이 이해할 수 있도록 알림 제목과 내용을 입력해주세요.');
                     }
-                    if (requiredCount >= 2 && (!countTimeoutMinutes || countTimeoutMinutes <= 0)) {
-                        return showError('여러 번 확인할 시간을 분 단위로 입력해주세요.');
-                    }
-                    const cooldownMinutes = Number(
-                        action.querySelector('.action-cooldown').value || defaultCooldownMinutes
-                    );
-                    if (!Number.isFinite(cooldownMinutes) || cooldownMinutes < 0) {
-                        return showError('재알림 대기 시간은 0분 이상으로 입력해주세요.');
-                    }
-                    const countTimeoutSeconds = requiredCount >= 2
-                        ? Math.round(countTimeoutMinutes * secondsPerMinute)
-                        : null;
-                    const cooldownSeconds = Math.round(cooldownMinutes * secondsPerMinute);
                     configuration = {
                         title,
                         severity: action.querySelector('.action-severity').value,
-                        message,
-                        requiredCount,
-                        countTimeoutSeconds,
-                        cooldownSeconds
+                        message
                     };
                 }
 
@@ -1098,8 +1211,11 @@
             : {locationId: Number(locationSelect.value), name, description, nodes, links};
         const url = mode === 'edit' ? `/my-group/flows/${flow.flowId}` : '/my-group/flows';
         const method = mode === 'edit' ? 'PUT' : 'POST';
+        const reactivateInput = document.getElementById('reactivateAfterSave');
+        const reactivateAfterSave = mode === 'edit' && Boolean(reactivateInput?.checked);
 
         saveBtn.disabled = true;
+        if (reactivateInput) reactivateInput.disabled = true;
         fetch(url, {
             method,
             headers: {'Content-Type': 'application/json'},
@@ -1112,12 +1228,32 @@
                 }
                 return response.json();
             })
+            .then(async (saved) => {
+                if (!reactivateAfterSave) return saved;
+                let activationResponse;
+                try {
+                    activationResponse = await fetch(`/my-group/flows/${saved.flowId}/status`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({status: 'ACTIVE'})
+                    });
+                } catch (ignored) {
+                    showActivationStatusUnknown(saved.flowId);
+                    return null;
+                }
+                if (!activationResponse.ok) {
+                    showActivationFailure(saved.flowId);
+                    return null;
+                }
+                return saved;
+            })
             .then((saved) => {
-                location.href = `/my-group/flows/${saved.flowId}`;
+                if (saved) location.href = `/my-group/flows/${saved.flowId}`;
             })
             .catch((error) => {
                 showError(error.message);
                 saveBtn.disabled = false;
+                if (reactivateInput) reactivateInput.disabled = false;
             });
     });
 })();

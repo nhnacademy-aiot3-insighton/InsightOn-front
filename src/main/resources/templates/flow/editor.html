@@ -32,7 +32,7 @@
                 <div>
                     <p class="flow-editor-eyebrow" th:text="${mode == 'edit'} ? '자동화 다듬기' : '새 자동화'">새 자동화</p>
                     <h2 th:text="${mode == 'edit'} ? '자동화 수정' : '새 자동화 만들기'">새 자동화 만들기</h2>
-                    <p>언제 시작해서, 무엇을 확인하고, 어떤 알림을 보낼지 순서대로 설정하세요.</p>
+                    <p>언제 시작해서, 무엇을 확인하고, 얼마나 신중하게 실행할지 순서대로 설정하세요.</p>
                 </div>
                 <span class="status-badge neutral" th:if="${mode == 'edit'}">새 버전으로 저장</span>
             </div>
@@ -73,7 +73,7 @@
                         <span class="flow-card-index">02</span>
                         <div>
                             <h3 id="flowBuilderTitle">자동화 흐름</h3>
-                        <p>시작 하나와 필요한 조건, 마지막에 실행할 알림을 설정합니다.</p>
+                        <p>시작 하나와 필요한 조건, 실행 안전장치, 마지막 동작을 설정합니다.</p>
                         </div>
                     </div>
                 </div>
@@ -112,9 +112,14 @@
                                 <select class="form-select path-trigger-sensor" aria-label="시작 센서"></select>
                             </div>
                             <div class="path-trigger-schedule-field">
+                                <div class="flow-schedule-invalid path-schedule-invalid" role="alert" hidden>
+                                    <strong><i class="ti ti-alert-triangle"></i> 예약을 다시 지정해주세요.</strong>
+                                    <p>기존 예약은 현재 화면에서 편집할 수 없는 형식입니다. 아래에서 반복이나 시간을 한 번 선택하면 새 예약으로 바뀝니다.</p>
+                                </div>
                                 <div class="settings-field">
                                     <label>반복</label>
                                     <select class="form-select path-schedule-repeat" aria-label="반복 주기">
+                                        <option value="" disabled>반복 주기를 선택해주세요</option>
                                         <option value="DAILY">매일</option>
                                         <option value="WEEKLY">매주</option>
                                         <option value="MONTHLY">매월</option>
@@ -174,12 +179,67 @@
                                 <span class="flow-node-icon"><i class="ti ti-filter"></i></span>
                                 <div><span class="flow-node-kind">조건 · 선택</span><h4>무엇을 확인할까요?</h4></div>
                             </div>
-                            <p class="flow-node-help">선택한 센서의 온도·습도·CO₂·조도 중 측정 항목과 기준값을 설정합니다.</p>
+                            <p class="flow-node-help">운영 시간과 측정값 중 필요한 조건을 설정합니다. 추가한 조건은 모두 만족해야 합니다.</p>
+                            <div class="flow-time-window">
+                                <div class="form-check form-switch flow-time-window-toggle">
+                                    <input id="timeWindowEnabled" class="form-check-input path-time-window-enabled" type="checkbox" role="switch"
+                                           aria-label="운영 시간 제한 사용">
+                                    <label class="form-check-label" for="timeWindowEnabled">운영 시간 제한 사용</label>
+                                </div>
+                                <div class="path-time-window-fields">
+                                    <div class="settings-field">
+                                        <label for="timeWindowStart">시작 시간</label>
+                                        <input id="timeWindowStart" type="time" step="60" class="form-control path-time-window-start"
+                                               aria-label="운영 시작 시간" value="09:00">
+                                    </div>
+                                    <div class="settings-field">
+                                        <label for="timeWindowEnd">종료 시간</label>
+                                        <input id="timeWindowEnd" type="time" step="60" class="form-control path-time-window-end"
+                                               aria-label="운영 종료 시간" value="18:00">
+                                    </div>
+                                </div>
+                                <p class="field-hint path-time-window-summary" aria-live="polite">사용하지 않으면 하루 종일 확인합니다.</p>
+                            </div>
                             <div class="condition-list path-condition-list"></div>
                             <button type="button" class="btn-add-widget btn-add-path-condition">
                                 <i class="ti ti-plus"></i> 조건 추가
                             </button>
                             <p class="flow-expression-example flow-metric-status" aria-live="polite">센서에 실제 등록된 측정 항목과 단위를 자동으로 불러옵니다.</p>
+                            <span class="flow-port flow-port-out" aria-hidden="true"></span>
+                        </article>
+
+                        <div class="flow-connector" aria-hidden="true"><span></span><i class="ti ti-chevron-right"></i></div>
+
+                        <article class="flow-node flow-node-gate">
+                            <span class="flow-port flow-port-in" aria-hidden="true"></span>
+                            <div class="flow-node-header">
+                                <span class="flow-node-icon"><i class="ti ti-shield-check"></i></span>
+                                <div><span class="flow-node-kind">실행 안전장치 · 선택</span><h4>반복 실행을 어떻게 막을까요?</h4></div>
+                            </div>
+                            <p class="flow-node-help">값이 잠깐 흔들리거나 같은 명령을 너무 자주 시도하는 것을 막습니다.</p>
+                            <div class="form-check form-switch flow-gate-toggle">
+                                <input class="form-check-input path-gate-enabled" type="checkbox" role="switch"
+                                       aria-label="실행 안전장치 사용">
+                                <label class="form-check-label">안전장치 사용</label>
+                            </div>
+                            <div class="path-gate-fields">
+                                <div class="settings-field">
+                                    <label>확인 횟수</label>
+                                    <input type="number" class="form-control path-gate-required-count" min="1"
+                                           aria-label="안전장치 확인 횟수">
+                                </div>
+                                <div class="settings-field path-gate-window-field">
+                                    <label>확인 시간(분)</label>
+                                    <input type="number" class="form-control path-gate-window" min="0.01" step="any"
+                                           aria-label="안전장치 확인 시간(분)">
+                                </div>
+                                <div class="settings-field">
+                                    <label>최소 실행 간격(분)</label>
+                                    <input type="number" class="form-control path-gate-cooldown" min="0" step="any"
+                                           aria-label="안전장치 최소 실행 간격(분)">
+                                </div>
+                            </div>
+                            <p class="field-hint path-gate-summary" aria-live="polite"></p>
                             <span class="flow-port flow-port-out" aria-hidden="true"></span>
                         </article>
 
@@ -200,6 +260,14 @@
                     </div>
                 </section>
             </template>
+
+            <div class="flow-edit-activation" th:if="${mode == 'edit' and flow != null and flow.status().name() == 'ACTIVE'}">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="reactivateAfterSave" checked>
+                    <label class="form-check-label" for="reactivateAfterSave">저장 후 바로 활성화</label>
+                </div>
+                <p>수정하면 기존 버전은 보관되고 새 버전이 만들어집니다. 이 옵션을 끄면 새 버전은 비활성 상태로 저장됩니다.</p>
+            </div>
 
             <div class="flow-editor-actions">
                 <p><i class="ti ti-info-circle"></i> 필요한 내용을 모두 설정하면 하나의 자동화로 저장됩니다.</p>
@@ -228,6 +296,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:src="@{/js/chat-widget.js}"></script>
+<script th:src="@{/js/flow-editor-core.js}"></script>
 <script th:src="@{/js/flow-editor.js}"></script>
 </body>
 </html>

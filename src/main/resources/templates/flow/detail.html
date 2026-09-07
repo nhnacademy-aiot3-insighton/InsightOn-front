@@ -87,7 +87,8 @@
                 </div>
             </div>
             <div class="flow-detail-node-path"
-                 th:with="hasCondition=${flow.hasCondition()}">
+                 th:with="hasCondition=${flow.hasCondition()}, hasEventGate=${flow.hasEventGate()}"
+                 th:style="'--flow-detail-columns: ' + ${flow.laneCount()}">
                 <div class="flow-detail-node-column flow-detail-node-column-start">
                     <div class="flow-detail-lane-title">
                         <span>1</span>
@@ -99,7 +100,7 @@
                         </th:block>
                     </th:block>
                 </div>
-                <div class="flow-detail-node-column flow-detail-node-column-condition">
+                <div class="flow-detail-node-column flow-detail-node-column-condition" th:if="${hasCondition}">
                     <div class="flow-detail-lane-title">
                         <span>2</span>
                         <div><strong>모든 조건</strong><small>아래 조건을 모두 만족해야 해요.</small></div>
@@ -110,11 +111,22 @@
                         </th:block>
                     </th:block>
                 </div>
+                <div class="flow-detail-node-column flow-detail-node-column-gate" th:if="${hasEventGate}">
+                    <div class="flow-detail-lane-title">
+                        <span th:text="${flow.eventGateStepNumber()}">3</span>
+                        <div><strong>실행 안전장치</strong><small>반복 실행을 어떻게 제한할까요?</small></div>
+                    </div>
+                    <th:block th:each="step : ${flow.steps()}">
+                        <th:block th:if="${step.roleLabel() == '실행 안전장치'}">
+                            <th:block th:replace="~{fragments/flow-step :: card(${step})}"></th:block>
+                        </th:block>
+                    </th:block>
+                </div>
                 <div class="flow-detail-node-column flow-detail-node-column-action">
                     <div class="flow-detail-lane-title">
-                        <span th:text="${hasCondition} ? '3' : '2'">3</span>
+                        <span th:text="${flow.laneCount()}">4</span>
                         <div><strong>실행</strong>
-                            <small th:text="${hasCondition} ? '조건이 맞으면 무엇을 할까요?' : '시작되면 무엇을 할까요?'">조건이 맞으면 무엇을 할까요?</small>
+                            <small th:text="${hasEventGate} ? '안전장치를 통과하면 무엇을 할까요?' : (${hasCondition} ? '조건이 맞으면 무엇을 할까요?' : '시작되면 무엇을 할까요?')">안전장치를 통과하면 무엇을 할까요?</small>
                         </div>
                     </div>
                     <th:block th:each="step : ${flow.steps()}">
