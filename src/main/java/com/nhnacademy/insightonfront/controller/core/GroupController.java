@@ -262,15 +262,13 @@ public class GroupController {
     @ResponseBody
     public ResponseEntity<String> deleteGroup(
             @CookieValue("groupId") Long groupId,
-            @RequestParam(value = "inviteToken", required = false) String inviteToken,
-            @RequestParam(value = "token", required = false) String token) {
-        String targetToken = (inviteToken != null && !inviteToken.isBlank()) ? inviteToken : token;
-        if (targetToken == null || targetToken.isBlank()) {
+            @RequestParam("inviteToken") String inviteToken) {
+        if (inviteToken == null || inviteToken.isBlank()) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST).body("그룹 인증 토큰이 입력되지 않았습니다.");
         }
 
         try {
-            groupClient.deleteGroup(groupId, targetToken);
+            groupClient.deleteGroup(groupId, inviteToken);
             log.info("성공적으로 삭제되었습니다. Group ID : {}", groupId);
             return ResponseEntity.ok("성공적으로 삭제되었습니다.");
         } catch (FeignException.Forbidden e) {
