@@ -259,18 +259,32 @@ public class GroupController {
     }
 
     @DeleteMapping("/delete")
-    public String deleteGroup(@CookieValue("groupId") Long groupId, @RequestParam("inviteToken") String inviteToken, RedirectAttributes redirectAttributes) {
+    @ResponseBody
+    public ResponseEntity<String> deleteGroup(
+            @CookieValue("groupId") Long groupId,
+            @RequestParam(value = "inviteToken", required = false) String inviteToken,
+            @RequestParam(value = "token", required = false) String token) {
+        String targetToken = (inviteToken != null && !inviteToken.isBlank()) ? inviteToken : token;
+        if (targetToken == null || targetToken.isBlank()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST).body("그룹 인증 토큰이 입력되지 않았습니다.");
+        }
+
         try {
-            groupClient.deleteGroup(groupId, inviteToken);
+            groupClient.deleteGroup(groupId, targetToken);
             log.info("성공적으로 삭제되었습니다. Group ID : {}", groupId);
-            return "redirect:/";
+            return ResponseEntity.ok("성공적으로 삭제되었습니다.");
         } catch (FeignException.Forbidden e) {
             log.warn("그룹 삭제 권한 없음(403) - groupId:{}", groupId);
-            redirectAttributes.addFlashAttribute("groupError", "그룹을 삭제할 권한이 없습니다.");
-            return "redirect:/my-group/manage";
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body("그룹을 삭제할 권한이 없습니다.");
+        } catch (FeignException.BadRequest e) {
+            log.warn("그룹 토큰 불일치(400) - groupId:{}", groupId);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST).body("그룹 토큰이 일치하지 않습니다.");
         } catch (FeignException.NotFound e) {
             log.warn("삭제할 그룹 존재하지 않음(404) - groupId:{}", groupId);
-            return "redirect:/";
+            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body("삭제할 그룹이 존재하지 않습니다.");
+        } catch (Exception e) {
+            log.error("그룹 삭제 중 오류 발생 - groupId:{}", groupId, e);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR).body("그룹 삭제 처리 중 오류가 발생했습니다.");
         }
     }
 
