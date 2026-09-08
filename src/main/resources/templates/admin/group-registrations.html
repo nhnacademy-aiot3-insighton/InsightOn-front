@@ -22,6 +22,7 @@
     <nav class="landing-nav">
         <a th:href="@{/admin/users}">회원 조회</a>
         <a th:href="@{/admin/group-registrations}">그룹 신청 관리</a>
+        <a th:href="@{/admin/groups}">그룹 목록</a>
     </nav>
     <div class="landing-header-actions">
         <a class="landing-greeting" th:href="@{/mypage}" th:if="${userName != null}" th:text="|${userName}님|"></a>
@@ -58,14 +59,23 @@
             <div class="location-summary-name">
                 <span class="location-avatar" th:text="${#strings.substring(item.groupName(), 0, 1)}"></span>
                 <div>
-                    <div th:text="${item.groupName()}"></div>
+                    <div>
+                        <a th:href="@{/admin/group-registrations/{id}(id=${item.groupRegistrationId()})}" class="font-weight-bold text-dark text-decoration-none" th:text="${item.groupName()}"></a>
+                    </div>
                     <div style="color:var(--ink-faint); font-size:var(--fs-meta); margin-top:2px;"
-                         th:text="${item.groupRegion()} + ' · ' + ${#temporals.format(item.createdAt(), 'yyyy-MM-dd')}"></div>
+                         th:text="${item.groupRegion()} + ' · ' + ${#temporals.format(item.createdAt(), 'yyyy-MM-dd HH:mm')}"></div>
+                    <div th:if="${item.description() != null and !#strings.isEmpty(item.description())}" 
+                         style="color: var(--ink-light); font-size: 0.85rem; margin-top: 4px;" 
+                         th:text="${#strings.length(item.description()) > 40 ? #strings.substring(item.description(), 0, 40) + '...' : item.description()}"></div>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="status-badge" style="margin-top:0;" th:classappend="${item.status().badgeClass}"
                       th:text="${item.status().label}"></span>
+                <a th:href="@{/admin/group-registrations/{id}(id=${item.groupRegistrationId()})}"
+                   class="btn btn-outline-primary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta);">
+                    <i class="ti ti-eye"></i> 상세보기
+                </a>
                 <form method="post" style="display:inline;" th:action="@{/admin/group-registrations/{id}/approve(id=${item.groupRegistrationId()})}"
                       th:if="${item.status().name() == 'PENDING'}">
                     <button class="btn-landing-secondary" style="padding: var(--sp-1) var(--sp-3); font-size: var(--fs-meta);" type="submit">승인</button>

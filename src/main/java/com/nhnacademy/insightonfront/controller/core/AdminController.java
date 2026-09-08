@@ -22,15 +22,22 @@ public class AdminController {
     private final GroupClient groupClient;
     private final GroupRegistrationClient groupRegistrationClient;
 
-    @GetMapping("/group-list")
-    public String getGroupList(@RequestHeader String userRole,
-                               @RequestParam("page") int page,
-                               @RequestParam("size") int size, Model model) {
-        PageResponse<GroupAdminResponse> adminGroupList = groupClient.getGroupList(userRole, page, size);
+    @GetMapping({"/group-list"})
+    public String getGroupList(@CookieValue(value = "accessToken", required = false) String accessToken,
+                               @RequestParam(defaultValue = "0") int page,
+                               @RequestParam(defaultValue = "10") int size,
+                               Model model) {
+        if (Objects.isNull(accessToken)) {
+            return "redirect:/admin/login";
+        }
 
-        model.addAttribute("groupList", adminGroupList);
-
-        return "";
+        try {
+            PageResponse<GroupAdminResponse> adminGroupList = groupClient.getGroupList("ADMIN", page, size);
+            model.addAttribute("groupList", adminGroupList);
+            return "admin/group-list";
+        } catch (FeignException.Forbidden e) {
+            return "redirect:/";
+        }
     }
 
     @GetMapping("/group-registrations")
@@ -45,12 +52,31 @@ public class AdminController {
         }
 
         try {
-            PageResponse<GroupRegistrationResponse> registrations = groupRegistrationClient.getGroupRegistrations(status, page, size, "groupRegistrationId,asc");
+            PageResponse<GroupRegistrationResponse> registrations = groupRegistrationClient.getGroupRegistrations(status, page, size, "groupRegistrationId,desc");
             model.addAttribute("registrations", registrations);
             model.addAttribute("status", status);
             return "admin/group-registrations";
         } catch (FeignException.Forbidden e) {
             return "redirect:/";
+        }
+    }
+
+    @GetMapping("/group-registrations/{id}")
+    public String getGroupRegistrationDetail(@CookieValue(value = "accessToken", required = false) String accessToken,
+                                             @PathVariable("id") Long id,
+                                             Model model) {
+        if (Objects.isNull(accessToken)) {
+            return "redirect:/admin/login";
+        }
+
+        try {
+            GroupRegistrationResponse registration = groupRegistrationClient.getGroupRegistration(id);
+            model.addAttribute("registration", registration);
+            return "admin/group-registration-detail";
+        } catch (FeignException.Forbidden e) {
+            return "redirect:/";
+        } catch (FeignException.NotFound e) {
+            return "redirect:/admin/group-registrations";
         }
     }
 
