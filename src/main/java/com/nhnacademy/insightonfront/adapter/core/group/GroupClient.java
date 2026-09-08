@@ -6,14 +6,7 @@ import com.nhnacademy.insightonfront.adapter.core.group.dto.GroupResponse;
 import com.nhnacademy.insightonfront.adapter.core.group.dto.MyGroupIdResponse;
 import com.nhnacademy.insightonfront.common.dto.PageResponse;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * Core의 퍼블릭 그룹 API를 Gateway 경유로 호출한다.
@@ -62,5 +55,5 @@ public interface GroupClient {
                      @RequestBody GroupRequest request);
 
     @DeleteMapping("/api/v1/groups/{group-id}/delete")
-    void deleteGroup(@PathVariable("group-id") Long groupId);
+    void deleteGroup(@PathVariable("group-id") Long groupId, @RequestParam String inviteToken);
 }

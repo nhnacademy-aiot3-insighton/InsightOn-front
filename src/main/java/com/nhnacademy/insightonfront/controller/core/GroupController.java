@@ -259,9 +259,9 @@ public class GroupController {
     }
 
     @DeleteMapping("/delete")
-    public String deleteGroup(@CookieValue("groupId") Long groupId, RedirectAttributes redirectAttributes) {
+    public String deleteGroup(@CookieValue("groupId") Long groupId, @RequestParam("inviteToken") String inviteToken, RedirectAttributes redirectAttributes) {
         try {
-            groupClient.deleteGroup(groupId);
+            groupClient.deleteGroup(groupId, inviteToken);
             log.info("성공적으로 삭제되었습니다. Group ID : {}", groupId);
             return "redirect:/";
         } catch (FeignException.Forbidden e) {

@@ -2,16 +2,18 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
     <title>그룹 관리 - InsightOn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.46.0/dist/tabler-icons.min.css" rel="stylesheet">
-    <link rel="icon" type="image/png" href="/img/favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="/img/favicon.png" rel="icon" type="image/png">
+    <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link as="style" crossorigin
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+          rel="stylesheet">
     <script th:replace="~{fragments/layout :: themeInit}"></script>
-    <link th:href="@{/css/app.css}" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
 
@@ -39,7 +41,7 @@
                     <div class="form-section-label"><i class="ti ti-id-badge-2"></i>기본 정보</div>
                     <div class="settings-field">
                         <label for="groupName">그룹명</label>
-                        <input type="text" id="groupName" class="form-control" th:value="${myGroup.name()}">
+                        <input class="form-control" id="groupName" th:value="${myGroup.name()}" type="text">
                     </div>
                     <div class="row g-3">
                         <div class="col-6 settings-field">
@@ -62,7 +64,8 @@
                     </div>
                     <div class="settings-field">
                         <label for="description">설명</label>
-                        <textarea id="description" class="form-control" rows="4" th:text="${myGroup.description()}"></textarea>
+                        <textarea class="form-control" id="description" rows="4"
+                                  th:text="${myGroup.description()}"></textarea>
                     </div>
                 </div>
 
@@ -75,29 +78,34 @@
                         <!-- 세 요소 모두 .input-group 의 직접 자식이어야 부트스트랩 모서리 라운딩이 먹는다.
                              "새로 발급"을 <form> 으로 감싸면 :last-child 가 <form> 이 돼서 버튼 우측이 직각으로 남았음. -->
                         <div class="input-group">
-                            <input type="text" id="inviteToken" class="form-control" th:value="${myGroup.inviteToken()}" readonly>
-                            <button type="button" id="btnCopyInviteToken" class="btn btn-outline-secondary">복사</button>
-                            <button type="button" id="btnNewInviteToken" class="btn btn-outline-secondary">새로 발급</button>
+                            <input class="form-control" id="inviteToken" readonly th:value="${myGroup.inviteToken()}"
+                                   type="text">
+                            <button class="btn btn-outline-secondary" id="btnCopyInviteToken" type="button">복사</button>
+                            <button class="btn btn-outline-secondary" id="btnNewInviteToken" type="button">새로 발급
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div id="groupInfoSaveStatus" class="field-hint danger" style="display:none;"></div>
+                <div class="field-hint danger" id="groupInfoSaveStatus" style="display:none;"></div>
                 <div class="form-actions">
                     <span class="spacer"></span>
-                    <button type="button" id="btnCancelGroupInfo" class="btn-landing-secondary">취소</button>
-                    <button type="button" id="btnSaveGroupInfo" class="btn-landing-primary">저장</button>
+                    <button class="btn-landing-secondary" id="btnCancelGroupInfo" type="button">취소</button>
+                    <button class="btn-landing-primary" id="btnSaveGroupInfo" type="button">저장</button>
                 </div>
             </div>
 
             <!-- 위험 영역 — SUPER_MANAGER(그룹 소유자)는 그룹 삭제, 그 외는 그룹 탈퇴 -->
             <div class="form-panel form-panel-wide danger-zone mt-4" style="max-width: 720px;">
                 <div class="d-flex align-items-center justify-content-between" th:if="${isSuperManager}">
-                    <div>
+                    <div style="flex: 1; margin-right: 15px;">
                         <p class="mb-1 font-weight-bold" style="color: var(--danger); font-size: 1rem;">그룹 삭제</p>
-                        <p class="mb-0 text-muted" style="font-size: 0.85rem;">그룹과 모든 위치·센서·액추에이터·대시보드가 영구 삭제됩니다. 되돌릴 수 없어요.</p>
+                        <p class="mb-2 text-muted" style="font-size: 0.85rem;">그룹과 모든 위치·센서·액추에이터·대시보드가 영구 삭제됩니다. 되돌릴 수
+                            없어요.</p>
+                        <input class="form-control form-control-sm" id="deleteGroupToken" placeholder="그룹 인증 토큰 입력"
+                               style="max-width: 280px;" type="text">
                     </div>
-                    <button type="button" id="btnDeleteGroup" class="btn btn-outline-danger">
+                    <button class="btn btn-outline-danger" id="btnDeleteGroup" type="button">
                         <i class="ti ti-trash"></i> 그룹 삭제
                     </button>
                 </div>
@@ -106,8 +114,8 @@
                         <p class="mb-1 font-weight-bold" style="color: var(--danger); font-size: 1rem;">그룹 탈퇴</p>
                         <p class="mb-0 text-muted" style="font-size: 0.85rem;">현재 소속된 그룹에서 탈퇴합니다. 탈퇴 시 해당 그룹의 관제 및 접근 권한이 모두 삭제됩니다.</p>
                     </div>
-                    <form id="leaveGroupForm" th:action="@{/my-group/members/leave}" method="post">
-                        <button type="button" id="btnLeaveGroup" class="btn btn-outline-danger">
+                    <form id="leaveGroupForm" method="post" th:action="@{/my-group/members/leave}">
+                        <button class="btn btn-outline-danger" id="btnLeaveGroup" type="button">
                             <i class="ti ti-door-exit"></i> 그룹 탈퇴
                         </button>
                     </form>
@@ -118,7 +126,7 @@
         <div th:if="${section == 'members'}">
             <div class="section-header">
                 <p class="section-label mb-0">멤버 (4명)</p>
-                <button type="button" class="btn-add-widget"><i class="ti ti-user-plus"></i>멤버 초대</button>
+                <button class="btn-add-widget" type="button"><i class="ti ti-user-plus"></i>멤버 초대</button>
             </div>
             <div class="location-summary-list">
                 <div class="location-summary-row">
@@ -129,7 +137,8 @@
                     <div class="location-summary-stat">010-1234-5678</div>
                     <div class="location-summary-stat">2025-03-12 가입</div>
                     <div class="dropdown">
-                        <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
+                        <button class="header-icon-btn" data-bs-toggle="dropdown" type="button"><i
+                                class="ti ti-dots-vertical"></i></button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#">역할 변경</a></li>
                             <li><a class="dropdown-item text-danger" href="#">멤버 내보내기</a></li>
@@ -144,7 +153,8 @@
                     <div class="location-summary-stat">010-2345-6789</div>
                     <div class="location-summary-stat">2025-04-01 가입</div>
                     <div class="dropdown">
-                        <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
+                        <button class="header-icon-btn" data-bs-toggle="dropdown" type="button"><i
+                                class="ti ti-dots-vertical"></i></button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#">역할 변경</a></li>
                             <li><a class="dropdown-item text-danger" href="#">멤버 내보내기</a></li>
@@ -159,7 +169,8 @@
                     <div class="location-summary-stat">010-3456-7890</div>
                     <div class="location-summary-stat">2025-05-20 가입</div>
                     <div class="dropdown">
-                        <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
+                        <button class="header-icon-btn" data-bs-toggle="dropdown" type="button"><i
+                                class="ti ti-dots-vertical"></i></button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#">역할 변경</a></li>
                             <li><a class="dropdown-item text-danger" href="#">멤버 내보내기</a></li>
@@ -174,7 +185,8 @@
                     <div class="location-summary-stat">010-4567-8901</div>
                     <div class="location-summary-stat">2025-06-15 가입</div>
                     <div class="dropdown">
-                        <button type="button" class="header-icon-btn" data-bs-toggle="dropdown"><i class="ti ti-dots-vertical"></i></button>
+                        <button class="header-icon-btn" data-bs-toggle="dropdown" type="button"><i
+                                class="ti ti-dots-vertical"></i></button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#">역할 변경</a></li>
                             <li><a class="dropdown-item text-danger" href="#">멤버 내보내기</a></li>
@@ -188,41 +200,42 @@
             <p class="section-label">게이트웨이</p>
             <p class="field-hint" style="margin-bottom: var(--sp-4);">그룹당 게이트웨이는 한 대만 연결할 수 있어요.</p>
 
-            <p id="gatewayEmptyNotice" class="field-hint" style="display:none;">
+            <p class="field-hint" id="gatewayEmptyNotice" style="display:none;">
                 <i class="ti ti-router"></i> 아직 등록된 게이트웨이가 없어요. 아래에서 바로 등록하세요.
             </p>
 
             <div class="gateway-layout">
-                <div id="gatewayStatusPanel" class="gateway-status-panel" style="display:none;">
+                <div class="gateway-status-panel" id="gatewayStatusPanel" style="display:none;">
                     <div class="gateway-status-icon"><i class="ti ti-router"></i></div>
-                    <div id="gatewayStatusName" class="gateway-status-name">GW-1F-MAIN</div>
-                    <span id="gatewayStatusBadge" class="status-badge success">ACTIVE</span>
+                    <div class="gateway-status-name" id="gatewayStatusName">GW-1F-MAIN</div>
+                    <span class="status-badge success" id="gatewayStatusBadge">ACTIVE</span>
                     <div class="gateway-status-meta">
                         <div class="gateway-status-meta-row">
                             <span>프로토콜</span>
-                            <span id="gatewayStatusProtocol" class="gateway-status-meta-value">MQTT</span>
+                            <span class="gateway-status-meta-value" id="gatewayStatusProtocol">MQTT</span>
                         </div>
                         <div class="gateway-status-meta-row">
                             <span>마지막 통신</span>
-                            <span id="gatewayHeartbeat" class="gateway-status-meta-value"></span>
+                            <span class="gateway-status-meta-value" id="gatewayHeartbeat"></span>
                         </div>
                         <div class="gateway-status-meta-row">
                             <span>등록일</span>
-                            <span id="gatewayCreatedAt" class="gateway-status-meta-value"></span>
+                            <span class="gateway-status-meta-value" id="gatewayCreatedAt"></span>
                         </div>
                     </div>
                 </div>
 
-                <div id="gatewayCard" class="settings-card gateway-form-card">
-                    <div id="saveStatus" class="field-hint danger" style="display:none; margin-bottom: var(--sp-4);"></div>
+                <div class="settings-card gateway-form-card" id="gatewayCard">
+                    <div class="field-hint danger" id="saveStatus"
+                         style="display:none; margin-bottom: var(--sp-4);"></div>
 
                     <div class="settings-field">
                         <label for="gatewayName">이름</label>
-                        <input type="text" id="gatewayName" class="form-control" placeholder="예: GW-1F-MAIN">
+                        <input class="form-control" id="gatewayName" placeholder="예: GW-1F-MAIN" type="text">
                     </div>
                     <div class="settings-field">
                         <label for="gatewayProtocol">프로토콜</label>
-                        <select id="gatewayProtocol" class="form-select">
+                        <select class="form-select" id="gatewayProtocol">
                             <option value="MQTT">MQTT</option>
                             <option value="MODBUS_TCP">MODBUS_TCP</option>
                         </select>
@@ -230,25 +243,29 @@
 
                     <div class="settings-field">
                         <label for="gatewayBrokerUrl">브로커 주소</label>
-                        <input type="text" id="gatewayBrokerUrl" class="form-control" placeholder="예: tcp://mqtt.insighton.io:1883">
+                        <input class="form-control" id="gatewayBrokerUrl" placeholder="예: tcp://mqtt.insighton.io:1883"
+                               type="text">
                     </div>
                     <div class="settings-field">
                         <label for="gatewayTopic">구독 토픽 (선택, 비우면 ChirpStack 기본 규격 사용)</label>
-                        <input type="text" id="gatewayTopic" class="form-control" placeholder="예: application/+/sensor/+/event/up">
+                        <input class="form-control" id="gatewayTopic" placeholder="예: application/+/sensor/+/event/up"
+                               type="text">
                     </div>
                     <div class="settings-field">
                         <label for="gatewayUsername">사용자명 (선택)</label>
-                        <input type="text" id="gatewayUsername" class="form-control" autocomplete="off">
+                        <input autocomplete="off" class="form-control" id="gatewayUsername" type="text">
                     </div>
                     <div class="settings-field">
                         <label for="gatewayPassword">비밀번호 (선택)</label>
-                        <input type="password" id="gatewayPassword" class="form-control" autocomplete="new-password">
+                        <input autocomplete="new-password" class="form-control" id="gatewayPassword" type="password">
                     </div>
 
                     <div class="settings-actions">
-                        <button type="button" id="btnDeleteGateway" class="btn btn-outline-secondary text-danger" style="display:none;">삭제</button>
+                        <button class="btn btn-outline-secondary text-danger" id="btnDeleteGateway"
+                                style="display:none;" type="button">삭제
+                        </button>
                         <div style="flex:1;"></div>
-                        <button type="button" id="btnSaveGateway" class="btn btn-primary">저장</button>
+                        <button class="btn btn-primary" id="btnSaveGateway" type="button">저장</button>
                     </div>
                 </div>
             </div>
@@ -259,7 +276,7 @@
 
 <div th:replace="~{fragments/layout :: chatWidget}"></div>
 
-<script th:inline="javascript" th:if="${section == 'gateway'}">
+<script th:if="${section == 'gateway'}" th:inline="javascript">
     const GATEWAY_INIT = {
         gateway: /*[[${gateway}]]*/ null
     };
@@ -350,19 +367,31 @@
         });
     }
 
-    // SUPER_MANAGER 전용 — 그룹 자체를 삭제 (DELETE /my-group/delete)
+    // SUPER_MANAGER 전용 — 그룹 자체를 삭제 (DELETE /my-group/delete?token=...)
     const btnDeleteGroup = document.getElementById('btnDeleteGroup');
     if (btnDeleteGroup) {
         btnDeleteGroup.addEventListener('click', function () {
+            const tokenInput = document.getElementById('deleteGroupToken');
+            const token = tokenInput ? tokenInput.value.trim() : '';
+
+            if (!token) {
+                alert('그룹 삭제를 위해 그룹 인증 토큰을 입력해 주세요.');
+                if (tokenInput) tokenInput.focus();
+                return;
+            }
+
             if (!confirm("그룹을 삭제하시겠습니까? 모든 위치·센서·액추에이터·대시보드가 함께 삭제됩니다.")) return;
             if (!confirm("정말 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+
             btnDeleteGroup.disabled = true;
-            fetch('/my-group/delete', { method: 'DELETE' })
-                .then(function (res) {
-                    if (res.ok || res.redirected) {
+            fetch('/my-group/delete?token=' + encodeURIComponent(token), {method: 'DELETE'})
+                .then(async function (res) {
+                    if (res.ok) {
+                        alert('그룹이 성공적으로 삭제되었습니다.');
                         window.location.href = '/';
                     } else {
-                        alert('그룹 삭제에 실패했어요. 잠시 후 다시 시도해주세요.');
+                        const errorMsg = await res.text();
+                        alert(errorMsg || '그룹 삭제에 실패했어요. 토큰을 확인해 주세요.');
                         btnDeleteGroup.disabled = false;
                     }
                 })
@@ -374,7 +403,7 @@
     }
 </script>
 
-<script th:inline="javascript" th:if="${section == 'info'}"
+<script th:if="${section == 'info'}" th:inline="javascript"
         th:with="prevRegion=${myGroup.groupRegion() != null ? #strings.arraySplit(myGroup.groupRegion(), ' ') : null}">
     const REGISTRATION_INIT = {
         previousState: /*[[${prevRegion != null and #lists.size(prevRegion) > 0 ? prevRegion[0] : null}]]*/ null,
