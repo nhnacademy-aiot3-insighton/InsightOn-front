@@ -22,7 +22,7 @@
     <nav class="landing-nav">
         <a th:href="@{/admin/users}">회원 조회</a>
         <a th:href="@{/admin/group-registrations}">그룹 신청 관리</a>
-        <a class="active" th:href="@{/admin/groups}">그룹 목록</a>
+        <a class="active" th:href="@{/admin/group-list}">그룹 목록</a>
     </nav>
     <div class="landing-header-actions">
         <a class="landing-greeting" th:href="@{/mypage}" th:if="${userName != null}" th:text="|${userName}님|"></a>
@@ -37,6 +37,11 @@
         <div class="landing-section-eyebrow">GROUP MANAGEMENT</div>
         <h2>그룹 목록 관리</h2>
         <p>현재 등록되어 관제 중인 모든 그룹의 정보 및 목록을 확인하세요.</p>
+    </div>
+
+    <div class="auth-error mb-3" th:if="${adminError}">
+        <i class="ti ti-x"></i>
+        <span th:text="${adminError}"></span>
     </div>
 
     <div class="location-summary-list" style="margin-top: var(--sp-4);" th:if="${groupList != null and not #lists.isEmpty(groupList.content())}">
@@ -63,10 +68,10 @@
     </p>
 
     <nav class="list-pagination" th:if="${groupList != null and groupList.totalPages() > 1}">
-        <a class="btn-landing-secondary" th:href="@{/admin/groups(page=${groupList.number()-1})}"
+        <a class="btn-landing-secondary" th:href="@{/admin/group-list(page=${groupList.number()-1})}"
            th:if="${!groupList.first()}">이전</a>
         <span th:text="${groupList.number()+1} + ' / ' + ${groupList.totalPages()}"></span>
-        <a class="btn-landing-secondary" th:href="@{/admin/groups(page=${groupList.number()+1})}"
+        <a class="btn-landing-secondary" th:href="@{/admin/group-list(page=${groupList.number()+1})}"
            th:if="${!groupList.last()}">다음</a>
     </nav>
 </section>
