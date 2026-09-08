@@ -21,7 +21,7 @@
     <nav class="landing-nav">
         <a th:href="@{/admin/users}">회원 조회</a>
         <a th:href="@{/admin/group-registrations}">그룹 신청 관리</a>
-        <a th:href="@{/admin/groups}">그룹 목록</a>
+        <a th:href="@{/admin/group-list}">그룹 목록</a>
     </nav>
     <div class="landing-header-actions">
         <a class="landing-greeting" th:href="@{/mypage}" th:if="${userName != null}" th:text="|${userName}님|"></a>
