@@ -21,7 +21,7 @@
     <nav class="landing-nav">
         <a th:href="@{/admin/users}">회원 조회</a>
         <a th:href="@{/admin/group-registrations}">그룹 신청 관리</a>
-        <a th:href="@{/admin/groups}">그룹 목록</a>
+        <a th:href="@{/admin/group-list}">그룹 목록</a>
     </nav>
     <div class="landing-header-actions">
         <a th:href="@{/mypage}" class="landing-greeting" th:if="${userName != null}"
@@ -36,7 +36,7 @@
     <div class="landing-section-head">
         <div class="landing-section-eyebrow">ADMIN CONSOLE</div>
         <h2>관리자 콘솔</h2>
-        <p>회원 계정을 조회하고 상태를 관리하세요.</p>
+        <p>회원 계정을 조회하고 그룹 및 관제 상태를 관리하세요.</p>
     </div>
 
     <div class="feature-grid">
@@ -55,6 +55,15 @@
             <div class="feature-num">02</div>
             <h3>그룹 신청 관리</h3>
             <p>새로 들어온 그룹 생성 신청을 확인하고 승인하거나 거절하세요.</p>
+            <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
+        </a>
+
+        <a class="feature-card blueprint-frame" th:href="@{/admin/group-list}" style="text-decoration:none; color:inherit;">
+            <span class="tick-bl"></span><span class="tick-br"></span>
+            <span class="feature-icon"><i class="ti ti-folders"></i></span>
+            <div class="feature-num">03</div>
+            <h3>그룹 목록</h3>
+            <p>현재 등록되어 관제 중인 모든 그룹의 정보 및 목록을 확인하세요.</p>
             <span class="feature-arrow" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
         </a>
     </div>
