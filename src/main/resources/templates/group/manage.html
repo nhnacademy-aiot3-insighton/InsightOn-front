@@ -384,14 +384,18 @@
             if (!confirm("정말 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
 
             btnDeleteGroup.disabled = true;
-            fetch('/my-group/delete?token=' + encodeURIComponent(token), {method: 'DELETE'})
+            fetch('/my-group/delete?inviteToken=' + encodeURIComponent(token), {method: 'DELETE'})
                 .then(async function (res) {
                     if (res.ok) {
                         alert('그룹이 성공적으로 삭제되었습니다.');
                         window.location.href = '/';
                     } else {
                         const errorMsg = await res.text();
-                        alert(errorMsg || '그룹 삭제에 실패했어요. 토큰을 확인해 주세요.');
+                        if (errorMsg && errorMsg.trim().startsWith('<')) {
+                            alert('그룹 삭제에 실패했어요. 그룹 토큰이 일치하지 않거나 권한이 없습니다.');
+                        } else {
+                            alert(errorMsg || '그룹 삭제에 실패했어요. 토큰을 확인해 주세요.');
+                        }
                         btnDeleteGroup.disabled = false;
                     }
                 })

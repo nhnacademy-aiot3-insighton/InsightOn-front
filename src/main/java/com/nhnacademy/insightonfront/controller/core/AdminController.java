@@ -22,7 +22,7 @@ public class AdminController {
     private final GroupClient groupClient;
     private final GroupRegistrationClient groupRegistrationClient;
 
-    @GetMapping({"/group-list"})
+    @GetMapping("/group-list")
     public String getGroupList(@CookieValue(value = "accessToken", required = false) String accessToken,
                                @RequestParam(defaultValue = "0") int page,
                                @RequestParam(defaultValue = "10") int size,
@@ -37,6 +37,10 @@ public class AdminController {
             return "admin/group-list";
         } catch (FeignException.Forbidden e) {
             return "redirect:/";
+        } catch (Exception e) {
+            model.addAttribute("adminError", "그룹 목록을 불러오는 중 오류가 발생했습니다.");
+            model.addAttribute("groupList", null);
+            return "admin/group-list";
         }
     }
 
