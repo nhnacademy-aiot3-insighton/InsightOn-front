@@ -164,7 +164,14 @@
                 const padMin1 = Math.floor(minVal1 - span1 * 0.05);
                 const padMax1 = Math.ceil(maxVal1 + span1 * 0.05);
 
-                syncYAxis(w, padMin0, padMax0, padMin1, padMax1, true);
+                if (chart.options.scales.y) {
+                    chart.options.scales.y.min = padMin0;
+                    chart.options.scales.y.max = padMax0;
+                }
+                if (chart.options.scales.y1) {
+                    chart.options.scales.y1.min = padMin1;
+                    chart.options.scales.y1.max = padMax1;
+                }
             } else {
                 const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
                 const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
@@ -472,99 +479,35 @@
         destroyChart(w.uid + '_y');
         destroyChart(w.uid + '_y1');
 
-        if (!isDual) {
-            const yCanvas = el.querySelector('.y-axis-canvas') || el.querySelector('.y-axis-canvas-left');
-            if (!yCanvas) return;
+        if (isDual) return; // 듀얼 축일 때는 Chart.js 자체 캔버스에 직접 좌/우 Y축을 그리므로 더미 캔버스가 필요없음
 
-            chartInstances[w.uid + '_y'] = new Chart(yCanvas, {
-                type: 'line',
-                data: { labels: [''], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    scales: {
-                        x: { display: false },
-                        y: {
-                            min: (minVal !== undefined && minVal !== null) ? Math.floor(minVal) : 0,
-                            max: (maxVal !== undefined && maxVal !== null) ? Math.ceil(maxVal) : 100,
-                            ticks: {
-                                font: { size: 10, weight: '600' },
-                                color: cssVar('--ink-soft', '#475569'),
-                                precision: 0,
-                                callback: yTickFmt
-                            },
-                            grid: { color: 'transparent' }
-                        }
+        const yCanvas = el.querySelector('.y-axis-canvas');
+        if (!yCanvas) return;
+
+        chartInstances[w.uid + '_y'] = new Chart(yCanvas, {
+            type: 'line',
+            data: { labels: [''], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        min: (minVal !== undefined && minVal !== null) ? Math.floor(minVal) : 0,
+                        max: (maxVal !== undefined && maxVal !== null) ? Math.ceil(maxVal) : 100,
+                        ticks: {
+                            font: { size: 10, weight: '600' },
+                            color: cssVar('--ink-soft', '#475569'),
+                            precision: 0,
+                            callback: yTickFmt
+                        },
+                        grid: { color: 'transparent' }
                     }
                 }
-            });
-        } else {
-            const yLeftCanvas = el.querySelector('.y-axis-canvas-left');
-            const yRightCanvas = el.querySelector('.y-axis-canvas-right');
-
-            if (yLeftCanvas) {
-                const field0 = (w.widgetConfig.fields || [])[0] || '';
-                const color0 = getFieldColor(field0, 0);
-
-                chartInstances[w.uid + '_y'] = new Chart(yLeftCanvas, {
-                    type: 'line',
-                    data: { labels: [''], datasets: [] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: false,
-                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                        scales: {
-                            x: { display: false },
-                            y: {
-                                min: (minVal !== undefined && minVal !== null) ? Math.floor(minVal) : 0,
-                                max: (maxVal !== undefined && maxVal !== null) ? Math.ceil(maxVal) : 100,
-                                ticks: {
-                                    font: { size: 10, weight: '700' },
-                                    color: color0,
-                                    precision: 0,
-                                    callback: yTickFmt
-                                },
-                                grid: { color: 'transparent' }
-                            }
-                        }
-                    }
-                });
             }
-
-            if (yRightCanvas) {
-                const field1 = (w.widgetConfig.fields || [])[1] || '';
-                const color1 = getFieldColor(field1, 1);
-
-                chartInstances[w.uid + '_y1'] = new Chart(yRightCanvas, {
-                    type: 'line',
-                    data: { labels: [''], datasets: [] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: false,
-                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                        scales: {
-                            x: { display: false },
-                            y: {
-                                position: 'right',
-                                min: (minVal1 !== undefined && minVal1 !== null) ? Math.floor(minVal1) : 0,
-                                max: (maxVal1 !== undefined && maxVal1 !== null) ? Math.ceil(maxVal1) : 100,
-                                ticks: {
-                                    font: { size: 10, weight: '700' },
-                                    color: color1,
-                                    precision: 0,
-                                    callback: yTickFmt
-                                },
-                                grid: { color: 'transparent' }
-                            }
-                        }
-                    }
-                });
-            }
-        }
+        });
     }
 
     function initEmptyChart(w, el) {
@@ -597,13 +540,7 @@
                 `;
 
                 scrollWrapperHtml = `
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 60px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -60px; pointer-events: none;">
-                        <canvas class="y-axis-canvas-left" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="sticky-y-axis-right" style="position: sticky; right: 0; top: 0; width: 60px; height: 100%; z-index: 20; background: transparent; float: right; margin-left: -60px; pointer-events: none;">
-                        <canvas class="y-axis-canvas-right" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 60px; padding-right: 60px;">
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative;">
                         <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
                     </div>
                 `;
@@ -640,8 +577,34 @@
 
             const scales = isDual ? {
                 x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-                y: { type: 'linear', position: 'left', ticks: { display: false }, grid: { color: cssVar('--line', '#e2e8f0') } },
-                y1: { type: 'linear', position: 'right', ticks: { display: false }, grid: { drawOnChartArea: false } }
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        font: { size: 10, weight: '700' },
+                        color: getFieldColor(fields[0], 0),
+                        precision: 0,
+                        callback: yTickFmt
+                    },
+                    grid: { color: cssVar('--line', '#e2e8f0') }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        font: { size: 10, weight: '700' },
+                        color: getFieldColor(fields[1], 1),
+                        precision: 0,
+                        callback: yTickFmt
+                    },
+                    grid: { drawOnChartArea: false }
+                }
             } : {
                 x: { ticks: { font: { size: 10 } }, grid: { display: false } },
                 y: { ticks: { display: false }, grid: { color: cssVar('--line', '#e2e8f0') } }
@@ -679,9 +642,7 @@
                 }
             });
 
-            if (isDual) {
-                syncYAxis(w, 0, 100, 0, 100, true);
-            } else {
+            if (!isDual) {
                 syncYAxis(w, 0, 100, null, null, false);
             }
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
@@ -778,13 +739,7 @@
                 `;
 
                 scrollWrapperHtml = `
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 60px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -60px; pointer-events: none;">
-                        <canvas class="y-axis-canvas-left" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="sticky-y-axis-right" style="position: sticky; right: 0; top: 0; width: 60px; height: 100%; z-index: 20; background: transparent; float: right; margin-left: -60px; pointer-events: none;">
-                        <canvas class="y-axis-canvas-right" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 60px; padding-right: 60px;">
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative;">
                         <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
                     </div>
                 `;
@@ -820,14 +775,61 @@
             if (!canvas) return;
             const chartType = (type === 'BAR') ? 'bar' : 'line';
 
-            const scales = isDual ? {
-                x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-                y: { type: 'linear', position: 'left', ticks: { display: false }, grid: { color: cssVar('--line', '#e2e8f0') } },
-                y1: { type: 'linear', position: 'right', ticks: { display: false }, grid: { drawOnChartArea: false } }
-            } : {
-                x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-                y: { ticks: { display: false }, grid: { color: cssVar('--line', '#e2e8f0') } }
-            };
+            let scales = {};
+            if (isDual) {
+                const d0Points = (datasets[0]?.data || []).filter(v => v !== null && v !== undefined);
+                const minVal0 = d0Points.length ? Math.min(...d0Points) : 0;
+                const maxVal0 = d0Points.length ? Math.max(...d0Points) : 100;
+
+                const d1Points = (datasets[1]?.data || []).filter(v => v !== null && v !== undefined);
+                const minVal1 = d1Points.length ? Math.min(...d1Points) : 0;
+                const maxVal1 = d1Points.length ? Math.max(...d1Points) : 100;
+
+                const span0 = (maxVal0 - minVal0) || 10;
+                const padMin0 = Math.floor(minVal0 - span0 * 0.05);
+                const padMax0 = Math.ceil(maxVal0 + span0 * 0.05);
+
+                const span1 = (maxVal1 - minVal1) || 10;
+                const padMin1 = Math.floor(minVal1 - span1 * 0.05);
+                const padMax1 = Math.ceil(maxVal1 + span1 * 0.05);
+
+                scales = {
+                    x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        min: padMin0,
+                        max: padMax0,
+                        ticks: {
+                            font: { size: 10, weight: '700' },
+                            color: getFieldColor(datasets[0].label, 0),
+                            precision: 0,
+                            callback: yTickFmt
+                        },
+                        grid: { color: cssVar('--line', '#e2e8f0') }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        min: padMin1,
+                        max: padMax1,
+                        ticks: {
+                            font: { size: 10, weight: '700' },
+                            color: getFieldColor(datasets[1].label, 1),
+                            precision: 0,
+                            callback: yTickFmt
+                        },
+                        grid: { drawOnChartArea: false }
+                    }
+                };
+            } else {
+                scales = {
+                    x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                    y: { ticks: { display: false }, grid: { color: cssVar('--line', '#e2e8f0') } }
+                };
+            }
 
             chartInstances[w.uid] = new Chart(canvas, {
                 type: chartType,
@@ -861,25 +863,7 @@
                 }
             });
 
-            if (isDual) {
-                const d0Points = (datasets[0]?.data || []).filter(v => v !== null && v !== undefined);
-                const minVal0 = d0Points.length ? Math.min(...d0Points) : 0;
-                const maxVal0 = d0Points.length ? Math.max(...d0Points) : 100;
-
-                const d1Points = (datasets[1]?.data || []).filter(v => v !== null && v !== undefined);
-                const minVal1 = d1Points.length ? Math.min(...d1Points) : 0;
-                const maxVal1 = d1Points.length ? Math.max(...d1Points) : 100;
-
-                const span0 = (maxVal0 - minVal0) || 10;
-                const padMin0 = Math.floor(minVal0 - span0 * 0.05);
-                const padMax0 = Math.ceil(maxVal0 + span0 * 0.05);
-
-                const span1 = (maxVal1 - minVal1) || 10;
-                const padMin1 = Math.floor(minVal1 - span1 * 0.05);
-                const padMax1 = Math.ceil(maxVal1 + span1 * 0.05);
-
-                syncYAxis(w, padMin0, padMax0, padMin1, padMax1, true);
-            } else {
+            if (!isDual) {
                 const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
                 const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
                 const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
