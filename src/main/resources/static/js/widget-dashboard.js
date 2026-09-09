@@ -141,10 +141,43 @@
                 });
             }
 
-            // 데이터 개수가 많아지면 좌우 스크롤 폭 확장
+            // 스크롤 폭 조정
             adjustChartScroll(w, chart.data.labels.length);
 
-            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 동적 갱신
+            // Split 모드: 상단 차트도 함께 갱신
+            const topChart = chartInstances[w.uid + '_split_top'];
+            if (w._splitMode && topChart) {
+                const topLabels = topChart.data.labels;
+                const lastTopLabel = topLabels.length > 0 ? topLabels[topLabels.length - 1] : null;
+                const topKeys = w._splitTopFieldKeys || [];
+                const botKeys = w._splitBotFieldKeys || [];
+
+                if (lastTopLabel === bucketTimeStr) {
+                    topChart.data.datasets.forEach(ds => {
+                        const key = ds.fieldKey || ds.label;
+                        const val = metrics[key] ?? null;
+                        if (val !== null && ds.data.length > 0) ds.data[ds.data.length - 1] = Number(val);
+                    });
+                } else {
+                    topChart.data.labels.push(bucketTimeStr);
+                    topChart.data.datasets.forEach(ds => {
+                        const key = ds.fieldKey || ds.label;
+                        const val = metrics[key] ?? null;
+                        ds.data.push(val !== null ? Number(val) : null);
+                    });
+                }
+
+                // 상단 Y축 갱신
+                const el = contentEl(w.uid);
+                const topYCanvas = el ? el.querySelector('.y-axis-canvas-top') : null;
+                if (topYCanvas) {
+                    const topVals = topChart.data.datasets.flatMap(d => d.data || []).filter(v => v !== null && !isNaN(v)).map(Number);
+                    if (topVals.length) syncYAxisCanvas(w.uid + '_y_top', topYCanvas, Math.min(...topVals), Math.max(...topVals));
+                }
+                topChart.update('quiet');
+            }
+
+            // 하단(또는 단일) 차트 Y축 갱신
             const allDataPoints = chart.data.datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
             const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
             const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
@@ -437,14 +470,74 @@
         return fallbackColors[index % fallbackColors.length];
     }
 
-    function syncYAxis(w, minVal, maxVal) {
-        const el = contentEl(w.uid);
-        if (!el) return;
-        const yCanvas = el.querySelector('.y-axis-canvas');
-        if (!yCanvas) return;
+    // 데이터셋별 범위를 분석해 Dual Y-axis 필요 여부 및 각 축 범위/그룹을 반환
+    // 3~4개 데이터셋도 범위가 비슷한 것끼리 자동 그룹핑해 왼쪽/오른쪽 2축으로 묶음
+    function detectDualAxis(datasets) {
+        if (!datasets || datasets.length < 2) return { dual: false };
 
-        destroyChart(w.uid + '_y');
-        chartInstances[w.uid + '_y'] = new Chart(yCanvas, {
+        // 각 데이터셋의 대표 최대값(절댓값) 계산
+        const indexed = datasets.map((ds, i) => {
+            const vals = (ds.data || []).filter((v) => v !== null && v !== undefined && !isNaN(v)).map(Number);
+            const maxAbs = vals.length ? Math.max(...vals.map(Math.abs)) : 0;
+            const min = vals.length ? Math.min(...vals) : 0;
+            const max = vals.length ? Math.max(...vals) : 0;
+            return { i, maxAbs, min, max };
+        });
+
+        // 최대값 기준으로 오름차순 정렬
+        const sorted = [...indexed].sort((a, b) => a.maxAbs - b.maxAbs);
+
+        // 인접한 두 항목 사이에서 가장 큰 비율 점프를 찾아 분리 지점 결정
+        let splitAfter = -1;
+        let maxRatio = 1;
+        for (let k = 0; k < sorted.length - 1; k++) {
+            const lo = sorted[k].maxAbs || 1;
+            const hi = sorted[k + 1].maxAbs || 1;
+            const ratio = hi / lo;
+            if (ratio > maxRatio) {
+                maxRatio = ratio;
+                splitAfter = k;
+            }
+        }
+
+        // 최대 비율이 1.5배 미만이면 단일 축으로 충분 (온도 30°C vs 습도 58%도 dual axis 발동)
+        if (maxRatio < 1.5) return { dual: false };
+
+        // 왼쪽(작은 값 그룹) / 오른쪽(큰 값 그룹) 분리
+        const leftGroup  = sorted.slice(0, splitAfter + 1);
+        const rightGroup = sorted.slice(splitAfter + 1);
+
+        // 각 그룹의 통합 min/max 계산
+        const leftMin  = Math.min(...leftGroup.map(d => d.min));
+        const leftMax  = Math.max(...leftGroup.map(d => d.max));
+        const rightMin = Math.min(...rightGroup.map(d => d.min));
+        const rightMax = Math.max(...rightGroup.map(d => d.max));
+
+        // 원본 인덱스 → 'y' | 'y1' 매핑
+        const axisMap = {};
+        leftGroup.forEach(d  => { axisMap[d.i] = 'y'; });
+        rightGroup.forEach(d => { axisMap[d.i] = 'y1'; });
+
+        return {
+            dual: true,
+            axisMap,
+            ranges: [
+                { min: leftMin,  max: leftMax },
+                { min: rightMin, max: rightMax }
+            ]
+        };
+    }
+
+    function tickCallback(val) {
+        if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+        if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
+        return Number(val).toLocaleString();
+    }
+
+    // 특정 canvas에 Y축 차트를 렌더링하는 헬퍼 (모든 sticky Y축 공유)
+    function syncYAxisCanvas(uid, yCanvas, minVal, maxVal) {
+        destroyChart(uid);
+        chartInstances[uid] = new Chart(yCanvas, {
             type: 'line',
             data: { labels: [''], datasets: [] },
             options: {
@@ -461,17 +554,21 @@
                             font: { size: 10, weight: '600' },
                             color: cssVar('--ink-soft', '#475569'),
                             precision: 0,
-                            callback: function(val) {
-                                if (Math.abs(val) >= 1000000) return (val / 1000000).toFixed(1) + 'M';
-                                if (Math.abs(val) >= 10000) return (val / 1000).toFixed(0) + 'k';
-                                return Number(val).toLocaleString();
-                            }
+                            callback: tickCallback
                         },
                         grid: { color: 'transparent' }
                     }
                 }
             }
         });
+    }
+
+    function syncYAxis(w, minVal, maxVal) {
+        const el = contentEl(w.uid);
+        if (!el) return;
+        const yCanvas = el.querySelector('.y-axis-canvas');
+        if (!yCanvas) return;
+        syncYAxisCanvas(w.uid + '_y', yCanvas, minVal, maxVal);
     }
 
     function initEmptyChart(w, el) {
@@ -511,6 +608,21 @@
 
             const chartType = (type === 'BAR') ? 'bar' : 'line';
 
+            // initEmptyChart 단계에서는 아직 데이터가 없으므로 단일 축으로 초기화
+            const emptyScales = {
+                x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                y: { ticks: { display: false }, grid: { color: cssVar('--line', '#e2e8f0') } }
+            };
+            // 필드가 2개 이상이면 보조 Y축 자리도 미리 잡아둠 (데이터 오면 범위 갱신)
+            if (fields.length >= 2) {
+                emptyScales.y1 = {
+                    position: 'right',
+                    display: false,  // 데이터 없으면 숨김
+                    grid: { display: false },
+                    ticks: { display: false }
+                };
+            }
+
             chartInstances[w.uid] = new Chart(canvas, {
                 type: chartType,
                 data: {
@@ -527,7 +639,8 @@
                             fill: idx === 0,
                             tension: 0.3,
                             pointRadius: 3,
-                            pointHoverRadius: 5
+                            pointHoverRadius: 5,
+                            yAxisID: 'y'  // initEmpty 단계: 데이터 없어서 그룹핑 불가 → 일단 단일축, paintWidgetData에서 갱신
                         };
                     })
                 },
@@ -535,16 +648,8 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-                        y: {
-                            ticks: { display: false },
-                            grid: { color: cssVar('--line', '#e2e8f0') }
-                        }
-                    }
+                    plugins: { legend: { display: false } },
+                    scales: emptyScales
                 }
             });
 
@@ -622,78 +727,222 @@
         const body = el.querySelector('.grid-widget-body');
 
         if (type === 'GRAPH' || type === 'BAR') {
+            // 사전에 Dual Y-axis 여부 판단 → 범례에 축 방향 표시에 활용
+            const { dual: preDual, axisMap: preAxisMap } = detectDualAxis(datasets);
+
             const legendHtml = datasets.map((ds, i) => {
                 const color = getFieldColor(ds.label, i);
+                const axisBadge = preDual
+                    ? (preAxisMap?.[i] === 'y1'
+                        ? `<span style="font-size:9px; color:#94a3b8; font-weight:400;">→</span>`
+                        : `<span style="font-size:9px; color:#94a3b8; font-weight:400;">←</span>`)
+                    : '';
                 return `<div class="d-flex align-items-center gap-1 small fw-bold" style="color: ${cssVar('--ink', '#334155')};">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color};"></span>
                     <span>${metricLabelWithUnit(ds.label)}</span>
+                    ${axisBadge}
                 </div>`;
             }).join('');
-
             body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
-            body.innerHTML = `
-                <div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
-                    ${legendHtml}
-                </div>
-                <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
-                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
-                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                </div>
-            `;
-            const canvas = body.querySelector('.main-canvas');
-            if (!canvas) return;
-            destroyChart(w.uid);
-            const chartType = (type === 'BAR') ? 'bar' : 'line';
 
-            chartInstances[w.uid] = new Chart(canvas, {
-                type: chartType,
-                data: {
-                    labels,
-                    datasets: datasets.map((ds, i) => {
-                        const rawKey = ds.label;
-                        const color = getFieldColor(rawKey, i);
-                        return {
-                            fieldKey: rawKey,
-                            label: metricLabelWithUnit(rawKey),
-                            data: ds.data,
-                            borderColor: color,
-                            backgroundColor: (type === 'BAR') ? color + 'b0' : color + '20',
-                            borderWidth: 1.5,
-                            tension: 0.3,
-                            fill: i === 0,
-                            pointRadius: 3,
-                            pointHoverRadius: 5
-                        };
-                    })
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
+            if (dual) {
+                // ―――――――――――――――――――――――――――――――――――――――――
+                // 생략선 Split Chart 모드
+                // ―――――――――――――――――――――――――――――――――――――――――
+                const bottomDs = datasets.filter((_, i) => (axisMap?.[i] || 'y') === 'y');
+                const topDs    = datasets.filter((_, i) => (axisMap?.[i] || 'y') === 'y1');
+
+                const scrollStyle = 'width:100%;height:100%;overflow-x:auto;overflow-y:hidden;cursor:grab;scrollbar-width:none;-ms-overflow-style:none;flex:1;position:relative;';
+                const stickyStyle = 'position:sticky;left:0;top:0;width:68px;height:100%;z-index:20;background:transparent;float:left;margin-right:-68px;pointer-events:none;';
+                const innerStyle  = 'min-width:100%;height:100%;position:relative;padding-left:68px;';
+
+                body.innerHTML = `
+                    ${legendHtml ? `<div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink:0;background:${cssVar('--surface','#fff')};">${legendHtml}</div>` : ''}
+                    <div class="split-section split-top" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+                        <div class="chart-scroll-wrapper split-scroll-top" style="${scrollStyle}">
+                            <div class="sticky-y-axis" style="${stickyStyle}"><canvas class="y-axis-canvas-top" style="width:100%;height:100%;"></canvas></div>
+                            <div class="chart-inner-canvas split-inner-top" style="${innerStyle}"><canvas class="main-canvas-top" style="width:100%;height:100%;"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="axis-break" style="flex-shrink:0;display:flex;align-items:center;height:16px;padding:0 8px;">
+                        <div style="flex:1;height:1px;background:#cbd5e1;"></div>
+                        <span style="margin:0 6px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:2px;line-height:1;">//</span>
+                        <div style="flex:1;height:1px;background:#cbd5e1;"></div>
+                    </div>
+                    <div class="split-section split-bottom" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+                        <div class="chart-scroll-wrapper split-scroll-bottom" style="${scrollStyle}">
+                            <div class="sticky-y-axis" style="${stickyStyle}"><canvas class="y-axis-canvas" style="width:100%;height:100%;"></canvas></div>
+                            <div class="chart-inner-canvas split-inner-bottom" style="${innerStyle}"><canvas class="main-canvas" style="width:100%;height:100%;"></canvas></div>
+                        </div>
+                    </div>
+                `;
+
+                destroyChart(w.uid);
+                destroyChart(w.uid + '_split_top');
+
+                // 상단 차트 (X축 레이블 숨김)
+                const topCanvas = body.querySelector('.main-canvas-top');
+                const topVals   = topDs.flatMap(d => d.data || []).filter(v => v !== null && !isNaN(v)).map(Number);
+                const topMin    = topVals.length ? Math.min(...topVals) : 0;
+                const topMax    = topVals.length ? Math.max(...topVals) : 100;
+
+                chartInstances[w.uid + '_split_top'] = new Chart(topCanvas, {
+                    type: chartType,
+                    data: {
+                        labels,
+                        datasets: topDs.map((ds, i) => {
+                            const origIdx = datasets.indexOf(ds);
+                            const color = getFieldColor(ds.label, origIdx);
+                            return {
+                                fieldKey: ds.label,
+                                label: metricLabelWithUnit(ds.label),
+                                data: ds.data,
+                                borderColor: color,
+                                backgroundColor: color + '20',
+                                borderWidth: 1.5,
+                                tension: 0.3,
+                                fill: i === 0,
+                                pointRadius: 3,
+                                pointHoverRadius: 5
+                            };
+                        })
                     },
-                    scales: {
-                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-                        y: {
-                            ticks: { display: false },
-                            grid: { color: cssVar('--line', '#e2e8f0') }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                        scales: {
+                            x: { ticks: { display: false }, grid: { display: false } },
+                            y: { ticks: { display: false }, min: Math.floor(topMin), max: Math.ceil(topMax), grid: { color: cssVar('--line', '#e2e8f0') } }
                         }
                     }
-                }
-            });
+                });
 
-            // Y축 수치 범위 계산 및 좌측 Sticky 고정 Y축 렌더링
-            const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
-            const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
-            const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
-            syncYAxis(w, minVal, maxVal);
+                // 하단 차트 (X축 레이블 표시)
+                const botCanvas = body.querySelector('.main-canvas');
+                const botVals   = bottomDs.flatMap(d => d.data || []).filter(v => v !== null && !isNaN(v)).map(Number);
+                const botMin    = botVals.length ? Math.min(...botVals) : 0;
+                const botMax    = botVals.length ? Math.max(...botVals) : 100;
 
-            w.lastLabelCount = labels.length;
-            adjustChartScroll(w, labels.length, true);
+                chartInstances[w.uid] = new Chart(botCanvas, {
+                    type: chartType,
+                    data: {
+                        labels,
+                        datasets: bottomDs.map((ds, i) => {
+                            const origIdx = datasets.indexOf(ds);
+                            const color = getFieldColor(ds.label, origIdx);
+                            return {
+                                fieldKey: ds.label,
+                                label: metricLabelWithUnit(ds.label),
+                                data: ds.data,
+                                borderColor: color,
+                                backgroundColor: color + '20',
+                                borderWidth: 1.5,
+                                tension: 0.3,
+                                fill: i === 0,
+                                pointRadius: 3,
+                                pointHoverRadius: 5
+                            };
+                        })
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                        scales: {
+                            x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                            y: { ticks: { display: false }, min: Math.floor(botMin), max: Math.ceil(botMax), grid: { color: cssVar('--line', '#e2e8f0') } }
+                        }
+                    }
+                });
+
+                // Y축 렌더링
+                const topYCanvas = body.querySelector('.y-axis-canvas-top');
+                if (topYCanvas) syncYAxisCanvas(w.uid + '_y_top', topYCanvas, topMin, topMax);
+                syncYAxis(w, botMin, botMax);
+
+                // 스크롤 동기화
+                const topWrapper = body.querySelector('.split-scroll-top');
+                const botWrapper = body.querySelector('.split-scroll-bottom');
+                [topWrapper, botWrapper].filter(Boolean).forEach(el => {
+                    el.addEventListener('scroll', () => {
+                        const other = el === topWrapper ? botWrapper : topWrapper;
+                        if (other && other.scrollLeft !== el.scrollLeft) other.scrollLeft = el.scrollLeft;
+                    });
+                });
+
+                // Split 모드 상태 저장
+                w._splitMode = true;
+                w._splitTopFieldKeys  = topDs.map(d => d.label);
+                w._splitBotFieldKeys  = bottomDs.map(d => d.label);
+
+                const labelCount = labels.length;
+                w.lastLabelCount = labelCount;
+                const minW = Math.max((body.querySelector('.split-inner-top') || {clientWidth: 300}).clientWidth || 300, labelCount * 50);
+                ['split-inner-top', 'split-inner-bottom'].forEach(cls => {
+                    const el = body.querySelector('.' + cls);
+                    if (el) el.style.width = minW + 'px';
+                });
+                if (topWrapper) topWrapper.scrollLeft = topWrapper.scrollWidth;
+                if (botWrapper) botWrapper.scrollLeft = botWrapper.scrollWidth;
+
+            } else {
+                // ―――――――――――――――――――――――――――――――――――――――――
+                // 단일 차트 모드
+                // ―――――――――――――――――――――――――――――――――――――――――
+                w._splitMode = false;
+                body.innerHTML = `
+                    ${legendHtml ? `<div class="chart-legend-header px-2 pb-1 d-flex flex-wrap gap-3 align-items-center border-bottom mb-1" style="flex-shrink:0;background:${cssVar('--surface','#fff')};">${legendHtml}</div>` : ''}
+                    <div class="chart-scroll-wrapper" style="width:100%;height:100%;overflow-x:auto;overflow-y:hidden;cursor:grab;scrollbar-width:none;-ms-overflow-style:none;flex:1;position:relative;">
+                        <div class="sticky-y-axis" style="position:sticky;left:0;top:0;width:68px;height:100%;z-index:20;background:transparent;float:left;margin-right:-68px;pointer-events:none;"><canvas class="y-axis-canvas" style="width:100%;height:100%;"></canvas></div>
+                        <div class="chart-inner-canvas" style="min-width:100%;height:100%;position:relative;padding-left:68px;"><canvas class="main-canvas" style="width:100%;height:100%;"></canvas></div>
+                    </div>
+                `;
+                const canvas = body.querySelector('.main-canvas');
+                if (!canvas) return;
+                destroyChart(w.uid);
+
+                const allVals = datasets.flatMap(d => d.data || []).filter(v => v !== null && !isNaN(v)).map(Number);
+                const minVal  = allVals.length ? Math.min(...allVals) : 0;
+                const maxVal  = allVals.length ? Math.max(...allVals) : 100;
+
+                chartInstances[w.uid] = new Chart(canvas, {
+                    type: chartType,
+                    data: {
+                        labels,
+                        datasets: datasets.map((ds, i) => {
+                            const color = getFieldColor(ds.label, i);
+                            return {
+                                fieldKey: ds.label,
+                                label: metricLabelWithUnit(ds.label),
+                                data: ds.data,
+                                borderColor: color,
+                                backgroundColor: color + '20',
+                                borderWidth: 1.5,
+                                tension: 0.3,
+                                fill: i === 0,
+                                pointRadius: 3,
+                                pointHoverRadius: 5
+                            };
+                        })
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                            y: { ticks: { display: false }, grid: { color: cssVar('--line', '#e2e8f0') } }
+                        }
+                    }
+                });
+
+                syncYAxis(w, minVal, maxVal);
+                w.lastLabelCount = labels.length;
+                adjustChartScroll(w, labels.length, true);
+            }
             return;
         }
 
@@ -717,6 +966,17 @@
         if (chartInstances[uid]) {
             chartInstances[uid].destroy();
             delete chartInstances[uid];
+        }
+        // split top 인스턴스도 함께 정리
+        const topUid = uid + '_split_top';
+        if (chartInstances[topUid]) {
+            chartInstances[topUid].destroy();
+            delete chartInstances[topUid];
+        }
+        const topYUid = uid + '_y_top';
+        if (chartInstances[topYUid]) {
+            chartInstances[topYUid].destroy();
+            delete chartInstances[topYUid];
         }
     }
 
