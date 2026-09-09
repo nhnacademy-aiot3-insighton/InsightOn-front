@@ -1,7 +1,41 @@
 <!DOCTYPE html>
-<html>
-<head><title>InsightOn</title></head>
-<body>
-<h1>InsightOn Front 정상 작동 중</h1>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="/img/favicon.png">
+    <title>InsightOn — 멀티테넌트 오피스 IoT 관제 · AI 자동 제어</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <script th:replace="~{fragments/layout :: themeInit}"></script>
+    <link th:href="@{/css/landing.css}" rel="stylesheet">
+</head>
+<body class="landing-redesign">
+
+<div id="lp-root">
+    <!-- React(CDN)가 이 안에 마운트. JS 비활성 시 최소 안내 -->
+    <noscript>
+        <div style="padding:80px 24px;text-align:center;font-family:sans-serif;">
+            InsightOn — 멀티테넌트 오피스 IoT 관제 · AI 자동 제어.
+            이 페이지를 보려면 JavaScript를 켜주세요.
+        </div>
+    </noscript>
+</div>
+
+<!-- 서버 세션 상태를 React로 전달 (Spring Boot + Thymeleaf 유지) -->
+<script th:inline="javascript">
+    window.__LP_STATE__ = {
+        state: /*[[${authState != null ? authState : 'GUEST'}]]*/ 'GUEST',
+        userName: /*[[${userName}]]*/ null
+    };
+</script>
+
+<!-- React 18 (CDN, 무빌드) -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.js" crossorigin></script>
+<script th:src="@{/js/landing.js}"></script>
 </body>
 </html>

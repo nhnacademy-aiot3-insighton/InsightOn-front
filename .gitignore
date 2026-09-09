@@ -30,3 +30,12 @@ build/
 
 ### VS Code ###
 .vscode/
+.env
+
+### Redis ###
+*.rdb
+
+### Documentation & Agent Rules ###
+docs/
+AGENTS.md
+CLAUDE.md
