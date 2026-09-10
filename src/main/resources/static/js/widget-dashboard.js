@@ -100,10 +100,17 @@
 
     function formatTelemetryTime(ts) {
         const d = ts ? new Date(ts) : new Date();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        const now = new Date();
+        const sameDay = d.getFullYear() === now.getFullYear()
+            && d.getMonth() === now.getMonth()
+            && d.getDate() === now.getDate();
         const hours = String(d.getHours()).padStart(2, '0');
         const minutes = String(d.getMinutes()).padStart(2, '0');
+        if (sameDay) {
+            return `${hours}:${minutes}`;
+        }
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
         return `${month}-${day} ${hours}:${minutes}`;
     }
 
@@ -113,7 +120,9 @@
         const metrics = telemetryData.metrics || {};
         const type = w.widgetConfig.type || 'GRAPH';
 
-        const incomingMs = telemetryData.timestamp ? new Date(telemetryData.timestamp).getTime() : Date.now();
+        // 미래 타임스탬프 방지: 서버 시각이 현재보다 앞서면 현재 시각으로 cap
+        const rawMs = telemetryData.timestamp ? new Date(telemetryData.timestamp).getTime() : Date.now();
+        const incomingMs = Math.min(rawMs, Date.now());
         const windowMs = getAggregateWindowMs(w.widgetConfig.aggregateWindow);
         const bucketMs = Math.floor(incomingMs / windowMs) * windowMs;
         const bucketTimeStr = formatTelemetryTime(bucketMs);
@@ -148,17 +157,27 @@
             const datasets = chart.data.datasets;
             const isDual = (datasets.length === 2);
             if (isDual) {
-                // 초기 로딩 시 계산된 고정값 사용 (Y축 스케일 고정)
-                const fixed0 = w.yFixed0 || { min: 0, max: 100 };
-                const fixed1 = w.yFixed1 || { min: 0, max: 100 };
+                // yFixed가 없으면(히스토리 없이 SSE만 수신) 지금 데이터로 한 번만 고정
+                if (!w.yFixed0 || !w.yFixed1) {
+                    const d0 = (datasets[0]?.data || []).filter(v => v !== null && v !== undefined);
+                    const d1 = (datasets[1]?.data || []).filter(v => v !== null && v !== undefined);
+                    const mn0 = d0.length ? Math.min(...d0) : 0;
+                    const mx0 = d0.length ? Math.max(...d0) : 100;
+                    const mn1 = d1.length ? Math.min(...d1) : 0;
+                    const mx1 = d1.length ? Math.max(...d1) : 100;
+                    const sp0 = (mx0 - mn0) || 10;
+                    const sp1 = (mx1 - mn1) || 10;
+                    w.yFixed0 = { min: Math.floor(mn0 - sp0 * 0.05), max: Math.ceil(mx0 + sp0 * 0.05) };
+                    w.yFixed1 = { min: Math.floor(mn1 - sp1 * 0.05), max: Math.ceil(mx1 + sp1 * 0.05) };
+                }
 
                 if (chart.options.scales.y) {
-                    chart.options.scales.y.min = fixed0.min;
-                    chart.options.scales.y.max = fixed0.max;
+                    chart.options.scales.y.min = w.yFixed0.min;
+                    chart.options.scales.y.max = w.yFixed0.max;
                 }
                 if (chart.options.scales.y1) {
-                    chart.options.scales.y1.min = fixed1.min;
-                    chart.options.scales.y1.max = fixed1.max;
+                    chart.options.scales.y1.min = w.yFixed1.min;
+                    chart.options.scales.y1.max = w.yFixed1.max;
                 }
             } else {
                 const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
