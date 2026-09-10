@@ -100,10 +100,15 @@
 
     function formatTelemetryTime(ts) {
         const d = ts ? new Date(ts) : new Date();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        const now = new Date();
+        const sameDay = d.getFullYear() === now.getFullYear()
+            && d.getMonth() === now.getMonth()
+            && d.getDate() === now.getDate();
         const hours = String(d.getHours()).padStart(2, '0');
         const minutes = String(d.getMinutes()).padStart(2, '0');
+        if (sameDay) return `${hours}:${minutes}`;
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
         return `${month}-${day} ${hours}:${minutes}`;
     }
 
@@ -113,7 +118,8 @@
         const metrics = telemetryData.metrics || {};
         const type = w.widgetConfig.type || 'GRAPH';
 
-        const incomingMs = telemetryData.timestamp ? new Date(telemetryData.timestamp).getTime() : Date.now();
+        const rawMs = telemetryData.timestamp ? new Date(telemetryData.timestamp).getTime() : Date.now();
+        const incomingMs = Math.min(rawMs, Date.now());
         const windowMs = getAggregateWindowMs(w.widgetConfig.aggregateWindow);
         const bucketMs = Math.floor(incomingMs / windowMs) * windowMs;
         const bucketTimeStr = formatTelemetryTime(bucketMs);
@@ -144,23 +150,11 @@
             // 데이터 개수가 많아지면 좌우 스크롤 폭 확장
             adjustChartScroll(w, chart.data.labels.length);
 
-            // Y축 수치 범위: 듀얼 모드는 paintWidgetData에서 고정된 값 재사용, 싱글은 syncYAxis
+            // 듀얼: sticky 캔버스가 이미 고정돼 있으므로 메인 차트 축 옵션 건드리지 않음
+            // 싱글: syncYAxis로 고정 Y축 갱신
             const datasets = chart.data.datasets;
             const isDual = (datasets.length === 2);
-            if (isDual) {
-                // 초기 로딩 시 계산된 고정값 사용 (Y축 스케일 고정)
-                const fixed0 = w.yFixed0 || { min: 0, max: 100 };
-                const fixed1 = w.yFixed1 || { min: 0, max: 100 };
-
-                if (chart.options.scales.y) {
-                    chart.options.scales.y.min = fixed0.min;
-                    chart.options.scales.y.max = fixed0.max;
-                }
-                if (chart.options.scales.y1) {
-                    chart.options.scales.y1.min = fixed1.min;
-                    chart.options.scales.y1.max = fixed1.max;
-                }
-            } else {
+            if (!isDual) {
                 const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
                 const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
                 const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
@@ -467,8 +461,6 @@
         destroyChart(w.uid + '_y');
         destroyChart(w.uid + '_y1');
 
-        if (isDual) return; // 듀얼 축일 때는 Chart.js 자체 캔버스에 직접 좌/우 Y축을 그리므로 더미 캔버스가 필요없음
-
         const yCanvas = el.querySelector('.y-axis-canvas');
         if (!yCanvas) return;
 
@@ -496,6 +488,75 @@
                 }
             }
         });
+    }
+
+    // 듀얼 모드 전용: 좌(y)·우(y1) sticky 캔버스에 Y축을 그린다
+    function syncDualYAxis(w, minVal0, maxVal0, minVal1, maxVal1) {
+        const el = contentEl(w.uid);
+        if (!el) return;
+
+        destroyChart(w.uid + '_y');
+        destroyChart(w.uid + '_y1');
+
+        const yCanvas = el.querySelector('.y-axis-canvas');
+        const y1Canvas = el.querySelector('.y1-axis-canvas');
+        const fields = w.widgetConfig.fields || [];
+
+        if (yCanvas) {
+            chartInstances[w.uid + '_y'] = new Chart(yCanvas, {
+                type: 'line',
+                data: {labels: [''], datasets: []},
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {legend: {display: false}, tooltip: {enabled: false}},
+                    scales: {
+                        x: {display: false},
+                        y: {
+                            position: 'left',
+                            min: Math.floor(minVal0),
+                            max: Math.ceil(maxVal0),
+                            ticks: {
+                                font: {size: 10, weight: '700'},
+                                color: getFieldColor(fields[0], 0),
+                                precision: 0,
+                                callback: yTickFmt
+                            },
+                            grid: {color: 'transparent'}
+                        }
+                    }
+                }
+            });
+        }
+
+        if (y1Canvas) {
+            chartInstances[w.uid + '_y1'] = new Chart(y1Canvas, {
+                type: 'line',
+                data: {labels: [''], datasets: []},
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {legend: {display: false}, tooltip: {enabled: false}},
+                    scales: {
+                        x: {display: false},
+                        y: {
+                            position: 'right',
+                            min: Math.floor(minVal1),
+                            max: Math.ceil(maxVal1),
+                            ticks: {
+                                font: {size: 10, weight: '700'},
+                                color: getFieldColor(fields[1], 1),
+                                precision: 0,
+                                callback: yTickFmt
+                            },
+                            grid: {color: 'transparent'}
+                        }
+                    }
+                }
+            });
+        }
     }
 
     function initEmptyChart(w, el) {
@@ -528,7 +589,13 @@
                 `;
 
                 scrollWrapperHtml = `
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative;">
+                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 52px; height: 100%; z-index: 20; background: ${cssVar('--surface', '#ffffff')}; float: left; margin-right: -52px; pointer-events: none;">
+                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div class="sticky-y1-axis" style="position: sticky; right: 0; top: 0; width: 52px; height: 100%; z-index: 20; background: ${cssVar('--surface', '#ffffff')}; float: right; margin-left: -52px; pointer-events: none;">
+                        <canvas class="y1-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 52px; padding-right: 52px;">
                         <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
                     </div>
                 `;
@@ -571,12 +638,8 @@
                     position: 'left',
                     min: 0,
                     max: 100,
-                    ticks: {
-                        font: { size: 10, weight: '700' },
-                        color: getFieldColor(fields[0], 0),
-                        precision: 0,
-                        callback: yTickFmt
-                    },
+                    ticks: {display: false},
+                    border: {display: false},
                     grid: { color: cssVar('--line', '#e2e8f0') }
                 },
                 y1: {
@@ -585,12 +648,8 @@
                     position: 'right',
                     min: 0,
                     max: 100,
-                    ticks: {
-                        font: { size: 10, weight: '700' },
-                        color: getFieldColor(fields[1], 1),
-                        precision: 0,
-                        callback: yTickFmt
-                    },
+                    ticks: {display: false},
+                    border: {display: false},
                     grid: { drawOnChartArea: false }
                 }
             } : {
@@ -630,7 +689,9 @@
                 }
             });
 
-            if (!isDual) {
+            if (isDual) {
+                syncDualYAxis(w, 0, 100, 0, 100);
+            } else {
                 syncYAxis(w, 0, 100, null, null, false);
             }
         } else if (type === 'GAUGE' || type === 'SINGLE_STAT') {
@@ -727,7 +788,13 @@
                 `;
 
                 scrollWrapperHtml = `
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative;">
+                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 52px; height: 100%; z-index: 20; background: ${cssVar('--surface', '#ffffff')}; float: left; margin-right: -52px; pointer-events: none;">
+                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div class="sticky-y1-axis" style="position: sticky; right: 0; top: 0; width: 52px; height: 100%; z-index: 20; background: ${cssVar('--surface', '#ffffff')}; float: right; margin-left: -52px; pointer-events: none;">
+                        <canvas class="y1-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 52px; padding-right: 52px;">
                         <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
                     </div>
                 `;
@@ -781,7 +848,7 @@
                 const padMin1 = Math.floor(minVal1 - span1 * 0.05);
                 const padMax1 = Math.ceil(maxVal1 + span1 * 0.05);
 
-                // 초기 데이터 기반으로 Y축 고정값 저장 (실시간 업데이트 시 재사용)
+                // 초기 데이터 기반으로 Y축 고정값 저장
                 w.yFixed0 = { min: padMin0, max: padMax0 };
                 w.yFixed1 = { min: padMin1, max: padMax1 };
 
@@ -793,12 +860,8 @@
                         position: 'left',
                         min: padMin0,
                         max: padMax0,
-                        ticks: {
-                            font: { size: 10, weight: '700' },
-                            color: getFieldColor(datasets[0].label, 0),
-                            precision: 0,
-                            callback: yTickFmt
-                        },
+                        ticks: {display: false},
+                        border: {display: false},
                         grid: { color: cssVar('--line', '#e2e8f0') }
                     },
                     y1: {
@@ -807,12 +870,8 @@
                         position: 'right',
                         min: padMin1,
                         max: padMax1,
-                        ticks: {
-                            font: { size: 10, weight: '700' },
-                            color: getFieldColor(datasets[1].label, 1),
-                            precision: 0,
-                            callback: yTickFmt
-                        },
+                        ticks: {display: false},
+                        border: {display: false},
                         grid: { drawOnChartArea: false }
                     }
                 };
@@ -855,7 +914,9 @@
                 }
             });
 
-            if (!isDual) {
+            if (isDual) {
+                syncDualYAxis(w, w.yFixed0?.min ?? 0, w.yFixed0?.max ?? 100, w.yFixed1?.min ?? 0, w.yFixed1?.max ?? 100);
+            } else {
                 const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
                 const minVal = allDataPoints.length ? Math.min(...allDataPoints) : 0;
                 const maxVal = allDataPoints.length ? Math.max(...allDataPoints) : 100;
@@ -1181,56 +1242,58 @@
                 widgetConfig: {...w.widgetConfig, groupId: GROUP_ID, locationId: LOCATION_ID}
             }));
 
-        saveStatusEl.style.display = 'flex';
-        saveStatusEl.textContent = '저장 중...';
-        btnSaveLayout.disabled = true;
+            saveStatusEl.style.display = 'flex';
+            saveStatusEl.textContent = '저장 중...';
+            btnSaveLayout.disabled = true;
 
-        fetch(`${BASE_URL}/save`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        })
-            .then((r) => {
-                if (!r.ok) throw new Error(`save failed with status ${r.status}`);
-                return r.json();
+            fetch(`${BASE_URL}/save`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
             })
-            .then((savedWidgetIds) => {
-                // 저장 성공: 서버에서 반환된 widgetId를 state에 반영 (신규 위젯 ID 확정)
-                if (Array.isArray(savedWidgetIds)) {
-                    state.forEach((w, idx) => {
-                        if (savedWidgetIds[idx] != null) {
-                            w.widgetId = savedWidgetIds[idx];
-                            // uid도 widgetId 기반으로 갱신 (gridstack gs-id는 유지)
+                .then((r) => {
+                    if (!r.ok) throw new Error(`save failed with status ${r.status}`);
+                    return r.json();
+                })
+                .then((savedWidgetIds) => {
+                    // 저장 성공: 서버에서 반환된 widgetId를 state에 반영 (신규 위젯 ID 확정)
+                    if (Array.isArray(savedWidgetIds)) {
+                        state.forEach((w, idx) => {
+                            if (savedWidgetIds[idx] != null) {
+                                w.widgetId = savedWidgetIds[idx];
+                                // uid도 widgetId 기반으로 갱신 (gridstack gs-id는 유지)
+                            }
+                        });
+                    }
+
+                    // dirty 플래그 초기화
+                    state.forEach((w) => {
+                        const wasDirty = w.layoutDirty || w.configDirty;
+                        w.layoutDirty = false;
+                        w.configDirty = false;
+
+                        // 설정이 변경됐던 위젯은 InfluxDB 데이터 즉시 재조회
+                        if (wasDirty && w.widgetId) {
+                            const el = contentEl(w.uid);
+                            if (el) {
+                                console.log(`[Save] 위젯 (${w.uid}) 저장 완료, InfluxDB 데이터 재조회`);
+                                fetchAndRenderData(w, el);
+                            }
                         }
                     });
-                }
 
-                // dirty 플래그 초기화
-                state.forEach((w) => {
-                    const wasDirty = w.layoutDirty || w.configDirty;
-                    w.layoutDirty = false;
-                    w.configDirty = false;
-
-                    // 설정이 변경됐던 위젯은 InfluxDB 데이터 즉시 재조회
-                    if (wasDirty && w.widgetId) {
-                        const el = contentEl(w.uid);
-                        if (el) {
-                            console.log(`[Save] 위젯 (${w.uid}) 저장 완료, InfluxDB 데이터 재조회`);
-                            fetchAndRenderData(w, el);
-                        }
-                    }
+                    saveStatusEl.textContent = '저장 완료 ✓';
+                    btnSaveLayout.disabled = false;
+                    setTimeout(() => {
+                        saveStatusEl.style.display = 'none';
+                    }, 2000);
+                    console.log('[Dashboard Save] 저장 완료, widgetIds:', savedWidgetIds);
+                })
+                .catch((err) => {
+                    console.error('[Dashboard Save] 저장 실패 원인:', err);
+                    saveStatusEl.textContent = '저장에 실패했어요. 잠시 후 다시 시도해주세요.';
+                    btnSaveLayout.disabled = false;
                 });
-
-                saveStatusEl.textContent = '저장 완료 ✓';
-                btnSaveLayout.disabled = false;
-                setTimeout(() => { saveStatusEl.style.display = 'none'; }, 2000);
-                console.log('[Dashboard Save] 저장 완료, widgetIds:', savedWidgetIds);
-            })
-            .catch((err) => {
-                console.error('[Dashboard Save] 저장 실패 원인:', err);
-                saveStatusEl.textContent = '저장에 실패했어요. 잠시 후 다시 시도해주세요.';
-                btnSaveLayout.disabled = false;
-            });
         });
     }
 
