@@ -144,33 +144,21 @@
             // 데이터 개수가 많아지면 좌우 스크롤 폭 확장
             adjustChartScroll(w, chart.data.labels.length);
 
-            // Y축 수치 범위 계산 및 Sticky 고정 Y축 동적 갱신
+            // Y축 수치 범위: 듀얼 모드는 paintWidgetData에서 고정된 값 재사용, 싱글은 syncYAxis
             const datasets = chart.data.datasets;
             const isDual = (datasets.length === 2);
             if (isDual) {
-                const d0Points = (datasets[0]?.data || []).filter(v => v !== null && v !== undefined);
-                const minVal0 = d0Points.length ? Math.min(...d0Points) : 0;
-                const maxVal0 = d0Points.length ? Math.max(...d0Points) : 100;
-
-                const d1Points = (datasets[1]?.data || []).filter(v => v !== null && v !== undefined);
-                const minVal1 = d1Points.length ? Math.min(...d1Points) : 0;
-                const maxVal1 = d1Points.length ? Math.max(...d1Points) : 100;
-
-                const span0 = (maxVal0 - minVal0) || 10;
-                const padMin0 = Math.floor(minVal0 - span0 * 0.05);
-                const padMax0 = Math.ceil(maxVal0 + span0 * 0.05);
-
-                const span1 = (maxVal1 - minVal1) || 10;
-                const padMin1 = Math.floor(minVal1 - span1 * 0.05);
-                const padMax1 = Math.ceil(maxVal1 + span1 * 0.05);
+                // 초기 로딩 시 계산된 고정값 사용 (Y축 스케일 고정)
+                const fixed0 = w.yFixed0 || { min: 0, max: 100 };
+                const fixed1 = w.yFixed1 || { min: 0, max: 100 };
 
                 if (chart.options.scales.y) {
-                    chart.options.scales.y.min = padMin0;
-                    chart.options.scales.y.max = padMax0;
+                    chart.options.scales.y.min = fixed0.min;
+                    chart.options.scales.y.max = fixed0.max;
                 }
                 if (chart.options.scales.y1) {
-                    chart.options.scales.y1.min = padMin1;
-                    chart.options.scales.y1.max = padMax1;
+                    chart.options.scales.y1.min = fixed1.min;
+                    chart.options.scales.y1.max = fixed1.max;
                 }
             } else {
                 const allDataPoints = datasets.flatMap(d => d.data || []).filter(v => v !== null && v !== undefined);
@@ -792,6 +780,10 @@
                 const span1 = (maxVal1 - minVal1) || 10;
                 const padMin1 = Math.floor(minVal1 - span1 * 0.05);
                 const padMax1 = Math.ceil(maxVal1 + span1 * 0.05);
+
+                // 초기 데이터 기반으로 Y축 고정값 저장 (실시간 업데이트 시 재사용)
+                w.yFixed0 = { min: padMin0, max: padMax0 };
+                w.yFixed1 = { min: padMin1, max: padMax1 };
 
                 scales = {
                     x: { ticks: { font: { size: 10 } }, grid: { display: false } },
