@@ -471,6 +471,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
+                layout: { padding: { bottom: 24 } },
                 plugins: { legend: { display: false }, tooltip: { enabled: false } },
                 scales: {
                     x: { display: false },
@@ -510,6 +511,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: false,
+                    layout: { padding: { bottom: 24 } },
                     plugins: {legend: {display: false}, tooltip: {enabled: false}},
                     scales: {
                         x: {display: false},
@@ -538,6 +540,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: false,
+                    layout: { padding: { bottom: 24 } },
                     plugins: {legend: {display: false}, tooltip: {enabled: false}},
                     scales: {
                         x: {display: false},
@@ -572,8 +575,6 @@
             destroyChart(w.uid);
 
             let legendHtml = '';
-            let scrollWrapperHtml = '';
-
             if (isDual) {
                 const color0 = getFieldColor(fields[0], 0);
                 const color1 = getFieldColor(fields[1], 1);
@@ -587,18 +588,6 @@
                         <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color1};"></span>
                     </div>
                 `;
-
-                scrollWrapperHtml = `
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 52px; height: 100%; z-index: 20; background: ${cssVar('--surface', '#ffffff')}; float: left; margin-right: -52px; pointer-events: none;">
-                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="sticky-y1-axis" style="position: sticky; right: 0; top: 0; width: 52px; height: 100%; z-index: 20; background: ${cssVar('--surface', '#ffffff')}; float: right; margin-left: -52px; pointer-events: none;">
-                        <canvas class="y1-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 52px; padding-right: 52px;">
-                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                `;
             } else {
                 legendHtml = fields.map((field, idx) => {
                     const color = getFieldColor(field, idx);
@@ -607,15 +596,6 @@
                         <span>${metricLabelWithUnit(field)}</span>
                     </div>`;
                 }).join('');
-
-                scrollWrapperHtml = `
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
-                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
-                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                `;
             }
 
             body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
@@ -623,8 +603,20 @@
                 <div class="chart-legend-header px-2 pb-1 d-flex ${isDual ? 'justify-content-between' : 'flex-wrap gap-3'} align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
                     ${legendHtml}
                 </div>
-                <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
-                    ${scrollWrapperHtml}
+                <div class="chart-wrapper-container" style="position: relative; flex: 1; width: 100%; height: 100%; min-height: 0;">
+                    <div class="sticky-y-axis" style="position: absolute; left: 0; top: 0; bottom: 0; width: 52px; z-index: 10; background: ${cssVar('--surface', '#ffffff')}; pointer-events: none;">
+                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    ${isDual ? `
+                    <div class="sticky-y1-axis" style="position: absolute; right: 0; top: 0; bottom: 0; width: 52px; z-index: 10; background: ${cssVar('--surface', '#ffffff')}; pointer-events: none;">
+                        <canvas class="y1-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    ` : ''}
+                    <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; position: relative;">
+                        <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 52px; ${isDual ? 'padding-right: 52px;' : ''}">
+                            <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
+                        </div>
+                    </div>
                 </div>
             `;
             const canvas = body.querySelector('.main-canvas');
@@ -771,8 +763,6 @@
             destroyChart(w.uid);
 
             let legendHtml = '';
-            let scrollWrapperHtml = '';
-
             if (isDual) {
                 const color0 = getFieldColor(datasets[0].label, 0);
                 const color1 = getFieldColor(datasets[1].label, 1);
@@ -786,18 +776,6 @@
                         <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: ${color1};"></span>
                     </div>
                 `;
-
-                scrollWrapperHtml = `
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 52px; height: 100%; z-index: 20; background: ${cssVar('--surface', '#ffffff')}; float: left; margin-right: -52px; pointer-events: none;">
-                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="sticky-y1-axis" style="position: sticky; right: 0; top: 0; width: 52px; height: 100%; z-index: 20; background: ${cssVar('--surface', '#ffffff')}; float: right; margin-left: -52px; pointer-events: none;">
-                        <canvas class="y1-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 52px; padding-right: 52px;">
-                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                `;
             } else {
                 legendHtml = datasets.map((ds, i) => {
                     const color = getFieldColor(ds.label, i);
@@ -806,15 +784,6 @@
                         <span>${metricLabelWithUnit(ds.label)}</span>
                     </div>`;
                 }).join('');
-
-                scrollWrapperHtml = `
-                    <div class="sticky-y-axis" style="position: sticky; left: 0; top: 0; width: 68px; height: 100%; z-index: 20; background: transparent; float: left; margin-right: -68px; pointer-events: none;">
-                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 68px;">
-                        <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                `;
             }
 
             body.className = 'card-body grid-widget-chart grid-widget-body p-2 d-flex flex-column';
@@ -822,8 +791,20 @@
                 <div class="chart-legend-header px-2 pb-1 d-flex ${isDual ? 'justify-content-between' : 'flex-wrap gap-3'} align-items-center border-bottom mb-1" style="flex-shrink: 0; background: ${cssVar('--surface', '#ffffff')};">
                     ${legendHtml}
                 </div>
-                <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; flex: 1; position: relative;">
-                    ${scrollWrapperHtml}
+                <div class="chart-wrapper-container" style="position: relative; flex: 1; width: 100%; height: 100%; min-height: 0;">
+                    <div class="sticky-y-axis" style="position: absolute; left: 0; top: 0; bottom: 0; width: 52px; z-index: 10; background: ${cssVar('--surface', '#ffffff')}; pointer-events: none;">
+                        <canvas class="y-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    ${isDual ? `
+                    <div class="sticky-y1-axis" style="position: absolute; right: 0; top: 0; bottom: 0; width: 52px; z-index: 10; background: ${cssVar('--surface', '#ffffff')}; pointer-events: none;">
+                        <canvas class="y1-axis-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    ` : ''}
+                    <div class="chart-scroll-wrapper" style="width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; position: relative;">
+                        <div class="chart-inner-canvas" style="min-width: 100%; height: 100%; position: relative; padding-left: 52px; ${isDual ? 'padding-right: 52px;' : ''}">
+                            <canvas class="main-canvas" style="width: 100%; height: 100%;"></canvas>
+                        </div>
+                    </div>
                 </div>
             `;
             const canvas = body.querySelector('.main-canvas');
